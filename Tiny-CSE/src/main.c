@@ -7,10 +7,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sqlite3.h>
 
 #include "HTTP_Server.h"
 #include "Routes.h"
 #include "Response.h"
+#include "Sqlite.h"
 
 int main() {
 	// initiate HTTP_Server
@@ -23,11 +25,12 @@ int main() {
 	struct Route * route = initRoute("/", "index.html"); 
 	addRoute(route, "/about", "about.html");
 
-
 	printf("\n====================================\n");
 	printf("=========ALL VAILABLE ROUTES========\n");
 	// display all available routes
 	inorder(route);
+
+	struct sqlite3 * mydb = initDatabase("tiny-oneM2M.db"); // Assign the return value of the init function
 
 	while (1) {
 		char client_msg[4096] = "";
@@ -88,7 +91,6 @@ int main() {
 
 		strcat(http_header, response_data);
 		strcat(http_header, "\r\n\r\n");
-
 
 		printf("http_header: %s\n", http_header);
 
