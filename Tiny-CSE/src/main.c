@@ -15,7 +15,7 @@
 int main() {
 	// initiate HTTP_Server
 	HTTP_Server http_server;
-	init_server(&http_server, 6969);
+	init_server(&http_server, 6970);
 
 	int client_socket;
 	
@@ -42,7 +42,7 @@ int main() {
 		char *urlRoute = "";
 
 		char *client_http_header = strtok(client_msg, "\n");
-			
+		
 		printf("\n\n%s\n\n", client_http_header);
 
 		char *header_token = strtok(client_http_header, " ");
@@ -81,13 +81,16 @@ int main() {
 			}
 		}
 
+		// Creating the response
 		char * response_data = render_static_file(template);
-
+		
 		char http_header[4096] = "HTTP/1.1 200 OK\r\n\r\n";
 
 		strcat(http_header, response_data);
 		strcat(http_header, "\r\n\r\n");
 
+
+		printf("http_header: %s\n", http_header);
 
 		send(client_socket, http_header, sizeof(http_header), 0);
 		close(client_socket);

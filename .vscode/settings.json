@@ -1,5 +1,10 @@
 {
     "files.associations": {
-        "ulfius.h": "c"
+        "ulfius.h": "c",
+        "in.h": "c",
+        "fcntl.h": "c",
+        "stdio.h": "c",
+        "types.h": "c",
+        "socket.h": "c"
     }
 }
