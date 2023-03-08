@@ -14,6 +14,9 @@
 #include "Response.h"
 #include "Sqlite.h"
 
+#define true 1
+#define false 0
+
 int main() {
 	// initiate HTTP_Server
 	HTTP_Server http_server;
@@ -30,7 +33,18 @@ int main() {
 	// display all available routes
 	inorder(route);
 
-	struct sqlite3 * mydb = initDatabase("tiny-oneM2M.db"); // Assign the return value of the init function
+	// Inicialização do Sqlite3 abrindo/criando a base de dados
+	struct sqlite3 * mydb = initDatabase("tiny-oneM2M.db");
+	if (mydb == NULL) {
+		exit(0);
+	}
+
+	char *query = "CREATE TABLE mytable (id INT, name TEXT);";
+	// When we expect the query to return something such as a SELECT statement isCallback flat should be true
+	short rc = execDatabaseScript(query, mydb, false);
+	if (rc == 1) {
+		exit(0);
+	}
 
 	while (1) {
 		char client_msg[4096] = "";
@@ -98,5 +112,8 @@ int main() {
 		close(client_socket);
 		free(response_data);
 	}
+
+	closeDatabase(mydb);
+
 	return 0;
 }
