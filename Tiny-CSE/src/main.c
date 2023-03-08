@@ -33,7 +33,7 @@ int main() {
 	// display all available routes
 	inorder(route);
 
-	// Inicialização do Sqlite3 abrindo/criando a base de dados
+	// Sqlite3 initialization opening/creating database
 	struct sqlite3 * mydb = initDatabase("tiny-oneM2M.db");
 	if (mydb == NULL) {
 		exit(0);
