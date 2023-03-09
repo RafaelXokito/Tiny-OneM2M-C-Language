@@ -26,6 +26,10 @@
         "type_traits": "c",
         "vector": "c",
         "routes.h": "c",
-        "http_server.h": "c"
+        "http_server.h": "c",
+        "sqlite.h": "c",
+        "float.h": "c",
+        "cjson.h": "c",
+        "signals.h": "c"
     }
 }

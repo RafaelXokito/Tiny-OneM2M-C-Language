@@ -19,6 +19,7 @@ int main() {
 
 	// Register the SIGINT signal handler
     signal(SIGINT, sigint_handler);
+	
 
 	// initiate HTTP_Server
 	HTTP_Server http_server;
