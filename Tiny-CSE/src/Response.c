@@ -40,7 +40,7 @@ void *handle_connection(void *connectioninfo) {
     int valread;
     
     // read data from the client
-    valread = read(info->socket_desc, buffer, 1024);
+    read(info->socket_desc, client_msg, 1024);
     
     printf("%s\n", client_msg);
 

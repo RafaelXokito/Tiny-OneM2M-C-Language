@@ -24,6 +24,8 @@
         "system_error": "c",
         "tuple": "c",
         "type_traits": "c",
-        "vector": "c"
+        "vector": "c",
+        "routes.h": "c",
+        "http_server.h": "c"
     }
 }
