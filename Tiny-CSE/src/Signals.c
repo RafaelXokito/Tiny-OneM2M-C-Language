@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "Signal.h"
+#include "Signals.h"
 
 void sigint_handler(int sig) {
     // Code to execute when SIGINT is received
