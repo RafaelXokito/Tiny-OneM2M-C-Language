@@ -38,9 +38,9 @@ short execDatabaseScript(char* query, struct sqlite3 *db, short isCallback) {
         fprintf(stderr, "SQL error: %s\n", err_msg);
         sqlite3_free(err_msg);
         sqlite3_close(db);
-        return 1;
+        return false;
     }
-    return 0;
+    return true;
 }
 
 void closeDatabase(struct sqlite3 *db) {

@@ -5,6 +5,12 @@
         "fcntl.h": "c",
         "stdio.h": "c",
         "types.h": "c",
-        "socket.h": "c"
+        "socket.h": "c",
+        "stdlib.h": "c",
+        "istream": "c",
+        "locale": "c",
+        "response.h": "c",
+        "signal.h": "c",
+        "common.h": "c"
     }
 }
