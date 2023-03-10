@@ -16,6 +16,8 @@
 #define true 1
 #define false 0
 
+int client_socket;
+
 int main() {
 
 	// Register the SIGINT signal handler

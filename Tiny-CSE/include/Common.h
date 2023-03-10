@@ -11,11 +11,3 @@
 
 #define true 1
 #define false 0
-
-
-#ifndef GLOBAL_H
-#define GLOBAL_H
-
-extern int client_socket; // declaration of the global variable
-
-#endif // GLOBAL_H

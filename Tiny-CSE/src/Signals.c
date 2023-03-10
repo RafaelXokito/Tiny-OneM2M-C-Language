@@ -5,6 +5,8 @@
 
 #include "Common.h"
 
+extern int client_socket; // declare the client_socket variable
+
 void sigint_handler(int sig) {
     // Code to execute when SIGINT is received
     printf("Ctrl+C pressed\n");
