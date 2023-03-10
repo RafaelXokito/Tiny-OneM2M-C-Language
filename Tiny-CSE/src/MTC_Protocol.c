@@ -71,11 +71,11 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
         }
 
     }
-    
+
     // Add New Routes
     char uri[50];
     snprintf(uri, sizeof(uri), "/%s", csebase->ri);
-    addRoute(route, uri, csebase->ty, csebase->rn);
+    addRoute(route, uri, csebase->ri, csebase->ty, csebase->rn);
 
     return true;
 }

@@ -3,11 +3,14 @@
 #include <string.h>
 #include <stdio.h>
 
-struct Route * initRoute(char* key, short ty, char* value) {
+struct Route * initRoute(char* key, char* ri, short ty, char* value) {
 	struct Route * temp = (struct Route *) malloc(sizeof(struct Route));
 
 	temp->key = (char*) malloc(strlen(key) + 1);
 	strcpy(temp->key, key);
+
+	temp->ri = (char*) malloc(strlen(ri) + 1);
+	strcpy(temp->ri, ri);
 
 	temp->ty = ty;
 	
@@ -22,23 +25,23 @@ void inorder(struct Route* root)
 {
     if (root != NULL) {
         inorder(root->left);
-        printf("%s -> %d -> %s \n", root->key, root->ty, root->value);
+        printf("%s -> %s -> %d -> %s \n", root->key, root->ri, root->ty, root->value);
         inorder(root->right);
     }
 }
 
-struct Route * addRoute(struct Route * root, char* key, short ty, char* value) {
+struct Route * addRoute(struct Route * root, char* ri, char* key, short ty, char* value) {
 	if (root == NULL) {
-		return initRoute(key, ty, value);
+		return initRoute(key, ri, ty, value);
 	}
 
 	if (strcmp(key, root->key) == 0) {
 		printf("============ WARNING ============\n");
 		printf("A Route For \"%s\" Already Exists\n", key);
 	}else if (strcmp(key, root->key) > 0) {
-		root->right = addRoute(root->right, key, ty, value);
+		root->right = addRoute(root->right, key, ri, ty, value);
 	}else {
-		root->left = addRoute(root->left, key, ty, value);
+		root->left = addRoute(root->left, key, ri, ty, value);
 	}
 
 	return root;

@@ -106,3 +106,14 @@ char getLastCSEBase(CSEBase * csebase, sqlite3 *db) {
 
     return true;
 }
+
+cJSON *csebase_to_json(const CSEBase *csebase) {
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddNumberToObject(root, "ty", csebase->ty);
+    cJSON_AddStringToObject(root, "ri", csebase->ri);
+    cJSON_AddStringToObject(root, "rn", csebase->rn);
+    cJSON_AddStringToObject(root, "pi", csebase->pi);
+    cJSON_AddStringToObject(root, "ct", csebase->ct);
+    cJSON_AddStringToObject(root, "lt", csebase->lt);
+    return root;
+}

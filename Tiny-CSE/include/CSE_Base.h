@@ -10,3 +10,5 @@ typedef struct {
 char init_cse_base(CSEBase * csebase, struct sqlite3 * db, char isTableCreated);
 
 char getLastCSEBase(CSEBase * csebase, sqlite3 *db);
+
+cJSON *csebase_to_json(const CSEBase *csebase);

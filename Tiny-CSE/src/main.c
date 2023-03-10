@@ -24,13 +24,12 @@ int main() {
 
 	// initiate HTTP_Server
 	HTTP_Server http_server;
-	init_server(&http_server, 6970);
+	init_server(&http_server, 6969);
 
-	int client_socket;
 	pthread_t thread_id;
 	
 	// registering Routes
-	struct Route * route = initRoute("/", -1, "index.html");
+	struct Route * route = initRoute("/", "", -1, "index.html");
 
 	sqlite3 *db;
 	short rs = init_protocol(db, route);

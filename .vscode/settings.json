@@ -35,6 +35,8 @@
         "mtc_protocol.h": "c",
         "cse_base.h": "c",
         "string.h": "c",
-        "__locale": "c"
+        "__locale": "c",
+        "__config": "c",
+        "errno.h": "c"
     }
 }

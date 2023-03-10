@@ -71,34 +71,112 @@ void *handle_connection(void *connectioninfo) {
 	printf("The method is %s\n", method);
 	printf("The route is %s\n", urlRoute);
 
+	struct Route * destination = search(info->route, urlRoute);
 
-	char template[100] = "";
-	
-	if (strstr(urlRoute, "/static/") != NULL) {
-		//strcat(template, urlRoute+1);
-		strcat(template, "static/index.css");
-	}else {
-		struct Route * destination = search(info->route, urlRoute);
-		strcat(template, "templates/");
+	printf("Check if route was founded\n");
+	if (destination == NULL) {
+		char template[100] = "templates/";
 
-		if (destination == NULL) {
-			strcat(template, "404.html");
-		}else {
-			strcat(template, destination->value);
-		}
+		strcat(template, "404.html");
+		char * response_data = render_static_file(template);
+		char response[4096] = "HTTP/1.1 404 Not Found\r\n\r\n";
+		strcat(response, response_data);
+		strcat(response, "\r\n\r\n");
+
+		printf("http_header: %s\n", response);
+
+		send(info->socket_desc, response, sizeof(response), 0);
+
+		// close the client socket
+		close(info->socket_desc);
+		// free the socket descriptor pointer
+		free(info);
+		// exit the thread
+		pthread_exit(NULL);
+	}
+
+	printf("Check if is the default route\n");
+	if (strcmp(destination->key, "/") == 0) {
+		char template[100] = "templates/";
+
+		strcat(template, destination->value);
+		char * response_data = render_static_file(template);
+
+		char response[4096] = "HTTP/1.1 200 OK\r\n\r\n";
+		strcat(response, response_data);
+		strcat(response, "\r\n\r\n");
+
+		printf("http_header: %s\n", response);
+
+		send(info->socket_desc, response, sizeof(response), 0);
+
+		// close the client socket
+		close(info->socket_desc);
+		// free the socket descriptor pointer
+		free(info);
+		// exit the thread
+		pthread_exit(NULL);
 	}
 
 	// Creating the response
-	char * response_data = render_static_file(template);
+	char response[4096] = "";
 	
-	char http_header[4096] = "HTTP/1.1 200 OK\r\n\r\n";
+	if (strcmp(method, "GET") == 0) {
+        // Get Request
+		char *sql = sqlite3_mprintf("SELECT * FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
+		printf("%s\n",sql);
+		sqlite3_stmt *stmt;
+		struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
+		short rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+		if (rc != SQLITE_OK) {
+			printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+			sqlite3_finalize(stmt);
+			sqlite3_close(db);
+			// close the client socket
+			close(info->socket_desc);
+			// free the socket descriptor pointer
+			free(info);
+			// exit the thread
+			pthread_exit(NULL);
+		}
 
-	strcat(http_header, response_data);
-	strcat(http_header, "\r\n\r\n");
+		printf("Creating the json object\n");
+		cJSON *root = cJSON_CreateArray();
+		while (sqlite3_step(stmt) == SQLITE_ROW) {
+			CSEBase csebase;
+			csebase.ty = sqlite3_column_int(stmt, 0);
+			strncpy(csebase.ri, (char *)sqlite3_column_text(stmt, 1), 50);
+			strncpy(csebase.rn, (char *)sqlite3_column_text(stmt, 2), 50);
+			strncpy(csebase.pi, (char *)sqlite3_column_text(stmt, 3), 50);
+			strncpy(csebase.ct, (char *)sqlite3_column_text(stmt, 4), 25);
+			strncpy(csebase.lt, (char *)sqlite3_column_text(stmt, 5), 25);
+			cJSON_AddItemToArray(root, csebase_to_json(&csebase));
+			break;
+		}
 
-	printf("http_header: %s\n", http_header);
+		printf("Coonvert to json string\n");
+		char *json_str = cJSON_PrintUnformatted(root);
+		printf("%s\n", json_str);
 
-	send(info->socket_desc, http_header, sizeof(http_header), 0);
+		char * response_data = json_str;
+		
+		strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
+
+		strcat(response, response_data);
+
+		cJSON_Delete(root);
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		free(json_str);
+    } else if (strcmp(method, "POST") == 0) {
+        printf("Command 2\n");
+    }
+
+	printf("response: %s\n", response);
+
+    int response_len = strlen(response);
+
+	send(info->socket_desc, response, response_len, 0);
 
     // close the client socket
     close(info->socket_desc);
