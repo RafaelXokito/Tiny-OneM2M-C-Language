@@ -38,12 +38,12 @@ int main() {
 	// display all available routes
 	inorder(route);
 
-	// Sqlite3 initialization opening/creating database
-	struct sqlite3 * mydb = initDatabase("tiny-oneM2M.db");
-	if (mydb == NULL) {
-		exit(0);
-	}
-
+	sqlite3 *db;
+	short rs = init_protocol(db);
+	if (rs == false) {
+        exit(EXIT_FAILURE);
+    }
+	
 	// char *query = "CREATE TABLE mytable (id INT, name TEXT);";
 	// // When we expect the query to return something such as a SELECT statement isCallback flat should be true
 	// short rc = execDatabaseScript(query, mydb, false);
@@ -67,7 +67,7 @@ int main() {
         printf("New client connected, thread created for handling.\n");
     }
 
-	closeDatabase(mydb);
+	closeDatabase(db);
 
 	return 0;
 }

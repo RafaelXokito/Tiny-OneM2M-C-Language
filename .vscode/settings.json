@@ -30,6 +30,9 @@
         "sqlite.h": "c",
         "float.h": "c",
         "cjson.h": "c",
-        "signals.h": "c"
+        "signals.h": "c",
+        "__string": "c",
+        "mtc_protocol.h": "c",
+        "cse_base.h": "c"
     }
 }

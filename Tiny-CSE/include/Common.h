@@ -4,3 +4,7 @@
 #include "Sqlite.h"
 #include "Signals.h"
 #include "cJSON.h"
+#include "MTC_Protocol.h"
+
+#define true 1
+#define false 0
