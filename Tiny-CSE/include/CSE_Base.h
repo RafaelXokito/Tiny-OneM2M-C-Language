@@ -1,5 +1,3 @@
-#import <sqlite3.h>
-
 typedef struct {
     short ty; // resourceType
     char ri[50]; // resourceID

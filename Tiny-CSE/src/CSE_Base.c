@@ -12,7 +12,7 @@ char init_cse_base(CSEBase * csebase, struct sqlite3 * db, char isTableCreated) 
     // }
 
 	// Parse the JSON object
-    char jsonString[] = "{\"ty\": 5, \"ri\": \"id-in\", \"rn\": \"cse-in\", \"pi\": \"\", \"ct\": \"20230309T111952,126300\", \"lt\": \"20230309T111952,126300\"}";
+    char jsonString[] = "{\"ty\": 5, \"ri\": \"onem2m\", \"rn\": \"cse-in\", \"pi\": \"\"}";
     cJSON *json = cJSON_Parse(jsonString);
     if (json == NULL) {
         printf("Failed to parse JSON.\n");
@@ -24,8 +24,8 @@ char init_cse_base(CSEBase * csebase, struct sqlite3 * db, char isTableCreated) 
     strcpy(csebase->ri, cJSON_GetObjectItemCaseSensitive(json, "ri")->valuestring);
     strcpy(csebase->rn, cJSON_GetObjectItemCaseSensitive(json, "rn")->valuestring);
     strcpy(csebase->pi, cJSON_GetObjectItemCaseSensitive(json, "pi")->valuestring);
-    strcpy(csebase->ct, cJSON_GetObjectItemCaseSensitive(json, "ct")->valuestring);
-    strcpy(csebase->lt, cJSON_GetObjectItemCaseSensitive(json, "lt")->valuestring);
+    strcpy(csebase->ct, getCurrentTime());
+    strcpy(csebase->lt, getCurrentTime());
 
     // Free the cJSON object
     cJSON_Delete(json);

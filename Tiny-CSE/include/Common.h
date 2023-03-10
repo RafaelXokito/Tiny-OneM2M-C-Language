@@ -5,6 +5,7 @@
 #include "Signals.h"
 #include "cJSON.h"
 #include "MTC_Protocol.h"
+#include "Utils.h"
 
 #include <string.h>
 

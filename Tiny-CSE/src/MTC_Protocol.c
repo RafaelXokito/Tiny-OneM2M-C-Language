@@ -71,9 +71,7 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
         }
 
     }
-
-    // TODO - Creation and Last Modification Time
-
+    
     // Add New Routes
     char uri[50];
     snprintf(uri, sizeof(uri), "/%s", csebase->ri);
