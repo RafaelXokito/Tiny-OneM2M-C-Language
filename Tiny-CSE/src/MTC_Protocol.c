@@ -70,7 +70,6 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
             }
         } else {
             printf("CSE_Base already inserted.\n");
-
             // In case of the table and data exists, get the 
             char rs = getLastCSEBaseStruct(csebase, db);
             if (rs == false) {
