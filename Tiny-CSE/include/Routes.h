@@ -12,7 +12,7 @@ struct Route {
 
 struct Route * initRoute(char* key, char* ri, short ty, char* value);
 
-struct Route * addRoute(struct Route * root, char* ri, char* key, short ty, char* value);
+struct Route * addRoute(struct Route * root, char* key, char* ri, short ty, char* value);
 
 struct Route * search(struct Route * root, char * key);
 

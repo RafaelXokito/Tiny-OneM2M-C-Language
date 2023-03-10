@@ -1,12 +1,13 @@
-#include "Common.h"
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <pthread.h>
 #include <sqlite3.h>
 #include <unistd.h>
 #include <regex.h>
+
+#include "Common.h"
 
 char * render_static_file(char * fileName) {
 	FILE* file = fopen(fileName, "r");
@@ -128,51 +129,40 @@ void *handle_connection(void *connectioninfo) {
 	
 	if (strcmp(method, "GET") == 0) {
         // Get Request
-		char *sql = sqlite3_mprintf("SELECT * FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
-		printf("%s\n",sql);
-		sqlite3_stmt *stmt;
-		struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
-		short rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-		if (rc != SQLITE_OK) {
-			printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
-			sqlite3_finalize(stmt);
-			sqlite3_close(db);
-			// close the client socket
-			close(info->socket_desc);
-			// free the socket descriptor pointer
-			free(info);
-			// exit the thread
-			pthread_exit(NULL);
-		}
-
-		printf("Creating the json object\n");
-		cJSON *root = cJSON_CreateArray();
-		while (sqlite3_step(stmt) == SQLITE_ROW) {
-			CSEBaseStruct csebase;
-			csebase.ty = sqlite3_column_int(stmt, 0);
-			strncpy(csebase.ri, (char *)sqlite3_column_text(stmt, 1), 50);
-			strncpy(csebase.rn, (char *)sqlite3_column_text(stmt, 2), 50);
-			strncpy(csebase.pi, (char *)sqlite3_column_text(stmt, 3), 50);
-			strncpy(csebase.ct, (char *)sqlite3_column_text(stmt, 4), 25);
-			strncpy(csebase.lt, (char *)sqlite3_column_text(stmt, 5), 25);
-			cJSON_AddItemToArray(root, csebase_to_json(&csebase));
+		switch (destination->ty)
+		{
+		case CSEBASE: {
+			char rs = retrieve_csebase(destination,response);
+			if (rs == false) {
+				// TODO - Error 400 Bad request
+				printf("Could not retrieve CSE_Base resource\n");
+				// close the client socket
+				close(info->socket_desc);
+				// free the socket descriptor pointer
+				free(info);
+				// exit the thread
+				pthread_exit(NULL);
+			}
+			break;
+			}
+		case AE: {
+			char rs = retrieve_ae(destination,response);
+			if (rs == false) {
+				// TODO - Error 400 Bad request
+				printf("Could not retrieve AE resource\n");
+				// close the client socket
+				close(info->socket_desc);
+				// free the socket descriptor pointer
+				free(info);
+				// exit the thread
+				pthread_exit(NULL);
+			}
+			}
+			break;
+		default:
 			break;
 		}
-
-		printf("Coonvert to json string\n");
-		char *json_str = cJSON_PrintUnformatted(root);
-		printf("%s\n", json_str);
-
-		char * response_data = json_str;
 		
-		strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
-
-		strcat(response, response_data);
-
-		cJSON_Delete(root);
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		free(json_str);
     } else if (strcmp(method, "POST") == 0) {
 		char* json_start = strstr(request, "{"); // find the start of the JSON data
 		if (json_start != NULL) {
@@ -233,8 +223,8 @@ void *handle_connection(void *connectioninfo) {
 							// exit the thread
 							pthread_exit(NULL);
 						}
-						}		
 						break;
+					}
 					default:
 						// TODO - Error bad request
 						printf("Theres no available resource for %s\n", key);
@@ -254,16 +244,13 @@ void *handle_connection(void *connectioninfo) {
 				printf("Object is empty\n");
 			}
 
-			// Free the cJSON object
-    		cJSON_Delete(json_object);
-
 		} else {
 			// TODO - Error bad request
 			printf("JSON data not found.\n");
 		}
     }
 
-	printf("response: %s\n", response);
+	printf("response: %s\n\n", response);
 
     int response_len = strlen(response);
 

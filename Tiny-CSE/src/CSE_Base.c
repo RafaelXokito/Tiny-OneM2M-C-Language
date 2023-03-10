@@ -108,12 +108,16 @@ char getLastCSEBaseStruct(CSEBaseStruct * csebase, sqlite3 *db) {
 }
 
 cJSON *csebase_to_json(const CSEBaseStruct *csebase) {
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddNumberToObject(root, "ty", csebase->ty);
-    cJSON_AddStringToObject(root, "ri", csebase->ri);
-    cJSON_AddStringToObject(root, "rn", csebase->rn);
-    cJSON_AddStringToObject(root, "pi", csebase->pi);
-    cJSON_AddStringToObject(root, "ct", csebase->ct);
-    cJSON_AddStringToObject(root, "lt", csebase->lt);
+    cJSON *innerObject = cJSON_CreateObject();
+    cJSON_AddNumberToObject(innerObject, "ty", csebase->ty);
+    cJSON_AddStringToObject(innerObject, "ri", csebase->ri);
+    cJSON_AddStringToObject(innerObject, "rn", csebase->rn);
+    cJSON_AddStringToObject(innerObject, "pi", csebase->pi);
+    cJSON_AddStringToObject(innerObject, "ct", csebase->ct);
+    cJSON_AddStringToObject(innerObject, "lt", csebase->lt);
+
+    // Create the outer JSON object with the key "m2m:cse" and the value set to the inner object
+    cJSON* root = cJSON_CreateObject();
+    cJSON_AddItemToObject(root, "m2m:db", innerObject);    
     return root;
 }

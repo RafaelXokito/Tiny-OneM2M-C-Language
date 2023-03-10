@@ -53,13 +53,18 @@ char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
 }
 
 cJSON *ae_to_json(const AEStruct *ae) {
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddNumberToObject(root, "ty", ae->ty);
-    cJSON_AddStringToObject(root, "ri", ae->ri);
-    cJSON_AddStringToObject(root, "rn", ae->rn);
-    cJSON_AddStringToObject(root, "pi", ae->pi);
-    cJSON_AddStringToObject(root, "et", ae->et);
-    cJSON_AddStringToObject(root, "ct", ae->ct);
-    cJSON_AddStringToObject(root, "lt", ae->lt);
+    cJSON *innerObject = cJSON_CreateObject();
+    cJSON_AddNumberToObject(innerObject, "ty", ae->ty);
+    cJSON_AddStringToObject(innerObject, "ri", ae->ri);
+    cJSON_AddStringToObject(innerObject, "rn", ae->rn);
+    cJSON_AddStringToObject(innerObject, "pi", ae->pi);
+    cJSON_AddStringToObject(innerObject, "et", ae->et);
+    cJSON_AddStringToObject(innerObject, "ct", ae->ct);
+    cJSON_AddStringToObject(innerObject, "lt", ae->lt);
+
+    // Create the outer JSON object with the key "m2m:ae" and the value set to the inner object
+    cJSON* root = cJSON_CreateObject();
+    cJSON_AddItemToObject(root, "m2m:ae", innerObject);
+
     return root;
 }
