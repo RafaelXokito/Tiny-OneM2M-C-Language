@@ -39,6 +39,8 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+	closeDatabase(db);
+
 	printf("\n====================================\n");
 	printf("=========ALL VAILABLE ROUTES========\n");
 	// display all available routes
@@ -59,8 +61,6 @@ int main() {
         
         printf("New client connected, thread created for handling.\n");
     }
-
-	closeDatabase(db);
 
 	return 0;
 }
