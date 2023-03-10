@@ -10,7 +10,7 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
 
     // Check if the cse_base exists
     sqlite3_stmt *stmt;
-    short rc = sqlite3_prepare_v2(db, "SELECT name FROM sqlite_master WHERE type='table' AND name='csebase';", -1, &stmt, NULL);
+    short rc = sqlite3_prepare_v2(db, "SELECT name FROM sqlite_master WHERE type='table' AND name='mtc';", -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         printf("Failed to prepare query: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
@@ -35,7 +35,7 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
 
         // Check if the table has any data
         sqlite3_stmt *stmt;
-        rc = sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM csebase;", -1, &stmt, NULL);
+        rc = sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM mtc;", -1, &stmt, NULL);
         if (rc != SQLITE_OK) {
             printf("Failed to prepare query: %s\n", sqlite3_errmsg(db));
             sqlite3_close(db);
@@ -55,7 +55,7 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
         sqlite3_finalize(stmt);
 
         if (rowCount == 0) {
-            printf("The csebase table is empty.\n");
+            printf("The mtc table is empty.\n");
 
             char rs = init_cse_base(csebase, db, true);
             if (rs == false) {
@@ -73,7 +73,6 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
     }
 
     // TODO - Creation and Last Modification Time
-    // TODO - Quando a BD já está criada, o root node deve ser carregado para um jsonObject e criar as rotas
 
     // Add New Routes
     char uri[50];

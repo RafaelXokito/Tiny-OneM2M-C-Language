@@ -32,7 +32,7 @@ char init_cse_base(CSEBase * csebase, struct sqlite3 * db, char isTableCreated) 
 
     if (isTableCreated == false) {
         // Create the table if it doesn't exist
-        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS csebase (ty INTEGER, ri TEXT, rn TEXT, pi TEXT, ct TEXT, lt TEXT)";
+        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT, rn TEXT, pi TEXT, ct TEXT, lt TEXT)";
         short rc = sqlite3_exec(db, createTableSQL, NULL, NULL, NULL);
         if (rc != SQLITE_OK) {
             printf("Failed to create table: %s\n", sqlite3_errmsg(db));
@@ -42,7 +42,7 @@ char init_cse_base(CSEBase * csebase, struct sqlite3 * db, char isTableCreated) 
     }
 
     // Prepare the insert statement
-    const char *insertSQL = "INSERT INTO csebase (ty, ri, rn, pi, ct, lt) VALUES (?, ?, ?, ?, ?, ?)";
+    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, ct, lt) VALUES (?, ?, ?, ?, ?, ?)";
     sqlite3_stmt *stmt;
     short rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
@@ -82,7 +82,7 @@ char getLastCSEBase(CSEBase * csebase, sqlite3 *db) {
     // Prepare the SQL statement to retrieve the last row from the table
     
     // char *sql = sqlite3_mprintf("SELECT * FROM %s ORDER BY ROWID DESC LIMIT 1;", table_name);
-    const char *sql = "SELECT * FROM csebase ORDER BY ROWID DESC LIMIT 1;";
+    const char *sql = "SELECT * FROM mtc ORDER BY ROWID DESC LIMIT 1;";
     sqlite3_stmt *stmt;
     int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
