@@ -37,14 +37,14 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
         sqlite3_stmt *stmt;
         rc = sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM mtc;", -1, &stmt, NULL);
         if (rc != SQLITE_OK) {
-            printf("Failed to prepare query: %s\n", sqlite3_errmsg(db));
+            printf("Failed to prepare 'SELECT COUNT(*) FROM mtc;' query: %s\n", sqlite3_errmsg(db));
             sqlite3_close(db);
             return false;
         }
 
         rc = sqlite3_step(stmt);
         if (rc != SQLITE_ROW) {
-            printf("Failed to execute query: %s\n", sqlite3_errmsg(db));
+            printf("Failed to execute 'SELECT COUNT(*) FROM mtc;' query: %s\n", sqlite3_errmsg(db));
             sqlite3_finalize(stmt);
             sqlite3_close(db);
             return false;

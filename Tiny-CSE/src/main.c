@@ -23,11 +23,6 @@ int main() {
 	// Register the SIGINT signal handler
     signal(SIGINT, sigint_handler);
 
-
-	// initiate HTTP_Server
-	HTTP_Server http_server;
-	init_server(&http_server, 6969);
-
 	pthread_t thread_id;
 	
 	// registering Routes
@@ -45,6 +40,10 @@ int main() {
 	printf("=========ALL VAILABLE ROUTES========\n");
 	// display all available routes
 	inorder(route);
+
+	// initiate HTTP_Server
+	HTTP_Server http_server;
+	init_server(&http_server, 6969);
 
 	// accept incoming client connections and handle them in separate threads
     while (1) {
