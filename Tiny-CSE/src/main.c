@@ -34,6 +34,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+	// The DB connection should exist in each thread and should not be shared
 	closeDatabase(db);
 
 	printf("\n====================================\n");

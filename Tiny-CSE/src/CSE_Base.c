@@ -81,10 +81,10 @@ char getLastCSEBase(CSEBase * csebase, sqlite3 *db) {
 
     // Prepare the SQL statement to retrieve the last row from the table
     
-    // char *sql = sqlite3_mprintf("SELECT * FROM %s ORDER BY ROWID DESC LIMIT 1;", table_name);
-    const char *sql = "SELECT * FROM mtc ORDER BY ROWID DESC LIMIT 1;";
+    char *sql = sqlite3_mprintf("SELECT * FROM mtc WHERE ty = %d ORDER BY ROWID DESC LIMIT 1;", CSEBASE);
     sqlite3_stmt *stmt;
     int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    sqlite3_free(sql);
     if (rc != SQLITE_OK) {
         printf("Failed to prepare getLastCSEBase query: %s\n", sqlite3_errmsg(db));
         return false;

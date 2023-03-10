@@ -178,7 +178,7 @@ void *handle_connection(void *connectioninfo) {
 
 	send(info->socket_desc, response, response_len, 0);
 
-    // close the client socket
+    // close the children socket
     close(info->socket_desc);
     
     // free the socket descriptor pointer

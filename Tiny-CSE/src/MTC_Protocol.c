@@ -35,16 +35,18 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
 
         // Check if the table has any data
         sqlite3_stmt *stmt;
-        rc = sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM mtc;", -1, &stmt, NULL);
+        char *sql = sqlite3_mprintf("SELECT COUNT(*) FROM mtc WHERE ty = %d ORDER BY ROWID DESC LIMIT 1;", CSEBASE);
+        rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+        sqlite3_free(sql);
         if (rc != SQLITE_OK) {
-            printf("Failed to prepare 'SELECT COUNT(*) FROM mtc;' query: %s\n", sqlite3_errmsg(db));
+            printf("Failed to prepare 'SELECT COUNT(*) FROM mtc WHERE ty = %d;' query: %s\n", CSEBASE, sqlite3_errmsg(db));
             sqlite3_close(db);
             return false;
         }
 
         rc = sqlite3_step(stmt);
         if (rc != SQLITE_ROW) {
-            printf("Failed to execute 'SELECT COUNT(*) FROM mtc;' query: %s\n", sqlite3_errmsg(db));
+            printf("Failed to execute 'SELECT COUNT(*) FROM mtc WHERE ty = %d;' query: %s\n", CSEBASE, sqlite3_errmsg(db));
             sqlite3_finalize(stmt);
             sqlite3_close(db);
             return false;
@@ -55,7 +57,7 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
         sqlite3_finalize(stmt);
 
         if (rowCount == 0) {
-            printf("The mtc table is empty.\n");
+            printf("The mtc table dont have CSE_Base resources.\n");
 
             char rs = init_cse_base(csebase, db, true);
             if (rs == false) {
@@ -64,12 +66,12 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
         } else {
             printf("CSE_Base already inserted.\n");
 
+            // In case of the table and data exists, get the 
             char rs = getLastCSEBase(csebase, db);
             if (rs == false) {
                 return false;
             }
         }
-
     }
 
     // Add New Routes
