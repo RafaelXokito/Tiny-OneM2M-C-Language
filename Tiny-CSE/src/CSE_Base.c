@@ -118,6 +118,6 @@ cJSON *csebase_to_json(const CSEBaseStruct *csebase) {
 
     // Create the outer JSON object with the key "m2m:cse" and the value set to the inner object
     cJSON* root = cJSON_CreateObject();
-    cJSON_AddItemToObject(root, "m2m:db", innerObject);    
+    cJSON_AddItemToObject(root, "m2m:cb", innerObject);    
     return root;
 }
