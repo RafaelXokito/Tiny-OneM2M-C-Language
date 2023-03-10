@@ -24,3 +24,4 @@
 #define ACTR    63
 
 char init_protocol(struct sqlite3 * db, struct Route* route);
+char create_ae(struct Route* route);

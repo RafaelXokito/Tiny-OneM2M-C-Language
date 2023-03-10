@@ -81,3 +81,8 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
 
     return true;
 }
+
+char create_ae(struct Route* route) {
+    
+    return true;
+}

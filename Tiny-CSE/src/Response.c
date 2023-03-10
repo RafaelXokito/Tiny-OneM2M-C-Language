@@ -170,6 +170,55 @@ void *handle_connection(void *connectioninfo) {
 		free(json_str);
     } else if (strcmp(method, "POST") == 0) {
         printf("Command 2\n");
+
+		switch (destination->ty) {
+			case CSEBASE:
+
+				char* json_start = strstr(client_msg, "{"); // find the start of the JSON data
+				if (json_start != NULL) {
+					size_t json_length = strlen(json_start); // calculate the length of the JSON data
+					char json_data[json_length + 1]; // create a buffer to hold the JSON data
+					strncpy(json_data, json_start, json_length); // copy the JSON data to the buffer
+					json_data[json_length] = '\0'; // add a null terminator to the end of the buffer
+					printf("JSON data: %s\n", json_data);
+				}
+				else {
+					printf("JSON data not found.\n");
+				}
+
+				// TODO  -> deserialize the HTTP Body
+				char rs = create_ae(destination);
+				if (rs == false) {
+					printf("Could not create AE resource\n");
+					// close the client socket
+					close(info->socket_desc);
+					// free the socket descriptor pointer
+					free(info);
+					// exit the thread
+					pthread_exit(NULL);
+				}
+				break;
+			default:
+				char template[100] = "templates/";
+				
+				strcat(template, "404.html");
+				char * response_data = render_static_file(template);
+				char response[4096] = "HTTP/1.1 404 Not Found\r\n\r\n";
+				strcat(response, response_data);
+				strcat(response, "\r\n\r\n");
+
+				printf("http_header: %s\n", response);
+
+				send(info->socket_desc, response, sizeof(response), 0);
+
+				// close the client socket
+				close(info->socket_desc);
+				// free the socket descriptor pointer
+				free(info);
+				// exit the thread
+				pthread_exit(NULL);
+				break;
+		}
     }
 
 	printf("response: %s\n", response);

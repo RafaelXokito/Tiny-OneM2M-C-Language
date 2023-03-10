@@ -37,6 +37,7 @@
         "string.h": "c",
         "__locale": "c",
         "__config": "c",
-        "errno.h": "c"
+        "errno.h": "c",
+        "ae.h": "c"
     }
 }
