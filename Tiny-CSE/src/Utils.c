@@ -7,6 +7,6 @@ char* getCurrentTime() {
     static char timestamp[30];
     time_t now = time(NULL);
     struct tm *timeinfo = localtime(&now);
-    strftime(timestamp, sizeof(timestamp), "%Y%m%dT%H%M%S,%f", timeinfo);
+    strftime(timestamp, sizeof(timestamp), "%Y%m%dT%H%M%S", timeinfo);
     return timestamp;
 }
