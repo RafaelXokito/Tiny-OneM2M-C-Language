@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <sqlite3.h>
 #include <unistd.h>
+#include <regex.h>
 
 char * render_static_file(char * fileName) {
 	FILE* file = fopen(fileName, "r");
@@ -31,6 +32,12 @@ char * render_static_file(char * fileName) {
 	return temp;
 }
 
+void responseMessage(char* response, int status_code, char* status_message, char* message){
+        printf("Creating the json response\n");
+
+        sprintf(response, "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\n\r\n{\"status_code\": %d, \"message\":\"%s\"}", status_code, status_message, status_code, message);
+}
+
 void *handle_connection(void *connectioninfo) {
 	ConnectionInfo* info = (ConnectionInfo*) connectioninfo;
 
@@ -41,7 +48,9 @@ void *handle_connection(void *connectioninfo) {
     
     // read data from the client
     read(info->socket_desc, client_msg, 1024);
-    
+	char request[1024];
+	strcpy(request, client_msg);
+
     printf("%s\n", client_msg);
 
 	// parsing client socket header to get HTTP method, route
@@ -75,24 +84,20 @@ void *handle_connection(void *connectioninfo) {
 
 	printf("Check if route was founded\n");
 	if (destination == NULL) {
-		char template[100] = "templates/";
+		char response[4096] = "";
 
-		strcat(template, "404.html");
-		char * response_data = render_static_file(template);
-		char response[4096] = "HTTP/1.1 404 Not Found\r\n\r\n";
-		strcat(response, response_data);
-		strcat(response, "\r\n\r\n");
+        responseMessage(response,404,"Not found","Resource not found");
 
-		printf("http_header: %s\n", response);
+        printf("http_header: %s\n", response);
 
-		send(info->socket_desc, response, sizeof(response), 0);
+        send(info->socket_desc, response, strlen(response), 0);
 
-		// close the client socket
-		close(info->socket_desc);
-		// free the socket descriptor pointer
-		free(info);
-		// exit the thread
-		pthread_exit(NULL);
+        // close the client socket
+        close(info->socket_desc);
+        // free the socket descriptor pointer
+        free(info);
+        // exit the thread
+        pthread_exit(NULL);
 	}
 
 	printf("Check if is the default route\n");
@@ -143,7 +148,7 @@ void *handle_connection(void *connectioninfo) {
 		printf("Creating the json object\n");
 		cJSON *root = cJSON_CreateArray();
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
-			CSEBase csebase;
+			CSEBaseStruct csebase;
 			csebase.ty = sqlite3_column_int(stmt, 0);
 			strncpy(csebase.ri, (char *)sqlite3_column_text(stmt, 1), 50);
 			strncpy(csebase.rn, (char *)sqlite3_column_text(stmt, 2), 50);
@@ -169,21 +174,57 @@ void *handle_connection(void *connectioninfo) {
 		sqlite3_close(db);
 		free(json_str);
     } else if (strcmp(method, "POST") == 0) {
-        printf("Command 2\n");
+		char* json_start = strstr(request, "{"); // find the start of the JSON data
+		if (json_start != NULL) {
+			size_t json_length = strlen(json_start); // calculate the length of the JSON data
+			char json_data[json_length + 1]; // create a buffer to hold the JSON data
+			strncpy(json_data, json_start, json_length); // copy the JSON data to the buffer
+			json_data[json_length] = '\0'; // add a null terminator to the end of the buffer
 
-		switch (destination->ty) {
-			case CSEBASE: {
+			// Parse the JSON string into a cJSON object
+    		cJSON* json_object = cJSON_Parse(json_data);
 
-					char* json_start = strstr(client_msg, "{"); // find the start of the JSON data
-					if (json_start != NULL) {
-						size_t json_length = strlen(json_start); // calculate the length of the JSON data
-						char json_data[json_length + 1]; // create a buffer to hold the JSON data
-						strncpy(json_data, json_start, json_length); // copy the JSON data to the buffer
-						json_data[json_length] = '\0'; // add a null terminator to the end of the buffer
-						printf("JSON data: %s\n", json_data);
+			// Retrieve the first key-value pair in the object
+			cJSON* first = json_object->child;
+			if (first != NULL) {
+				// Print the key and value
+				printf("First key: %s\n", first->string);
 
-						char rs = create_ae(destination);
+				char* pattern = "^m2m:.*$";  // Regex pattern to match
+				// Compile the regex pattern
+				regex_t regex;
+				int ret = regcomp(&regex, pattern, 0);
+				if (ret) {
+					// TODO - Error bad request
+					fprintf(stderr, "Error compiling regex\n");
+				}
+
+				// Test if the string matches the regex pattern
+				ret = regexec(&regex, first->string, 0, NULL, 0);
+				if (!ret) {
+					printf("String matches regex pattern\n");
+					// first->string comes like "m2m:ae"
+					char aux[50];
+					strcpy(aux, first->string);
+					char *key = strtok(aux, ":");
+					key = strtok(NULL, ":");
+					to_lowercase(key);
+					// search in the types hash table for the 'ty' (resourceType) by the key (resourceName)
+					short ty = search_type(&types, key);
+					
+					// Get the JSON string from a specific element (let's say "age")
+					cJSON *content = cJSON_GetObjectItemCaseSensitive(json_object, first->string);
+					if (content == NULL) {
+						// TODO - Error 500
+						fprintf(stderr, "Error while getting the content from request\n");
+					}
+
+					switch (ty) {
+					case AE: {
+						strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
+						char rs = create_ae(info->route, destination, content, response);
 						if (rs == false) {
+							// TODO - Error 400 Bad request
 							printf("Could not create AE resource\n");
 							// close the client socket
 							close(info->socket_desc);
@@ -191,35 +232,34 @@ void *handle_connection(void *connectioninfo) {
 							free(info);
 							// exit the thread
 							pthread_exit(NULL);
-						}	
+						}
+						}		
+						break;
+					default:
+						// TODO - Error bad request
+						printf("Theres no available resource for %s\n", key);
+						break;
 					}
-					else {
-						printf("JSON data not found.\n");
-					}
+				} else if (ret == REG_NOMATCH) {
+					// TODO - Error bad request
+					printf("String does not match regex pattern\n");
+				} else {
+					char buf[100];
+					regerror(ret, &regex, buf, sizeof(buf));
+					// TODO - Error 500
+					fprintf(stderr, "Error matching regex: %s\n", buf);
 				}
+			} else {
+				// TODO - Error bad request
+				printf("Object is empty\n");
+			}
 
-				break;
-			default: {
-				char template[100] = "templates/";
-				
-				strcat(template, "404.html");
-				char * response_data = render_static_file(template);
-				char response[4096] = "HTTP/1.1 404 Not Found\r\n\r\n";
-				strcat(response, response_data);
-				strcat(response, "\r\n\r\n");
+			// Free the cJSON object
+    		cJSON_Delete(json_object);
 
-				printf("http_header: %s\n", response);
-
-				send(info->socket_desc, response, sizeof(response), 0);
-
-				// close the client socket
-				close(info->socket_desc);
-				// free the socket descriptor pointer
-				free(info);
-				// exit the thread
-				pthread_exit(NULL);
-				}
-				break;
+		} else {
+			// TODO - Error bad request
+			printf("JSON data not found.\n");
 		}
     }
 

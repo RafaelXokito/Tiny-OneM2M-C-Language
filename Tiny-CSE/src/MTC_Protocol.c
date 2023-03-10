@@ -2,6 +2,11 @@
 
 char init_protocol(struct sqlite3 * db, struct Route* route) {
 
+    char rs = init_types();
+    if (rs == false) {
+        return false;
+    }
+
     // Sqlite3 initialization opening/creating database
     db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
@@ -17,7 +22,7 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
         return false;
     }
 
-    CSEBase * csebase = malloc(sizeof(CSEBase));
+    CSEBaseStruct * csebase = malloc(sizeof(CSEBaseStruct));
     
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_ROW) {
@@ -67,7 +72,7 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
             printf("CSE_Base already inserted.\n");
 
             // In case of the table and data exists, get the 
-            char rs = getLastCSEBase(csebase, db);
+            char rs = getLastCSEBaseStruct(csebase, db);
             if (rs == false) {
                 return false;
             }
@@ -82,7 +87,36 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
     return true;
 }
 
-char create_ae(struct Route* route) {
+char create_ae(struct Route* route, struct Route* destination, cJSON *content, char* response) {
     
+    // Sqlite3 initialization opening/creating database
+    struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
+    if (db == NULL) {
+		return false;
+	}
+
+    printf("Creating AE\n");
+
+    AEStruct * ae = malloc(sizeof(AEStruct));
+
+    // Should be garantee that the content (json object) dont have this keys
+    cJSON_AddStringToObject(content, "pi", destination->ri);
+    
+    char rs = init_ae(ae, content, db);
+    if (rs == false) {
+        return false;
+    }
+
+    // Add New Routes
+    char uri[60];
+    snprintf(uri, sizeof(uri), "/%s", ae->ri);
+    addRoute(route, uri, ae->ri, ae->ty, ae->rn);
+    inorder(route);
+
+    // Convert the AE struct to json and the Json Object to Json String
+    char *str = cJSON_Print(ae_to_json(ae));
+    strcat(response, str);
+    free(str);
+
     return true;
 }

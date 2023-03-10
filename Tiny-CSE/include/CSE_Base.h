@@ -5,10 +5,10 @@ typedef struct {
     char pi[50]; // parentID
     char ct[25]; // creationTime
     char lt[25]; // lastModifiedTime
-} CSEBase;
+} CSEBaseStruct;
 
-char init_cse_base(CSEBase * csebase, struct sqlite3 * db, char isTableCreated);
+char init_cse_base(CSEBaseStruct * csebase, struct sqlite3 * db, char isTableCreated);
 
-char getLastCSEBase(CSEBase * csebase, sqlite3 *db);
+char getLastCSEBaseStruct(CSEBaseStruct * csebase, sqlite3 *db);
 
-cJSON *csebase_to_json(const CSEBase *csebase);
+cJSON *csebase_to_json(const CSEBaseStruct *csebase);

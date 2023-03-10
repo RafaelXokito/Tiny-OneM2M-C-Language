@@ -1,6 +1,8 @@
 #include "CSE_Base.h"
 #include "AE.h"
 
+#include "Types.h"
+
 #define MIXED   0
 #define ACP     1
 #define AE      2
@@ -24,4 +26,4 @@
 #define ACTR    63
 
 char init_protocol(struct sqlite3 * db, struct Route* route);
-char create_ae(struct Route* route);
+char create_ae(struct Route* route, struct Route* destination, cJSON *content, char* response);

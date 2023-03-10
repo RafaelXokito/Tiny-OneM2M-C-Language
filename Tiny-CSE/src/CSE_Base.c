@@ -1,6 +1,6 @@
 #include "Common.h"
 
-char init_cse_base(CSEBase * csebase, struct sqlite3 * db, char isTableCreated) {
+char init_cse_base(CSEBaseStruct * csebase, struct sqlite3 * db, char isTableCreated) {
 
     // {
     //     "ty": 5,
@@ -32,7 +32,7 @@ char init_cse_base(CSEBase * csebase, struct sqlite3 * db, char isTableCreated) 
 
     if (isTableCreated == false) {
         // Create the table if it doesn't exist
-        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT, rn TEXT, pi TEXT, ct TEXT, lt TEXT)";
+        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT, rn TEXT, pi TEXT, et TEXT, ct TEXT, lt TEXT)";
         short rc = sqlite3_exec(db, createTableSQL, NULL, NULL, NULL);
         if (rc != SQLITE_OK) {
             printf("Failed to create table: %s\n", sqlite3_errmsg(db));
@@ -77,16 +77,16 @@ char init_cse_base(CSEBase * csebase, struct sqlite3 * db, char isTableCreated) 
     return true;
 }
 
-char getLastCSEBase(CSEBase * csebase, sqlite3 *db) {
+char getLastCSEBaseStruct(CSEBaseStruct * csebase, sqlite3 *db) {
 
     // Prepare the SQL statement to retrieve the last row from the table
     
-    char *sql = sqlite3_mprintf("SELECT * FROM mtc WHERE ty = %d ORDER BY ROWID DESC LIMIT 1;", CSEBASE);
+    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, ct, lt FROM mtc WHERE ty = %d ORDER BY ROWID DESC LIMIT 1;", CSEBASE);
     sqlite3_stmt *stmt;
     int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     sqlite3_free(sql);
     if (rc != SQLITE_OK) {
-        printf("Failed to prepare getLastCSEBase query: %s\n", sqlite3_errmsg(db));
+        printf("Failed to prepare getLastCSEBaseStruct query: %s\n", sqlite3_errmsg(db));
         return false;
     }
 
@@ -107,7 +107,7 @@ char getLastCSEBase(CSEBase * csebase, sqlite3 *db) {
     return true;
 }
 
-cJSON *csebase_to_json(const CSEBase *csebase) {
+cJSON *csebase_to_json(const CSEBaseStruct *csebase) {
     cJSON *root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "ty", csebase->ty);
     cJSON_AddStringToObject(root, "ri", csebase->ri);

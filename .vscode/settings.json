@@ -38,6 +38,9 @@
         "__locale": "c",
         "__config": "c",
         "errno.h": "c",
-        "ae.h": "c"
+        "ae.h": "c",
+        "string": "c",
+        "iosfwd": "c",
+        "utils.h": "c"
     }
 }
