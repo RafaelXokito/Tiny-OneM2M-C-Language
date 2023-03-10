@@ -12,7 +12,8 @@ char init_cse_base(CSEBase * csebase, struct sqlite3 * db, char isTableCreated) 
     // }
 
 	// Parse the JSON object
-    cJSON *json = cJSON_Parse("{\"ty\": 5, \"ri\": \"id-in\", \"rn\": \"cse-in\", \"pi\": \"\", \"ct\": \"20230309T111952,126300\", \"lt\": \"20230309T111952,126300\"}");
+    char jsonString[] = "{\"ty\": 5, \"ri\": \"id-in\", \"rn\": \"cse-in\", \"pi\": \"\", \"ct\": \"20230309T111952,126300\", \"lt\": \"20230309T111952,126300\"}";
+    cJSON *json = cJSON_Parse(jsonString);
     if (json == NULL) {
         printf("Failed to parse JSON.\n");
         return false;
@@ -72,5 +73,36 @@ char init_cse_base(CSEBase * csebase, struct sqlite3 * db, char isTableCreated) 
     sqlite3_close(db);
 
     printf("CSE_Base data inserted successfully.\n");
+
+    return true;
+}
+
+char getLastCSEBase(CSEBase * csebase, sqlite3 *db) {
+
+    // Prepare the SQL statement to retrieve the last row from the table
+    
+    // char *sql = sqlite3_mprintf("SELECT * FROM %s ORDER BY ROWID DESC LIMIT 1;", table_name);
+    const char *sql = "SELECT * FROM csebase ORDER BY ROWID DESC LIMIT 1;";
+    sqlite3_stmt *stmt;
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Failed to prepare getLastCSEBase query: %s\n", sqlite3_errmsg(db));
+        return false;
+    }
+
+    // Execute the query
+    rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        // Retrieve the data from the row
+        csebase->ty = sqlite3_column_int(stmt, 0);
+        strncpy(csebase->ri, (char *)sqlite3_column_text(stmt, 1), 50);
+        strncpy(csebase->rn, (char *)sqlite3_column_text(stmt, 2), 50);
+        strncpy(csebase->pi, (char *)sqlite3_column_text(stmt, 3), 50);
+        strncpy(csebase->ct, (char *)sqlite3_column_text(stmt, 4), 25);
+        strncpy(csebase->lt, (char *)sqlite3_column_text(stmt, 5), 25);
+    }
+
+    sqlite3_finalize(stmt);
+
     return true;
 }

@@ -30,26 +30,18 @@ int main() {
 	pthread_t thread_id;
 	
 	// registering Routes
-	struct Route * route = initRoute("/", "index.html"); 
-	addRoute(route, "/about", "about.html");
+	struct Route * route = initRoute("/", -1, "index.html");
+
+	sqlite3 *db;
+	short rs = init_protocol(db, route);
+	if (rs == false) {
+        exit(EXIT_FAILURE);
+    }
 
 	printf("\n====================================\n");
 	printf("=========ALL VAILABLE ROUTES========\n");
 	// display all available routes
 	inorder(route);
-
-	sqlite3 *db;
-	short rs = init_protocol(db);
-	if (rs == false) {
-        exit(EXIT_FAILURE);
-    }
-	
-	// char *query = "CREATE TABLE mytable (id INT, name TEXT);";
-	// // When we expect the query to return something such as a SELECT statement isCallback flat should be true
-	// short rc = execDatabaseScript(query, mydb, false);
-	// if (rc == false) {
-	// 	exit(0);
-	// }
 
 	// accept incoming client connections and handle them in separate threads
     while (1) {

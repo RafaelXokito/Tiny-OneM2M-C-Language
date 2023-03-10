@@ -1,7 +1,7 @@
 #include "Common.h"
 
-char init_protocol(struct sqlite3 * db) {
-    
+char init_protocol(struct sqlite3 * db, struct Route* route) {
+
     // Sqlite3 initialization opening/creating database
     db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
@@ -17,13 +17,14 @@ char init_protocol(struct sqlite3 * db) {
         return false;
     }
 
+    CSEBase * csebase = malloc(sizeof(CSEBase));
+    
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_ROW) {
         // If table dosnt exist we create it and populate it
         printf("The table does not exist.\n");
         sqlite3_finalize(stmt);
         
-        CSEBase * csebase = malloc(sizeof(CSEBase));
         char rs = init_cse_base(csebase, db, false);
         if (rs == false) {
             return false;
@@ -54,18 +55,30 @@ char init_protocol(struct sqlite3 * db) {
         sqlite3_finalize(stmt);
 
         if (rowCount == 0) {
-            printf("The table is empty.\n");
+            printf("The csebase table is empty.\n");
 
-            CSEBase * csebase = malloc(sizeof(CSEBase));
             char rs = init_cse_base(csebase, db, true);
             if (rs == false) {
                 return false;
             }
         } else {
             printf("CSE_Base already inserted.\n");
+
+            char rs = getLastCSEBase(csebase, db);
+            if (rs == false) {
+                return false;
+            }
         }
 
     }
+
+    // TODO - Creation and Last Modification Time
+    // TODO - Quando a BD já está criada, o root node deve ser carregado para um jsonObject e criar as rotas
+
+    // Add New Routes
+    char uri[50];
+    snprintf(uri, sizeof(uri), "/%s", csebase->ri);
+    addRoute(route, uri, csebase->ty, csebase->rn);
 
     return true;
 }

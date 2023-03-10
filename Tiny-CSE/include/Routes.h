@@ -3,14 +3,15 @@
 
 struct Route {
 	char* key;
+	short ty; // resource type
 	char* value;
 
 	struct Route *left, *right;
 };
 
-struct Route * initRoute(char* key, char* value);
+struct Route * initRoute(char* key, short ty, char* value);
 
-struct Route * addRoute(struct Route * root, char* key, char* value);
+struct Route * addRoute(struct Route * root, char* key, short ty, char* value);
 
 struct Route * search(struct Route * root, char * key);
 

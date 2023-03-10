@@ -33,6 +33,8 @@
         "signals.h": "c",
         "__string": "c",
         "mtc_protocol.h": "c",
-        "cse_base.h": "c"
+        "cse_base.h": "c",
+        "string.h": "c",
+        "__locale": "c"
     }
 }

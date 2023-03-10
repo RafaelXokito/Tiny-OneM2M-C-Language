@@ -1,7 +1,7 @@
 #import <sqlite3.h>
 
 typedef struct {
-    int ty; // resourceType
+    short ty; // resourceType
     char ri[50]; // resourceID
     char rn[50]; // resourceName
     char pi[50]; // parentID
@@ -10,3 +10,5 @@ typedef struct {
 } CSEBase;
 
 char init_cse_base(CSEBase * csebase, struct sqlite3 * db, char isTableCreated);
+
+char getLastCSEBase(CSEBase * csebase, sqlite3 *db);
