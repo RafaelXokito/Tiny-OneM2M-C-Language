@@ -115,7 +115,7 @@ void *handle_connection(void *connectioninfo) {
 
 		printf("http_header: %s\n", response);
 
-		send(info->socket_desc, response, sizeof(response), 0);
+		send(info->socket_desc, response, strlen(response), 0);
 
 		// close the client socket
 		close(info->socket_desc);
@@ -135,28 +135,16 @@ void *handle_connection(void *connectioninfo) {
 		case CSEBASE: {
 			char rs = retrieve_csebase(destination,response);
 			if (rs == false) {
-				// TODO - Error 400 Bad request
-				printf("Could not retrieve CSE_Base resource\n");
-				// close the client socket
-				close(info->socket_desc);
-				// free the socket descriptor pointer
-				free(info);
-				// exit the thread
-				pthread_exit(NULL);
+				responseMessage(response,500,"Internal Server Error","Error retrieving the data");
+				fprintf(stderr,"Could not retrieve CSE_Base resource\n");
 			}
 			break;
 			}
 		case AE: {
 			char rs = retrieve_ae(destination,response);
 			if (rs == false) {
-				// TODO - Error 400 Bad request
-				printf("Could not retrieve AE resource\n");
-				// close the client socket
-				close(info->socket_desc);
-				// free the socket descriptor pointer
-				free(info);
-				// exit the thread
-				pthread_exit(NULL);
+				responseMessage(response,500,"Internal Server Error","Error retrieving the data");
+				fprintf(stderr,"Could not retrieve AE resource\n");
 			}
 			}
 			break;
@@ -186,7 +174,7 @@ void *handle_connection(void *connectioninfo) {
 				regex_t regex;
 				int ret = regcomp(&regex, pattern, 0);
 				if (ret) {
-					// TODO - Error bad request
+					responseMessage(response,500,"Internal Server Error","Error compiling regex");
 					fprintf(stderr, "Error compiling regex\n");
 				}
 
@@ -206,42 +194,43 @@ void *handle_connection(void *connectioninfo) {
 					// Get the JSON string from a specific element (let's say "age")
 					cJSON *content = cJSON_GetObjectItemCaseSensitive(json_object, first->string);
 					if (content == NULL) {
-						// TODO - Error 500
 						fprintf(stderr, "Error while getting the content from request\n");
-					}
-
-					switch (ty) {
-					case AE: {
-						strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
-						char rs = create_ae(info->route, destination, content, response);
-						if (rs == false) {
-							// TODO - Error 400 Bad request
-							printf("Could not create AE resource\n");
+						responseMessage(response,500,"Internal Server Error","Error while getting the content from request");
+					} else {
+						// If everything was ok, we proced to the creation of resource
+						switch (ty) {
+						case AE: {
+							strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
+							char rs = create_ae(info->route, destination, content, response);
+							if (rs == false) {
+								// The method it self already change the response properly
+								fprintf(stderr, "Could not create AE resource\n");
+							}
+							break;
 						}
-						break;
-					}
-					default:
-						// TODO - Error bad request
-						printf("Theres no available resource for %s\n", key);
-						break;
+						default:
+							responseMessage(response,400,"Bad Request","Invalid resource");
+							fprintf(stderr, "Theres no available resource for %s\n", key);
+							break;
+						}
 					}
 				} else if (ret == REG_NOMATCH) {
-					// TODO - Error bad request
-					printf("String does not match regex pattern\n");
+					responseMessage(response,400,"Bad Request","Invalid json root name, should match m2m:<resource> (e.g m2m:ae)");
+					fprintf(stderr, "Invalid json root name\n");
 				} else {
 					char buf[100];
 					regerror(ret, &regex, buf, sizeof(buf));
-					// TODO - Error 500
+					responseMessage(response,500,"Bad Request","Error matching regex");
 					fprintf(stderr, "Error matching regex: %s\n", buf);
 				}
 			} else {
-				// TODO - Error bad request
-				printf("Object is empty\n");
+				responseMessage(response,400,"Bad Request","Invalid request body");
+				fprintf(stderr, "Object is empty\n");
 			}
 
 		} else {
-			// TODO - Error bad request
-			printf("JSON data not found.\n");
+			responseMessage(response,400,"Bad Request","Invalid request body");
+			fprintf(stderr, "JSON data not found.\n");
 		}
     }
 
