@@ -33,7 +33,13 @@ int main() {
 	if (rs == false) {
         exit(EXIT_FAILURE);
     }
+	// The DB connection should exist in each thread and should not be shared
+	closeDatabase(db);
 
+    rs = init_routes(route, db);
+	if (rs == false) {
+        exit(EXIT_FAILURE);
+    }
 	// The DB connection should exist in each thread and should not be shared
 	closeDatabase(db);
 

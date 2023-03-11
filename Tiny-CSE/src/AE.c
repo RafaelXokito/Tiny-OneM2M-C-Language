@@ -14,7 +14,7 @@ char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
 
     // Free the cJSON object
     cJSON_Delete(content);
-// Prepare the insert statement
+    // Prepare the insert statement
     const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, et, ct, lt) VALUES (?, ?, ?, ?, ?, ?, ?)";
     sqlite3_stmt *stmt;
     short rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, NULL);

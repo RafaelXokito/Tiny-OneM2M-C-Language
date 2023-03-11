@@ -15,15 +15,18 @@ int callback(void *NotUsed, int argc, char **argv, char **azColName) {
 
 // Define an init function that returns an sqlite3 pointer
 struct sqlite3 *initDatabase(char* databasename) {
-  sqlite3 *db;
-  char *err_msg = 0;
-  int rc = sqlite3_open(databasename, &db);
-  if (rc != SQLITE_OK) {
-    fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
-    sqlite3_close(db);
-    return NULL;
-  }
-  return db;
+    sqlite3 *db;
+    char *err_msg = 0;
+    int rc = sqlite3_open_v2(databasename, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return NULL;
+    }
+
+    sqlite3_busy_timeout(db, 1000);
+
+    return db;
 }
 
 short execDatabaseScript(char* query, struct sqlite3 *db, short isCallback) {

@@ -41,6 +41,8 @@
         "ae.h": "c",
         "string": "c",
         "iosfwd": "c",
-        "utils.h": "c"
+        "utils.h": "c",
+        "atomic": "c",
+        "cstddef": "c"
     }
 }

@@ -33,7 +33,7 @@ char * render_static_file(char * fileName) {
 	return temp;
 }
 
-void responseMessage(char* response, int status_code, char* status_message, char* message){
+void responseMessage(char* response, int status_code, char* status_message, char* message) {
         printf("Creating the json response\n");
 
         sprintf(response, "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\n\r\n{\"status_code\": %d, \"message\":\"%s\"}", status_code, status_message, status_code, message);
@@ -78,6 +78,7 @@ void *handle_connection(void *connectioninfo) {
 		header_parse_counter++;
 	}
 
+	to_lowercase(urlRoute);
 	printf("The method is %s\n", method);
 	printf("The route is %s\n", urlRoute);
 
@@ -216,12 +217,6 @@ void *handle_connection(void *connectioninfo) {
 						if (rs == false) {
 							// TODO - Error 400 Bad request
 							printf("Could not create AE resource\n");
-							// close the client socket
-							close(info->socket_desc);
-							// free the socket descriptor pointer
-							free(info);
-							// exit the thread
-							pthread_exit(NULL);
 						}
 						break;
 					}

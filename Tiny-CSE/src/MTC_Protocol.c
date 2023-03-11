@@ -7,11 +7,19 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
         return false;
     }
 
+    pthread_mutex_t db_mutex;
+
+    // initialize mutex
+    pthread_mutex_init(&db_mutex, NULL);
+
     // Sqlite3 initialization opening/creating database
     db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
 		return false;
 	}
+
+    // perform database operations
+    pthread_mutex_lock(&db_mutex);
 
     // Check if the cse_base exists
     sqlite3_stmt *stmt;
@@ -78,6 +86,12 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
         }
     }
 
+    // access database here
+    pthread_mutex_unlock(&db_mutex);
+
+    // clean up
+    pthread_mutex_destroy(&db_mutex);
+
     // Add New Routes
     char uri[60];
     snprintf(uri, sizeof(uri), "/%s", csebase->ri);
@@ -136,9 +150,42 @@ char retrieve_csebase(struct Route * destination, char *response) {
 
 char create_ae(struct Route* route, struct Route* destination, cJSON *content, char* response) {
     
+    char *keys[] = {"ri", "rn"};  // array of keys to validate
+    int num_keys = 2;  // number of keys in the array
+    char aux_response[300] = "";
+    char rs = validate_keys(content, keys, num_keys, aux_response);
+    if (rs == false) {
+        responseMessage(response,400,"Bad Request",aux_response);
+        return false;
+    }
+
+    char uri[60];
+    strcpy(uri,destination->key);
+    cJSON *value_ri = cJSON_GetObjectItem(content, "ri");  // retrieve the value associated with "key_name"
+    if (value_ri == NULL) {
+        responseMessage(response,400,"Bad Request","ri (resource id) key not found");
+        return false;
+    }
+    snprintf(uri, sizeof(uri), "%s/%s",uri ,value_ri->valuestring);
+    printf("%s\n", uri);
+    if (search(route, uri) != NULL) {
+        responseMessage(response,400,"Bad Request","ri (resource id) key already exist");
+        return false;
+    }
+    cJSON *value_rn = cJSON_GetObjectItem(content, "rn");  // retrieve the value associated with "key_name"
+    if (value_rn == NULL) {
+        responseMessage(response,400,"Bad Request","rn (resource name) key not found");
+        return false;
+    }
+    if (search_byrn_ty(route, value_rn->valuestring, AE) != NULL) {
+        responseMessage(response,400,"Bad Request","rn (resource name) key already exist in this ty (resource type)");
+        return false;
+    }
+
     // Sqlite3 initialization opening/creating database
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
+        responseMessage(response,500,"Internal Server Error","Could not open the database");
 		return false;
 	}
 
@@ -149,16 +196,15 @@ char create_ae(struct Route* route, struct Route* destination, cJSON *content, c
     // Should be garantee that the content (json object) dont have this keys
     cJSON_AddStringToObject(content, "pi", destination->ri);
     
-    char rs = init_ae(&ae, content, db);
+    rs = init_ae(&ae, content, db);
     if (rs == false) {
+        responseMessage(response,400,"Bad Request","Verify the request body");
         return false;
     }
 
     // Add New Routes
-    char uri[60];
-    snprintf(uri, sizeof(uri), "/%s", ae.ri);
     addRoute(route, uri, ae.ri, ae.ty, ae.rn);
-    inorder(route);
+    printf("New Route: %s -> %s -> %d -> %s \n", uri, ae.ri, ae.ty, ae.rn);
 
     // Convert the AE struct to json and the Json Object to Json String
     cJSON *root = ae_to_json(&ae);
@@ -211,4 +257,18 @@ char retrieve_ae(struct Route * destination, char *response) {
     free(json_str);
 
     return true;
+}
+
+char validate_keys(cJSON *object, char *keys[], int num_keys, char *response) {
+    cJSON *value = NULL;
+
+    for (int i = 0; i < num_keys; i++) {
+        value = cJSON_GetObjectItem(object, keys[i]);  // retrieve the value associated with the key
+        if (value == NULL) {
+            // concat each error key not found in object
+            sprintf(response, "%s%s key not found; ", response, keys[i]);
+        }
+    }
+
+    return strcmp(response, "") == 0 ? true : false;  // all keys were found in object
 }
