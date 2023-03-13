@@ -1,6 +1,6 @@
 #include "Common.h"
 
-char init_protocol(struct sqlite3 * db, struct Route* route) {
+char init_protocol(struct Route* route) {
 
     char rs = init_types();
     if (rs == false) {
@@ -13,6 +13,7 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
     pthread_mutex_init(&db_mutex, NULL);
 
     // Sqlite3 initialization opening/creating database
+    sqlite3 *db;
     db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
 		return false;
@@ -96,6 +97,12 @@ char init_protocol(struct sqlite3 * db, struct Route* route) {
     char uri[60];
     snprintf(uri, sizeof(uri), "/%s", csebase->ri);
     addRoute(route, uri, csebase->ri, csebase->ty, csebase->rn);
+
+    // The DB connection should exist in each thread and should not be shared
+    if (closeDatabase(db) == false) {
+        fprintf(stderr, "Error closing database.\n");
+        return false;
+    }
 
     return true;
 }
@@ -182,6 +189,11 @@ char create_ae(struct Route* route, struct Route* destination, cJSON *content, c
         return false;
     }
 
+    pthread_mutex_t db_mutex;
+
+    // initialize mutex
+    pthread_mutex_init(&db_mutex, NULL);
+
     // Sqlite3 initialization opening/creating database
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
@@ -195,6 +207,9 @@ char create_ae(struct Route* route, struct Route* destination, cJSON *content, c
 
     // Should be garantee that the content (json object) dont have this keys
     cJSON_AddStringToObject(content, "pi", destination->ri);
+
+    // perform database operations
+    pthread_mutex_lock(&db_mutex);
     
     rs = init_ae(&ae, content, db);
     if (rs == false) {
@@ -205,6 +220,12 @@ char create_ae(struct Route* route, struct Route* destination, cJSON *content, c
     // Add New Routes
     addRoute(route, uri, ae.ri, ae.ty, ae.rn);
     printf("New Route: %s -> %s -> %d -> %s \n", uri, ae.ri, ae.ty, ae.rn);
+
+    // access database here
+    pthread_mutex_unlock(&db_mutex);
+
+    // clean up
+    pthread_mutex_destroy(&db_mutex);
 
     // Convert the AE struct to json and the Json Object to Json String
     cJSON *root = ae_to_json(&ae);

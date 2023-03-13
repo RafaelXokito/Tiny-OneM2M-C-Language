@@ -14,7 +14,7 @@ int callback(void *NotUsed, int argc, char **argv, char **azColName) {
 }
 
 // Define an init function that returns an sqlite3 pointer
-struct sqlite3 *initDatabase(char* databasename) {
+sqlite3 *initDatabase(const char* databasename) {
     sqlite3 *db;
     char *err_msg = 0;
     int rc = sqlite3_open_v2(databasename, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL);
@@ -46,6 +46,27 @@ short execDatabaseScript(char* query, struct sqlite3 *db, short isCallback) {
     return true;
 }
 
-void closeDatabase(struct sqlite3 *db) {
-    sqlite3_close(db);
+int closeDatabase(sqlite3 *db) {
+    int rc;
+    sqlite3_stmt *stmt;
+
+    // Finalize all outstanding statements
+    while ((stmt = sqlite3_next_stmt(db, NULL)) != NULL) {
+        sqlite3_finalize(stmt);
+    }
+
+    // Commit or rollback any outstanding transactions
+    if (sqlite3_get_autocommit(db) == 0) {
+        rc = sqlite3_exec(db, "COMMIT", NULL, NULL, NULL);
+        if (rc != SQLITE_OK) {
+            sqlite3_exec(db, "ROLLBACK", NULL, NULL, NULL);
+        }
+    }
+
+    rc = sqlite3_close(db);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error closing database: %s\n", sqlite3_errmsg(db));
+        return false;
+    }
+    return true;
 }

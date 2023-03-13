@@ -1,7 +1,7 @@
 #include "Common.h"
 
 char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
-
+    
     // Convert the JSON object to a C structure
     ae->ty = AE;
     strcpy(ae->ri, cJSON_GetObjectItemCaseSensitive(content, "ri")->valuestring);

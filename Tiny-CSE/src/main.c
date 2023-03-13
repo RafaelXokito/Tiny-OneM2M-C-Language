@@ -28,20 +28,15 @@ int main() {
 	// registering Routes
 	struct Route * route = initRoute("/", "", -1, "index.html");
 
-	sqlite3 *db;
-	short rs = init_protocol(db, route);
+	short rs = init_protocol(route);
 	if (rs == false) {
         exit(EXIT_FAILURE);
     }
-	// The DB connection should exist in each thread and should not be shared
-	closeDatabase(db);
 
-    rs = init_routes(route, db);
+    rs = init_routes(route);
 	if (rs == false) {
         exit(EXIT_FAILURE);
     }
-	// The DB connection should exist in each thread and should not be shared
-	closeDatabase(db);
 
 	printf("\n====================================\n");
 	printf("=========ALL VAILABLE ROUTES========\n");

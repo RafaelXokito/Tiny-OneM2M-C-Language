@@ -25,7 +25,7 @@
 #define TSB     60
 #define ACTR    63
 
-char init_protocol(struct sqlite3 * db, struct Route* route);
+char init_protocol(struct Route* route);
 char retrieve_csebase(struct Route * destination, char *response);
 char create_ae(struct Route* route, struct Route* destination, cJSON *content, char* response);
 char retrieve_ae(struct Route * destination, char *response);

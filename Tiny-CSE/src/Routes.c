@@ -72,11 +72,12 @@ char * constructPath(char * result, char * resourceId, char * parentId, struct s
 	return result;
 }
 
-char init_routes(struct Route* route, struct sqlite3 *db) {
+char init_routes(struct Route* route) {
     printf("Initializing routes\n");
     // call the constructPath function for each resource in the database
 
 	// Sqlite3 initialization opening/creating database
+	sqlite3 *db;
     db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
 		return false;
@@ -111,6 +112,12 @@ char init_routes(struct Route* route, struct sqlite3 *db) {
     }
 
     sqlite3_finalize(stmt);
+
+	// The DB connection should exist in each thread and should not be shared
+    if (closeDatabase(db) == false) {
+        fprintf(stderr, "Error closing database.\n");
+        return false;
+    }
 
 	return true;
 }
