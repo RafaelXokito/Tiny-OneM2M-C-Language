@@ -1,6 +1,6 @@
 #include "Common.h"
 
-char init_cse_base(CSEBaseStruct * csebase, struct sqlite3 * db, char isTableCreated) {
+char init_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
 
     // {
     //     "ty": 5,
@@ -10,6 +10,13 @@ char init_cse_base(CSEBaseStruct * csebase, struct sqlite3 * db, char isTableCre
     //     "ct": "20230309T111952,126300",
     //     "lt": "20230309T111952,126300"
     // }
+
+    // Sqlite3 initialization opening/creating database
+    sqlite3 *db;
+    db = initDatabase("tiny-oneM2M.db");
+    if (db == NULL) {
+		return false;
+	}
 
 	// Parse the JSON object
     char jsonString[] = "{\"ty\": 5, \"ri\": \"onem2m\", \"rn\": \"cse-in\", \"pi\": \"\"}";
@@ -70,7 +77,7 @@ char init_cse_base(CSEBaseStruct * csebase, struct sqlite3 * db, char isTableCre
 
     // Finalize the statement and close the database
     sqlite3_finalize(stmt);
-    sqlite3_close(db);
+    closeDatabase(db);
 
     printf("CSE_Base data inserted successfully.\n");
 

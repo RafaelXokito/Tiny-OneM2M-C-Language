@@ -8,8 +8,8 @@ struct Route * initRoute(char* key, char* ri, short ty, char* value) {
 	struct Route * temp = (struct Route *) malloc(sizeof(struct Route));
 
 	temp->key = (char*) malloc(strlen(key) + 1);
-	to_lowercase(temp->key);
 	strcpy(temp->key, key);
+    to_lowercase(temp->key);
 
 	temp->ri = (char*) malloc(strlen(ri) + 1);
 	strcpy(temp->ri, ri);
@@ -24,25 +24,25 @@ struct Route * initRoute(char* key, char* ri, short ty, char* value) {
 }
 
 // function to recursively construct the string for a resource
-char * constructPath(char * result, char * resourceId, char * parentId, struct sqlite3 *db) {
+char * constructPath(char * result, char * resourceName, char * parentName, struct sqlite3 *db) {
 	/*
 	#pseudo-code from the whole algorithm#
 
-	select every records by resourceId and parentId
-	iterate every record that have parentId
+	select every records by resourceName and parentName
+	iterate every record that have parentName
 		calls a function that do:
 			initializate a blank string
-			if parentId exists
+			if parentName exists
 				get the parent record
 				calls it self with the parent data
-				concatenate the resourceId with the string
+				concatenate the resourceName with the string
 			else
-				return resourceId
+				return resourceName
 			return string concatenated
 	*/
-	if (strcmp("", parentId) != 0) {
+	if (strcmp("", parentName) != 0) {
 		// get the parent record
-		char *sql = sqlite3_mprintf("SELECT ri, pi FROM mtc WHERE ri='%s'", parentId);
+		char *sql = sqlite3_mprintf("SELECT rn, pi FROM mtc WHERE ri='%s'", parentName);
 		sqlite3_stmt *stmt;
 		int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
 		sqlite3_free(sql);
@@ -54,21 +54,21 @@ char * constructPath(char * result, char * resourceId, char * parentId, struct s
 		if(sqlite3_step(stmt) == SQLITE_ROW) {
 
 			// calls it self with the parent data
-			char * parentResourceId = (char *) sqlite3_column_text(stmt, 0);
+			char * parentResourceName = (char *) sqlite3_column_text(stmt, 0);
 			char * parentParentId = (char *) sqlite3_column_text(stmt, 1);
-			strcat(result, constructPath(result, parentResourceId,parentParentId,db));
-			// concatenate the resourceId with the string
+			strcat(result, constructPath(result, parentResourceName,parentParentId,db));
+			// concatenate the resourceName with the string
 		} else {
-			fprintf(stderr, "Resource not found: %s\n", parentId);
+			fprintf(stderr, "Resource not found: %s\n", parentName);
 			sqlite3_finalize(stmt);
 			exit(0);
 		}
 	} else {
     	strcat(result, "/");
-		return resourceId;
+		return resourceName;
 	}
 	strcat(result, "/");
-	strcat(result, resourceId);
+	strcat(result, resourceName);
 	return result;
 }
 
@@ -96,16 +96,17 @@ char init_routes(struct Route* route) {
 		}
 		
 
-		char * resourceId = (char *) sqlite3_column_text(stmt, 0);
-		printf("Initializing route: %s\n", resourceId);
-        char * parentId = (char *) sqlite3_column_text(stmt, 1);
-		char uri[60] = "";
-        constructPath(uri, resourceId, parentId, db);
-
-		short resourceType = sqlite3_column_int(stmt, 2);
 		char * resourceName = (char *) sqlite3_column_text(stmt, 3);
+		printf("Initializing route: %s\n", resourceName);
+        char * parentName = (char *) sqlite3_column_text(stmt, 1);
+		char uri[60] = "";
+        constructPath(uri, resourceName, parentName, db);
+
+		char * resourceId = (char *) sqlite3_column_text(stmt, 0);
+		short resourceType = sqlite3_column_int(stmt, 2);
 		
 		// Add New Routes
+		to_lowercase(uri);
 		addRoute(route, uri, resourceId, resourceType, resourceName);
 
 		printf("Route created: %s\n", uri);

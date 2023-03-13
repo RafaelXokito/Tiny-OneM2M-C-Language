@@ -7,7 +7,7 @@ typedef struct {
     char lt[25]; // lastModifiedTime
 } CSEBaseStruct;
 
-char init_cse_base(CSEBaseStruct * csebase, struct sqlite3 * db, char isTableCreated);
+char init_cse_base(CSEBaseStruct * csebase, char isTableCreated);
 
 char getLastCSEBaseStruct(CSEBaseStruct * csebase, sqlite3 *db);
 

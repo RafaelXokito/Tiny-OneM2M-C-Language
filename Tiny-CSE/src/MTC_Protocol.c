@@ -39,7 +39,7 @@ char init_protocol(struct Route* route) {
         printf("The table does not exist.\n");
         sqlite3_finalize(stmt);
         
-        char rs = init_cse_base(csebase, db, false);
+        char rs = init_cse_base(csebase, false);
         if (rs == false) {
             return false;
         }
@@ -54,7 +54,7 @@ char init_protocol(struct Route* route) {
         sqlite3_free(sql);
         if (rc != SQLITE_OK) {
             printf("Failed to prepare 'SELECT COUNT(*) FROM mtc WHERE ty = %d;' query: %s\n", CSEBASE, sqlite3_errmsg(db));
-            sqlite3_close(db);
+            closeDatabase(db);
             return false;
         }
 
@@ -62,7 +62,7 @@ char init_protocol(struct Route* route) {
         if (rc != SQLITE_ROW) {
             printf("Failed to execute 'SELECT COUNT(*) FROM mtc WHERE ty = %d;' query: %s\n", CSEBASE, sqlite3_errmsg(db));
             sqlite3_finalize(stmt);
-            sqlite3_close(db);
+            closeDatabase(db);
             return false;
         }
 
@@ -73,7 +73,7 @@ char init_protocol(struct Route* route) {
         if (rowCount == 0) {
             printf("The mtc table dont have CSE_Base resources.\n");
 
-            char rs = init_cse_base(csebase, db, true);
+            char rs = init_cse_base(csebase, true);
             if (rs == false) {
                 return false;
             }
@@ -95,7 +95,8 @@ char init_protocol(struct Route* route) {
 
     // Add New Routes
     char uri[60];
-    snprintf(uri, sizeof(uri), "/%s", csebase->ri);
+    snprintf(uri, sizeof(uri), "/%s", csebase->rn);
+    to_lowercase(uri);
     addRoute(route, uri, csebase->ri, csebase->ty, csebase->rn);
 
     // The DB connection should exist in each thread and should not be shared
@@ -167,14 +168,14 @@ char create_ae(struct Route* route, struct Route* destination, cJSON *content, c
     }
 
     char uri[60];
-    strcpy(uri,destination->key);
+    snprintf(uri, sizeof(uri), "/%s",destination->value);
     cJSON *value_ri = cJSON_GetObjectItem(content, "ri");  // retrieve the value associated with "key_name"
     if (value_ri == NULL) {
         responseMessage(response,400,"Bad Request","ri (resource id) key not found");
         return false;
     }
     snprintf(uri, sizeof(uri), "%s/%s",uri ,value_ri->valuestring);
-    printf("%s\n", uri);
+    to_lowercase(uri);
     if (search(route, uri) != NULL) {
         responseMessage(response,400,"Bad Request","ri (resource id) key already exist");
         return false;
@@ -218,7 +219,9 @@ char create_ae(struct Route* route, struct Route* destination, cJSON *content, c
     }
 
     // Add New Routes
-    addRoute(route, uri, ae.ri, ae.ty, ae.rn);
+
+    to_lowercase(uri);
+    route = addRoute(route, uri, ae.ri, ae.ty, ae.rn);
     printf("New Route: %s -> %s -> %d -> %s \n", uri, ae.ri, ae.ty, ae.rn);
 
     // access database here
