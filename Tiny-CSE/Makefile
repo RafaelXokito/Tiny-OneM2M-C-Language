@@ -1,35 +1,22 @@
-CC = gcc
-CFLAGS = -Iinclude -fPIC
+CC=gcc
+CFLAGS=-Iinclude
 DEPS = HTTP_Server.h Sqlite.h
-EXEC = server
-LIB = libexample.a
-SOURCES = $(wildcard src/*.c)
-OBJECTS = $(SOURCES:.c=.o)
-LIB_OBJECTS = $(filter-out src/main.o, $(OBJECTS))
-FLAGS = -g -Wall -lm -ldl -fPIC -rdynamic -I./include
-LIBRARIES = -lsqlite3
+exec = server.o
+sources = $(wildcard src/*.c)
+objects = $(sources:.c=.o)
+flags = -g -Wall -lm -ldl -fPIC -rdynamic -I./include
+libraries = -lsqlite3
+# flags = -I./include
 
-ifeq ($(OS),Windows_NT)
-    TARGET = $(EXEC).exe
-else
-    TARGET = $(EXEC)
-endif
-
-LDFLAGS = -static -L. -lexample
-
-all: $(TARGET)
-
-$(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) $(FLAGS) $(LDFLAGS) -o $(TARGET) $(LIBRARIES)
+$(exec): $(objects)
+	gcc $(objects) $(flags) -o $(exec) $(libraries)
 
 %.o: %.c %.h
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(LIB): $(LIB_OBJECTS)
-	ar rcs $(LIB) $(LIB_OBJECTS)
-
-install:
-	install -m 755 $(TARGET) $(DESTDIR)/usr/local/bin/$(EXEC)
+	gcc -c $(flags) $< -o $@
 
 clean:
-	rm -f $(OBJECTS) $(LIB_OBJECTS) $(TARGET) $(LIB)
+	-rm *.out
+	-rm *.o
+	-rm *.a
+	-rm src/*.a
+	-rm src/*.o
