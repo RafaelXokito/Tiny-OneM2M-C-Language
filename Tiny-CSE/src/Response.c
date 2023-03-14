@@ -237,6 +237,86 @@ void *handle_connection(void *connectioninfo) {
     } else if (strcmp(method, "DELETE") == 0) {
 		// Delete Request
 		delete_resource(destination, response);
+	} else if (strcmp(method, "PUT") == 0){
+		char* json_start = strstr(request, "{"); // find the start of the JSON data
+		if (json_start != NULL) {
+			size_t json_length = strlen(json_start); // calculate the length of the JSON data
+			char json_data[json_length + 1]; // create a buffer to hold the JSON data
+			strncpy(json_data, json_start, json_length); // copy the JSON data to the buffer
+			json_data[json_length] = '\0'; // add a null terminator to the end of the buffer
+
+			// Parse the JSON string into a cJSON object
+    		cJSON* json_object = cJSON_Parse(json_data);
+
+			// Retrieve the first key-value pair in the object
+			cJSON* first = json_object->child;
+			if (first != NULL) {
+				// Print the key and value
+				printf("First key: %s\n", first->string);
+
+				char* pattern = "^m2m:.*$";  // Regex pattern to match
+				// Compile the regex pattern
+				regex_t regex;
+				int ret = regcomp(&regex, pattern, 0);
+				if (ret) {
+					responseMessage(response,500,"Internal Server Error","Error compiling regex");
+					fprintf(stderr, "Error compiling regex\n");
+				}
+
+				// Test if the string matches the regex pattern
+				ret = regexec(&regex, first->string, 0, NULL, 0);
+				if (!ret) {
+					printf("String matches regex pattern\n");
+					// first->string comes like "m2m:ae"
+					char aux[50];
+					strcpy(aux, first->string);
+					char *key = strtok(aux, ":");
+					key = strtok(NULL, ":");
+					to_lowercase(key);
+					// search in the types hash table for the 'ty' (resourceType) by the key (resourceName)
+					short ty = search_type(&types, key);
+					
+					// Get the JSON string from a specific element (let's say "age")
+					cJSON *content = cJSON_GetObjectItemCaseSensitive(json_object, first->string);
+					if (content == NULL) {
+						fprintf(stderr, "Error while getting the content from request\n");
+						responseMessage(response,500,"Internal Server Error","Error while getting the content from request");
+					} else {
+						// If everything was ok, we proced to the creation of resource
+						switch (ty) {
+						case AE: {
+							strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
+							char rs = update_ae(destination, content, response);
+							if (rs == false) {
+								// The method it self already change the response properly
+								fprintf(stderr, "Could not update AE resource\n");
+							}
+							break;
+						}
+						default:
+							responseMessage(response,400,"Bad Request","Invalid resource");
+							fprintf(stderr, "Theres no available resource for %s\n", key);
+							break;
+						}
+					}
+				} else if (ret == REG_NOMATCH) {
+					responseMessage(response,400,"Bad Request","Invalid json root name, should match m2m:<resource> (e.g m2m:ae)");
+					fprintf(stderr, "Invalid json root name\n");
+				} else {
+					char buf[100];
+					regerror(ret, &regex, buf, sizeof(buf));
+					responseMessage(response,500,"Bad Request","Error matching regex");
+					fprintf(stderr, "Error matching regex: %s\n", buf);
+				}
+			} else {
+				responseMessage(response,400,"Bad Request","Invalid request body");
+				fprintf(stderr, "Object is empty\n");
+			}
+
+		} else {
+			responseMessage(response,400,"Bad Request","Invalid request body");
+			fprintf(stderr, "JSON data not found.\n");
+		}
 	}
 
 	// printf("response: %s\n\n", response);

@@ -31,3 +31,4 @@ char create_ae(struct Route** route, struct Route* destination, cJSON *content, 
 char retrieve_ae(struct Route * destination, char *response);
 char validate_keys(cJSON *object, char *keys[], int num_keys, char *response);
 char delete_resource(struct Route * destination, char *response);
+char update_ae(struct Route* destination, cJSON *content, char* response);

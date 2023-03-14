@@ -362,3 +362,137 @@ char delete_resource(struct Route * destination, char *response) {
     
     return true;
 }
+
+char update_ae(struct Route* destination, cJSON *content, char* response){
+    char *keys[] = {"et"};  // array of keys to validate
+    int num_keys = 1;  // number of keys in the array
+    char aux_response[300] = "";
+
+    // Validate rn key exists
+    char rs = validate_keys(content, keys, num_keys, aux_response);
+    if (rs == false) {
+        responseMessage(response,400,"Bad Request",aux_response);
+        return false;
+    }
+    // Retrieve the AE
+    char * sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, et, lt, ct FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
+    printf("%s\n",sql);
+    sqlite3_stmt *stmt;
+    struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
+    short rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return false;
+    }
+    
+    AEStruct ae;
+    CSEBaseStruct csebase;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        ae.ty = sqlite3_column_int(stmt, 0);
+        strncpy(ae.ri, (char *)sqlite3_column_text(stmt, 1), 50);
+        strncpy(ae.rn, (char *)sqlite3_column_text(stmt, 2), 50);
+        strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 50);
+        strncpy(ae.et, (char *)sqlite3_column_text(stmt, 4), 25);
+        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 4), 25);
+        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 5), 25);
+        break;
+    }
+    
+    // Validate if the et value is different than current
+    cJSON *value_et = cJSON_GetObjectItem(content, "et");  // retrieve the value associated with "key_name"
+    if(strcmp(ae.et,value_et->valuestring) == 0){
+        responseMessage(response,400,"Bad Request","Resource expiration time is equal to the current one");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return false;
+    }
+
+    struct tm time_struct;
+    int result = strptime(value_et->valuestring, "%Y%m%dT%H%M%S", &time_struct);
+    if (result == NULL) {
+        // The date string did not match the expected format
+        responseMessage(response,400,"Bad Request","Invalid date format");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return false;
+    }
+
+    time_t current_time, input_time;
+    // Convert struct tm to time_t
+    input_time = mktime(&time_struct);
+
+    // Get current system time
+    current_time = time(NULL);
+
+    // Compare input time with current time
+    if (current_time >= input_time) {
+        responseMessage(response,400,"Bad Request","Expiration time is in the past");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return false;
+    }
+
+    // verify date is not in past
+    sql = sqlite3_mprintf("UPDATE mtc SET et='%s' WHERE ri = '%s' AND ty = %d;", value_et->valuestring, destination->ri, destination->ty);
+    printf("%s\n",sql);
+
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return false;
+    }
+    
+    // Execute the statement
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+        printf("Failed to execute statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return false;
+    }
+
+    // Retrieve the AE
+    sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, et, lt, ct FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
+    printf("%s\n",sql);
+
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return false;
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        ae.ty = sqlite3_column_int(stmt, 0);
+        strncpy(ae.ri, (char *)sqlite3_column_text(stmt, 1), 50);
+        strncpy(ae.rn, (char *)sqlite3_column_text(stmt, 2), 50);
+        strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 50);
+        strncpy(ae.et, (char *)sqlite3_column_text(stmt, 4), 25);
+        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 4), 25);
+        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 5), 25);
+        break;
+    }
+
+    cJSON * root = ae_to_json(&ae);
+
+    printf("Convert to json string\n");
+    char * json_str = cJSON_PrintUnformatted(root);
+    char * response_data = json_str;
+    printf("%s\n", json_str);
+    strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
+
+    strcat(response, response_data);
+    
+    cJSON_Delete(root);
+    sqlite3_finalize(stmt);
+    closeDatabase(db);
+    free(json_str);
+     
+    return true;
+   
+}
