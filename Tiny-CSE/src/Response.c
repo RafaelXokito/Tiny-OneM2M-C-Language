@@ -235,8 +235,7 @@ void *handle_connection(void *connectioninfo) {
 			fprintf(stderr, "JSON data not found.\n");
 		}
     } else if (strcmp(method, "DELETE") == 0) {
-		// Get Request
-		
+		// Delete Request
 		delete_resource(destination, response);
 	}
 
