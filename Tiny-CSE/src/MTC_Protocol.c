@@ -174,7 +174,7 @@ char create_ae(struct Route* route, struct Route* destination, cJSON *content, c
         responseMessage(response,400,"Bad Request","ri (resource id) key not found");
         return false;
     }
-    snprintf(uri, sizeof(uri), "%s/%s",uri ,value_ri->valuestring);
+    snprintf(uri, sizeof(uri), "/%s/%s",uri ,value_ri->valuestring);
     to_lowercase(uri);
     if (search(route, uri) != NULL) {
         responseMessage(response,400,"Bad Request","ri (resource id) key already exist");
