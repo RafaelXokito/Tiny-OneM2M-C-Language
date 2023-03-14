@@ -1,6 +1,6 @@
 #include "Common.h"
 
-char init_protocol(struct Route* route) {
+char init_protocol(struct Route** head) {
 
     char rs = init_types();
     if (rs == false) {
@@ -97,7 +97,7 @@ char init_protocol(struct Route* route) {
     char uri[60];
     snprintf(uri, sizeof(uri), "/%s", csebase->rn);
     to_lowercase(uri);
-    addRoute(route, uri, csebase->ri, csebase->ty, csebase->rn);
+    addRoute(head, uri, csebase->ri, csebase->ty, csebase->rn);
 
     // The DB connection should exist in each thread and should not be shared
     if (closeDatabase(db) == false) {
@@ -156,8 +156,8 @@ char retrieve_csebase(struct Route * destination, char *response) {
     return true;
 }
 
-char create_ae(struct Route* route, struct Route* destination, cJSON *content, char* response) {
-    
+char create_ae(struct Route** head, struct Route* destination, cJSON *content, char* response) {
+
     char *keys[] = {"ri", "rn"};  // array of keys to validate
     int num_keys = 2;  // number of keys in the array
     char aux_response[300] = "";
@@ -173,11 +173,12 @@ char create_ae(struct Route* route, struct Route* destination, cJSON *content, c
         return false;
     }
     to_lowercase(value_ri->valuestring);
-    if (search_byri(route, value_ri->valuestring) != NULL) {
+    if (search_byri(*head, value_ri->valuestring) != NULL) {
         responseMessage(response,400,"Bad Request","ri (resource id) key already exist");
         return false;
     }
 
+    
     char uri[60];
     snprintf(uri, sizeof(uri), "/%s",destination->value);
     cJSON *value_rn = cJSON_GetObjectItem(content, "rn");  // retrieve the value associated with "key_name"
@@ -187,7 +188,7 @@ char create_ae(struct Route* route, struct Route* destination, cJSON *content, c
         responseMessage(response,400,"Bad Request","rn (resource name) key not found");
         return false;
     }
-    if (search_byrn_ty(route, value_rn->valuestring, AE) != NULL) {
+    if (search_byrn_ty(*head, value_rn->valuestring, AE) != NULL) {
         responseMessage(response,400,"Bad Request","rn (resource name) key already exist in this ty (resource type)");
         return false;
     }
@@ -223,7 +224,7 @@ char create_ae(struct Route* route, struct Route* destination, cJSON *content, c
     // Add New Routes
 
     to_lowercase(uri);
-    route = addRoute(route, uri, ae.ri, ae.ty, ae.rn);
+    addRoute(head, uri, ae.ri, ae.ty, ae.rn);
     printf("New Route: %s -> %s -> %d -> %s \n", uri, ae.ri, ae.ty, ae.rn);
 
     // access database here
@@ -249,7 +250,7 @@ char retrieve_ae(struct Route * destination, char *response) {
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
-        sqlite3_close(db);
+        closeDatabase(db);
     }
 
     printf("Creating the json object\n");
@@ -297,4 +298,67 @@ char validate_keys(cJSON *object, char *keys[], int num_keys, char *response) {
     }
 
     return strcmp(response, "") == 0 ? true : false;  // all keys were found in object
+}
+
+char delete_resource(struct Route * destination, char *response) {
+
+    char* errMsg = NULL;
+
+    // Sqlite3 initialization opening/creating database
+    sqlite3 *db;
+    db = initDatabase("tiny-oneM2M.db");
+    if (db == NULL) {
+		return false;
+	}
+
+    // Delete record from SQLite3 table
+    char* sql = sqlite3_mprintf("DELETE FROM mtc WHERE ri='%q'", destination->ri);
+    int rs = sqlite3_exec(db, sql, NULL, NULL, &errMsg);
+    sqlite3_free(sql);
+
+    if (rs != SQLITE_OK) {
+        responseMessage(response,400,"Bad Request","Error deleting record");
+        fprintf(stderr, "Error deleting record: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        closeDatabase(db);
+        return false;
+    }
+
+    printf("Resource deleted from the database\n");
+
+    // Imagina que é a primeira
+    // Imagina que é a ultima
+    // Imagina que é do meio
+    // deleteRoute(); {
+    // Remove node from ordered list
+
+    if (destination->left == NULL) {
+        destination->right->left = NULL;
+        responseMessage(response,200,"OK","Record deleted");
+        return true;
+    }
+
+
+    if (destination->right == NULL) {
+        destination->left->right = NULL;
+        responseMessage(response,200,"OK","Record deleted");
+        return true;
+    }
+
+    
+    destination->left->right = destination->right;
+    destination->right->left = destination->left;
+    responseMessage(response,200,"OK","Record deleted");
+
+    printf("ola\n");
+
+    printf("Record deleted ri = %s\n", destination->ri);
+    
+    // free(destination); Verificar se o free funciona
+
+    // }
+
+    responseMessage(response,200,"OK","Record deleted");
+    
+    return true;
 }

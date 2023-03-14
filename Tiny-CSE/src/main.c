@@ -26,14 +26,15 @@ int main() {
 	pthread_t thread_id;
 	
 	// registering Routes
-	struct Route * route = initRoute("/", "", -1, "index.html");
-
-	short rs = init_protocol(route);
+	struct Route *head = NULL; // initialize the head pointer to NULL
+	head = addRoute(&head, "/", "", -1, "index.html"); // add the first node to the list
+	
+	short rs = init_protocol(&head);
 	if (rs == false) {
         exit(EXIT_FAILURE);
     }
 
-    rs = init_routes(route);
+    rs = init_routes(&head);
 	if (rs == false) {
         exit(EXIT_FAILURE);
     }
@@ -41,7 +42,7 @@ int main() {
 	printf("\n====================================\n");
 	printf("=========ALL VAILABLE ROUTES========\n");
 	// display all available routes
-	inorder(route);
+	inorder(head);
 
 	// initiate HTTP_Server
 	HTTP_Server http_server;
@@ -53,7 +54,7 @@ int main() {
 
 		ConnectionInfo* info = malloc(sizeof(ConnectionInfo));
 		info->socket_desc = client_socket;
-    	info->route = route;
+    	info->route = head;
         
         if (pthread_create(&thread_id, NULL, handle_connection, info) < 0) {
             perror("pthread_create failed");

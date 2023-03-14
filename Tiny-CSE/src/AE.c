@@ -20,7 +20,7 @@ char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
     short rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
+        closeDatabase(db);
         return false;
     }
 
@@ -39,13 +39,13 @@ char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
     if (rc != SQLITE_DONE) {
         printf("Failed to execute statement: %s\n", sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
-        sqlite3_close(db);
+        closeDatabase(db);
         return false;
     }
 
     // Finalize the statement and close the database
     sqlite3_finalize(stmt);
-    sqlite3_close(db);
+    closeDatabase(db);
 
     printf("AE data inserted successfully.\n");
 

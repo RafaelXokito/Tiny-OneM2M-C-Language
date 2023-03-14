@@ -72,7 +72,7 @@ char * constructPath(char * result, char * resourceName, char * parentName, stru
 	return result;
 }
 
-char init_routes(struct Route* route) {
+char init_routes(struct Route** head) {
     printf("Initializing routes\n");
     // call the constructPath function for each resource in the database
 
@@ -107,7 +107,7 @@ char init_routes(struct Route* route) {
 		
 		// Add New Routes
 		to_lowercase(uri);
-		addRoute(route, uri, resourceId, resourceType, resourceName);
+		addRoute(head, uri, resourceId, resourceType, resourceName);
 
 		printf("Route created: %s\n", uri);
     }
@@ -123,30 +123,76 @@ char init_routes(struct Route* route) {
 	return true;
 }
 
-void inorder(struct Route* root)
+void inorder(struct Route* head)
 {
-    if (root != NULL) {
-        inorder(root->left);
-        printf("%s -> %s -> %d -> %s \n", root->key, root->ri, root->ty, root->value);
-        inorder(root->right);
+    struct Route* current = head;
+
+    while (current != NULL) {
+        printf("%s -> %s -> %d -> %s \n", current->key, current->ri, current->ty, current->value);
+        current = current->right;
     }
 }
 
-struct Route * addRoute(struct Route * root, char* key, char* ri, short ty, char* value) {
-	if (root == NULL) {
-		return initRoute(key, ri, ty, value);
+// struct Route * addRoute(struct Route * root, char* key, char* ri, short ty, char* value) {
+// 	if (root == NULL) {
+// 		return initRoute(key, ri, ty, value);
+// 	}
+
+// 	if (strcmp(key, root->key) == 0) {
+// 		printf("============ WARNING ============\n");
+// 		printf("A Route For \"%s\" Already Exists\n", key);
+// 	}else if (strcmp(key, root->key) > 0) {
+// 		root->right = addRoute(root->right, key, ri, ty, value);
+// 	}else {
+// 		root->left = addRoute(root->left, key, ri, ty, value);
+// 	}
+
+// 	return root;
+// }
+
+struct Route * addRoute(struct Route **head, char* key, char* ri, short ty, char* value) {
+	// create a new node with the given fields
+	struct Route *newNode = initRoute(key, ri, ty, value);
+
+	// check if the list is empty
+	if (*head == NULL) {
+		*head = newNode;
+		return newNode;
 	}
 
-	if (strcmp(key, root->key) == 0) {
-		printf("============ WARNING ============\n");
-		printf("A Route For \"%s\" Already Exists\n", key);
-	}else if (strcmp(key, root->key) > 0) {
-		root->right = addRoute(root->right, key, ri, ty, value);
-	}else {
-		root->left = addRoute(root->left, key, ri, ty, value);
+	// traverse the list to find the correct position to insert the new node
+	struct Route *current = *head;
+	while (current != NULL) {
+		if (strcmp(key, current->key) == 0) {
+			printf("A Route For \"%s\" Already Exists\n", key);
+			return current; // return the existing node with the same key
+		} else if (strcmp(key, current->key) > 0) {
+			// move to the next node in the list
+			if (current->right == NULL) {
+				// insert the new node at the end of the list
+				current->right = newNode;
+				newNode->left = current;
+				return newNode;
+			}
+			current = current->right;
+		} else {
+			// insert the new node before the current node
+			if (current->left == NULL) {
+				// insert the new node at the beginning of the list
+				newNode->right = current;
+				current->left = newNode;
+				*head = newNode;
+				return newNode;
+			} else {
+				current->left->right = newNode;
+				newNode->left = current->left;
+				newNode->right = current;
+				current->left = newNode;
+				return newNode;
+			}
+		}
 	}
-
-	return root;
+	return NULL;
 }
 
 struct Route * search(struct Route * root, char* key) {
@@ -165,21 +211,17 @@ struct Route * search(struct Route * root, char* key) {
 	return root;
 }
 
-struct Route* search_byri(struct Route* root, char* ri) {
-    if (root == NULL) {
-        return NULL;
+struct Route* search_byri(struct Route* head, char* ri) {
+    struct Route* current = head;
+
+    while (current != NULL) {
+        if (strcmp(current->ri, ri) == 0) {
+            return current;
+        }
+        current = current->right;
     }
 
-    if (strcmp(root->ri, ri) == 0) {
-        return root;
-    }
-
-    struct Route* leftResult = search_byri(root->left, ri);
-    if (leftResult != NULL) {
-        return leftResult;
-    }
-
-    return search_byri(root->right, ri);
+    return NULL;
 }
 
 struct Route * search_byrn_ty(struct Route * root, char* rn, short ty) {

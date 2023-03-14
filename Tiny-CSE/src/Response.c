@@ -42,6 +42,8 @@ void responseMessage(char* response, int status_code, char* status_message, char
 void *handle_connection(void *connectioninfo) {
 	ConnectionInfo* info = (ConnectionInfo*) connectioninfo;
 
+	printf("\n");
+
 	char client_msg[4096] = "";
 
     char buffer[1024] = {0};
@@ -52,7 +54,7 @@ void *handle_connection(void *connectioninfo) {
 	char request[1024];
 	strcpy(request, client_msg);
 
-    printf("%s\n", client_msg);
+    // printf("%s\n", client_msg);
 
 	// parsing client socket header to get HTTP method, route
 	char *method = "";
@@ -60,7 +62,7 @@ void *handle_connection(void *connectioninfo) {
 
 	char *client_http_header = strtok(client_msg, "\n");
 	
-	printf("\n\n%s\n\n", client_http_header);
+	// printf("\n\n%s\n\n", client_http_header);
 
 	char *header_token = strtok(client_http_header, " ");
 	
@@ -201,7 +203,7 @@ void *handle_connection(void *connectioninfo) {
 						switch (ty) {
 						case AE: {
 							strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
-							char rs = create_ae(info->route, destination, content, response);
+							char rs = create_ae(&info->route, destination, content, response);
 							if (rs == false) {
 								// The method it self already change the response properly
 								fprintf(stderr, "Could not create AE resource\n");
@@ -232,9 +234,13 @@ void *handle_connection(void *connectioninfo) {
 			responseMessage(response,400,"Bad Request","Invalid request body");
 			fprintf(stderr, "JSON data not found.\n");
 		}
-    }
+    } else if (strcmp(method, "DELETE") == 0) {
+		// Get Request
+		
+		delete_resource(destination, response);
+	}
 
-	printf("response: %s\n\n", response);
+	// printf("response: %s\n\n", response);
 
     int response_len = strlen(response);
 

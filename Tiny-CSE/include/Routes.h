@@ -12,7 +12,7 @@ struct Route {
 
 struct Route * initRoute(char* key, char* ri, short ty, char* value);
 
-struct Route * addRoute(struct Route * root, char* key, char* ri, short ty, char* value);
+struct Route *addRoute(struct Route **head, char *key, char *ri, short ty, char *value);
 
 struct Route * search(struct Route * root, char * key);
 struct Route * search_byri(struct Route * root, char* ri);
@@ -20,4 +20,4 @@ struct Route * search_byrn_ty(struct Route * root, char* rn, short ty);
 
 void inorder(struct Route * root );
 
-char init_routes(struct Route* route);
+char init_routes(struct Route** head);
