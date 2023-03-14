@@ -165,20 +165,21 @@ struct Route * search(struct Route * root, char* key) {
 	return root;
 }
 
-struct Route * search_byri(struct Route * root, char* ri) {
-	if (root == NULL) {
-		return NULL;
-	} 
+struct Route* search_byri(struct Route* root, char* ri) {
+    if (root == NULL) {
+        return NULL;
+    }
 
-	if (strcmp(ri, root->ri) == 0){
-		return root;
-	}else if (strcmp(ri, root->ri) > 0) {
-		return search(root->right, ri);
-	}else if (strcmp(ri, root->ri) < 0) {
-		return search(root->left, ri);
-	}  
+    if (strcmp(root->ri, ri) == 0) {
+        return root;
+    }
 
-	return root;
+    struct Route* leftResult = search_byri(root->left, ri);
+    if (leftResult != NULL) {
+        return leftResult;
+    }
+
+    return search_byri(root->right, ri);
 }
 
 struct Route * search_byrn_ty(struct Route * root, char* rn, short ty) {
@@ -189,6 +190,7 @@ struct Route * search_byrn_ty(struct Route * root, char* rn, short ty) {
 	if (ty == root->ty && strcmp(rn, root->value) == 0){
 		return root;
 	} else {
+		// Temos de garantir que o root que chega aqui é o primeiro, se não isto não faz sentido e teria de ser garantido de outra maneira
 		return search_byrn_ty(root->right, rn, ty);
 	}
 

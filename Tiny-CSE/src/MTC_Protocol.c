@@ -167,20 +167,22 @@ char create_ae(struct Route* route, struct Route* destination, cJSON *content, c
         return false;
     }
 
-    char uri[60];
-    snprintf(uri, sizeof(uri), "/%s",destination->value);
     cJSON *value_ri = cJSON_GetObjectItem(content, "ri");  // retrieve the value associated with "key_name"
     if (value_ri == NULL) {
         responseMessage(response,400,"Bad Request","ri (resource id) key not found");
         return false;
     }
-    snprintf(uri, sizeof(uri), "/%s/%s",uri ,value_ri->valuestring);
-    to_lowercase(uri);
-    if (search(route, uri) != NULL) {
+    to_lowercase(value_ri->valuestring);
+    if (search_byri(route, value_ri->valuestring) != NULL) {
         responseMessage(response,400,"Bad Request","ri (resource id) key already exist");
         return false;
     }
+
+    char uri[60];
+    snprintf(uri, sizeof(uri), "/%s",destination->value);
     cJSON *value_rn = cJSON_GetObjectItem(content, "rn");  // retrieve the value associated with "key_name"
+    snprintf(uri, sizeof(uri), "%s/%s",uri ,value_rn->valuestring);
+    to_lowercase(uri);
     if (value_rn == NULL) {
         responseMessage(response,400,"Bad Request","rn (resource name) key not found");
         return false;
