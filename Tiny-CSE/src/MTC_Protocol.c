@@ -284,12 +284,6 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     cJSON_Delete(root);
     cJSON_free(str);
 
-    // access database here
-    pthread_mutex_unlock(&db_mutex);
-
-    // clean up
-    pthread_mutex_destroy(&db_mutex);
-
     return TRUE;
 }
 
