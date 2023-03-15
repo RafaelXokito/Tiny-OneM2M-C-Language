@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 700
 #include <time.h>
 
 #include "Common.h"
@@ -482,7 +483,9 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
     memset(&parsed_time, 0, sizeof(parsed_time));
 
     // Parse the datetime string
-    if (strptime(value_et->valuestring, "%Y%m%dT%H%M%S", &parsed_time) == NULL) {
+    char *parse_result;
+    parse_result = strptime(value_et->valuestring, "%Y%m%dT%H%M%S", &parsed_time);
+    if (parse_result == NULL) {
         // The date string did not match the expected format
         responseMessage(response, 400, "Bad Request", "Invalid date format");
         sqlite3_finalize(stmt);
