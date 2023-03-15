@@ -475,9 +475,14 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
         return FALSE;
     }
 
-    struct tm time_struct;
-    char *result = strptime(value_et->valuestring, "%Y%m%dT%H%M%S", &time_struct);
-    if (result == NULL) {
+    struct tm parsed_time;
+    time_t datetime_timestamp, current_time;
+
+    // Clear the struct to avoid garbage values
+    memset(&parsed_time, 0, sizeof(parsed_time));
+
+    // Parse the datetime string
+    if (strptime(value_et->valuestring, "%Y%m%dT%H%M%S", &parsed_time) == NULL) {
         // The date string did not match the expected format
         responseMessage(response, 400, "Bad Request", "Invalid date format");
         sqlite3_finalize(stmt);
@@ -485,20 +490,20 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
         return FALSE;
     }
 
-    time_t current_time, input_time;
-    // Convert struct tm to time_t
-    input_time = mktime(&time_struct);
+    // Convert the parsed time to a timestamp
+    datetime_timestamp = mktime(&parsed_time);
 
-    // Get current system time
+    // Get the current time
     current_time = time(NULL);
 
-    // Compare input time with current time
-    if (current_time >= input_time) {
+    // Compare the times
+    if (difftime(datetime_timestamp, current_time) < 0) {
         responseMessage(response, 400, "Bad Request", "Expiration time is in the past");
         sqlite3_finalize(stmt);
         closeDatabase(db);
         return FALSE;
     }
+
 
     // Update the expiration time
     sql = sqlite3_mprintf("UPDATE mtc SET et='%s' WHERE ri = '%s' AND ty = %d;", value_et->valuestring, destination->ri, destination->ty);
