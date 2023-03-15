@@ -1,3 +1,5 @@
+#include <time.h>
+
 #include "Common.h"
 
 char init_protocol(struct Route** head) {
