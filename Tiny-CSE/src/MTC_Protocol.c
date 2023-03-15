@@ -268,12 +268,6 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     addRoute(head, uri, ae.ri, ae.ty, ae.rn);
     printf("New Route: %s -> %s -> %d -> %s \n", uri, ae.ri, ae.ty, ae.rn);
 
-    // access database here
-    pthread_mutex_unlock(&db_mutex);
-
-    // clean up
-    pthread_mutex_destroy(&db_mutex);
-
     closeDatabase(db);
 
     // Convert the AE struct to json and the Json Object to Json String
@@ -289,6 +283,12 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     // Free allocated resources
     cJSON_Delete(root);
     cJSON_free(str);
+
+    // access database here
+    pthread_mutex_unlock(&db_mutex);
+
+    // clean up
+    pthread_mutex_destroy(&db_mutex);
 
     return TRUE;
 }
