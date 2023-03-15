@@ -1,5 +1,9 @@
 CC=gcc
-CFLAGS=-Iinclude
+ifeq ($(UNAME_S),Linux)
+    CFLAGS = -Wall -Werror -std=c99 -Iinclude -fPIC
+else
+    CFLAGS = -Iinclude -fPIC
+endif
 DEPS = HTTP_Server.h Sqlite.h
 exec = server.o
 sources = $(wildcard src/*.c)

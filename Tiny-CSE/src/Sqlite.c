@@ -16,7 +16,6 @@ int callback(void *NotUsed, int argc, char **argv, char **azColName) {
 // Define an init function that returns an sqlite3 pointer
 sqlite3 *initDatabase(const char* databasename) {
     sqlite3 *db;
-    char *err_msg = 0;
     int rc = sqlite3_open_v2(databasename, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));

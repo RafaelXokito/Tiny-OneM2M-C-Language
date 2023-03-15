@@ -445,7 +445,6 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
     }
 
     AEStruct ae;
-    CSEBaseStruct csebase;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         ae.ty = sqlite3_column_int(stmt, 0);
         strncpy(ae.ri, (char *)sqlite3_column_text(stmt, 1), 50);
