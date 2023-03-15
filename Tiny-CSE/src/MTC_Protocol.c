@@ -231,13 +231,13 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
         return FALSE;
     }
 
-    pthread_mutex_t db_mutex;
+    // pthread_mutex_t db_mutex;
 
     // initialize mutex
-    if (pthread_mutex_init(&db_mutex, NULL) != 0) {
-        responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
-        return FALSE;
-    }
+    // if (pthread_mutex_init(&db_mutex, NULL) != 0) {
+    //     responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
+    //     return FALSE;
+    // }
 
     // Sqlite3 initialization opening/creating database
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
@@ -252,13 +252,13 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     cJSON_AddStringToObject(content, "pi", destination->ri);
 
     // perform database operations
-    pthread_mutex_lock(&db_mutex);
+    // pthread_mutex_lock(&db_mutex);
     
     rs = init_ae(&ae, content, db);
     if (rs == FALSE) {
         responseMessage(response, 400, "Bad Request", "Verify the request body");
-        pthread_mutex_unlock(&db_mutex);
-        pthread_mutex_destroy(&db_mutex);
+        // pthread_mutex_unlock(&db_mutex);
+        // pthread_mutex_destroy(&db_mutex);
         closeDatabase(db);
         return FALSE;
     }
@@ -283,6 +283,12 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     // Free allocated resources
     cJSON_Delete(root);
     cJSON_free(str);
+
+    // // access database here
+    // pthread_mutex_unlock(&db_mutex);
+
+    // // clean up
+    // pthread_mutex_destroy(&db_mutex);
 
     return TRUE;
 }
