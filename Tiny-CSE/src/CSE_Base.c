@@ -15,7 +15,7 @@ char init_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     sqlite3 *db;
     db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
-		return false;
+		return FALSE;
 	}
 
 	// Parse the JSON object
@@ -23,7 +23,7 @@ char init_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     cJSON *json = cJSON_Parse(jsonString);
     if (json == NULL) {
         printf("Failed to parse JSON.\n");
-        return false;
+        return FALSE;
     }
 
     // Convert the JSON object to a C structure
@@ -37,14 +37,14 @@ char init_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     // Free the cJSON object
     cJSON_Delete(json);
 
-    if (isTableCreated == false) {
+    if (isTableCreated == FALSE) {
         // Create the table if it doesn't exist
         const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT, rn TEXT, pi TEXT, et TEXT, ct TEXT, lt TEXT)";
         short rc = sqlite3_exec(db, createTableSQL, NULL, NULL, NULL);
         if (rc != SQLITE_OK) {
             printf("Failed to create table: %s\n", sqlite3_errmsg(db));
             sqlite3_close(db);
-            return false;
+            return FALSE;
         }
     }
 
@@ -55,7 +55,7 @@ char init_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
-        return false;
+        return FALSE;
     }
 
     // Bind the values to the statement
@@ -72,7 +72,7 @@ char init_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
         printf("Failed to execute statement: %s\n", sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         sqlite3_close(db);
-        return false;
+        return FALSE;
     }
 
     // Finalize the statement and close the database
@@ -81,7 +81,7 @@ char init_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
 
     printf("CSE_Base data inserted successfully.\n");
 
-    return true;
+    return TRUE;
 }
 
 char getLastCSEBaseStruct(CSEBaseStruct * csebase, sqlite3 *db) {
@@ -94,7 +94,7 @@ char getLastCSEBaseStruct(CSEBaseStruct * csebase, sqlite3 *db) {
     sqlite3_free(sql);
     if (rc != SQLITE_OK) {
         printf("Failed to prepare getLastCSEBaseStruct query: %s\n", sqlite3_errmsg(db));
-        return false;
+        return FALSE;
     }
 
     // Execute the query
@@ -111,7 +111,7 @@ char getLastCSEBaseStruct(CSEBaseStruct * csebase, sqlite3 *db) {
 
     sqlite3_finalize(stmt);
 
-    return true;
+    return TRUE;
 }
 
 cJSON *csebase_to_json(const CSEBaseStruct *csebase) {

@@ -3,48 +3,67 @@
 char init_protocol(struct Route** head) {
 
     char rs = init_types();
-    if (rs == false) {
-        return false;
+    if (rs == FALSE) {
+        fprintf(stderr, "Error initializing types.\n");
+        return FALSE;
     }
-
-    pthread_mutex_t db_mutex;
-
-    // initialize mutex
-    pthread_mutex_init(&db_mutex, NULL);
 
     // Sqlite3 initialization opening/creating database
     sqlite3 *db;
     db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
-		return false;
-	}
+        fprintf(stderr, "Error initializing database.\n");
+        return FALSE;
+    }
 
-    // perform database operations
+    // Initialize the mutex
+    pthread_mutex_t db_mutex;
+    if (pthread_mutex_init(&db_mutex, NULL) != 0) {
+        fprintf(stderr, "Error initializing mutex.\n");
+        closeDatabase(db);
+        return FALSE;
+    }
+
+    // Perform database operations
     pthread_mutex_lock(&db_mutex);
 
     // Check if the cse_base exists
     sqlite3_stmt *stmt;
     short rc = sqlite3_prepare_v2(db, "SELECT name FROM sqlite_master WHERE type='table' AND name='mtc';", -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
-        printf("Failed to prepare query: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
-        return false;
+        fprintf(stderr, "Failed to prepare query: %s\n", sqlite3_errmsg(db));
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        closeDatabase(db);
+        return FALSE;
     }
 
-    CSEBaseStruct * csebase = malloc(sizeof(CSEBaseStruct));
-    
+    CSEBaseStruct *csebase = malloc(sizeof(CSEBaseStruct));
+    if (csebase == NULL) {
+        fprintf(stderr, "Error allocating memory for CSEBaseStruct.\n");
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
+
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_ROW) {
-        // If table dosnt exist we create it and populate it
+        // If table doesn't exist, we create it and populate it
         printf("The table does not exist.\n");
         sqlite3_finalize(stmt);
         
-        char rs = init_cse_base(csebase, false);
-        if (rs == false) {
-            return false;
+        char rs = init_cse_base(csebase, FALSE);
+        if (rs == FALSE) {
+            fprintf(stderr, "Error initializing CSE base.\n");
+            pthread_mutex_unlock(&db_mutex);
+            pthread_mutex_destroy(&db_mutex);
+            closeDatabase(db);
+            free(csebase);
+            return FALSE;
         }
     } else {
-
         sqlite3_finalize(stmt);
 
         // Check if the table has any data
@@ -53,59 +72,73 @@ char init_protocol(struct Route** head) {
         rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
         sqlite3_free(sql);
         if (rc != SQLITE_OK) {
-            printf("Failed to prepare 'SELECT COUNT(*) FROM mtc WHERE ty = %d;' query: %s\n", CSEBASE, sqlite3_errmsg(db));
+            fprintf(stderr, "Failed to prepare 'SELECT COUNT(*) FROM mtc WHERE ty = %d;' query: %s\n", CSEBASE, sqlite3_errmsg(db));
+            pthread_mutex_unlock(&db_mutex);
+            pthread_mutex_destroy(&db_mutex);
             closeDatabase(db);
-            return false;
+            free(csebase);
+            return FALSE;
         }
 
         rc = sqlite3_step(stmt);
         if (rc != SQLITE_ROW) {
-            printf("Failed to execute 'SELECT COUNT(*) FROM mtc WHERE ty = %d;' query: %s\n", CSEBASE, sqlite3_errmsg(db));
+            fprintf(stderr, "Failed to execute 'SELECT COUNT(*) FROM mtc WHERE ty = %d;' query: %s\n", CSEBASE, sqlite3_errmsg(db));
             sqlite3_finalize(stmt);
+            pthread_mutex_unlock(&db_mutex);
+            pthread_mutex_destroy(&db_mutex);
             closeDatabase(db);
-            return false;
+            free(csebase);
+            return FALSE;
         }
 
         int rowCount = sqlite3_column_int(stmt, 0);
-
         sqlite3_finalize(stmt);
 
         if (rowCount == 0) {
-            printf("The mtc table dont have CSE_Base resources.\n");
+            printf("The mtc table doesn't have CSE_Base resources.\n");
 
-            char rs = init_cse_base(csebase, true);
-            if (rs == false) {
-                return false;
+            char rs = init_cse_base(csebase, TRUE);
+            if (rs == FALSE) {
+                fprintf(stderr, "Error initializing CSE base.\n");
+                pthread_mutex_unlock(&db_mutex);
+                pthread_mutex_destroy(&db_mutex);
+                closeDatabase(db);
+                free(csebase);
+                return FALSE;
             }
         } else {
             printf("CSE_Base already inserted.\n");
-            // In case of the table and data exists, get the 
+            // In case of the table and data exists, get the
             char rs = getLastCSEBaseStruct(csebase, db);
-            if (rs == false) {
-                return false;
+            if (rs == FALSE) {
+                fprintf(stderr, "Error getting last CSE base structure.\n");
+                pthread_mutex_unlock(&db_mutex);
+                pthread_mutex_destroy(&db_mutex);
+                closeDatabase(db);
+                free(csebase);
+                return FALSE;
             }
         }
     }
 
-    // access database here
+    // Access database here
     pthread_mutex_unlock(&db_mutex);
-
-    // clean up
     pthread_mutex_destroy(&db_mutex);
 
     // Add New Routes
-    char uri[60];
+    const int URI_BUFFER_SIZE = 60;
+    char uri[URI_BUFFER_SIZE];
     snprintf(uri, sizeof(uri), "/%s", csebase->rn);
     to_lowercase(uri);
     addRoute(head, uri, csebase->ri, csebase->ty, csebase->rn);
 
     // The DB connection should exist in each thread and should not be shared
-    if (closeDatabase(db) == false) {
+    if (closeDatabase(db) == FALSE) {
         fprintf(stderr, "Error closing database.\n");
-        return false;
+        return FALSE;
     }
 
-    return true;
+    return TRUE;
 }
 
 char retrieve_csebase(struct Route * destination, char *response) {
@@ -117,7 +150,8 @@ char retrieve_csebase(struct Route * destination, char *response) {
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
-        sqlite3_close(db);
+        closeDatabase(db);
+        return FALSE;
     }
 
     printf("Creating the json object\n");
@@ -134,26 +168,17 @@ char retrieve_csebase(struct Route * destination, char *response) {
 
     cJSON *root = csebase_to_json(&csebase);
 
-    // Print the resulting JSON string
-    char* jsonString = cJSON_Print(root);
-    printf("%s", jsonString);
-
-    printf("Coonvert to json string\n");
     char *json_str = cJSON_PrintUnformatted(root);
     printf("%s\n", json_str);
-
-    char * response_data = json_str;
     
-    strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
-
-    strcat(response, response_data);
+    snprintf(response, 1024, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", json_str);
 
     cJSON_Delete(root);
     sqlite3_finalize(stmt);
-    sqlite3_close(db);
+    closeDatabase(db);
     free(json_str);
 
-    return true;
+    return TRUE;
 }
 
 char create_ae(struct Route** head, struct Route* destination, cJSON *content, char* response) {
@@ -162,53 +187,54 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     int num_keys = 2;  // number of keys in the array
     char aux_response[300] = "";
     char rs = validate_keys(content, keys, num_keys, aux_response);
-    if (rs == false) {
+    if (rs == FALSE) {
         responseMessage(response,400,"Bad Request",aux_response);
-        return false;
+        return FALSE;
     }
 
     cJSON *value_ri = cJSON_GetObjectItem(content, "ri");  // retrieve the value associated with "key_name"
     if (value_ri == NULL) {
         responseMessage(response,400,"Bad Request","ri (resource id) key not found");
-        return false;
+        return FALSE;
     }
     to_lowercase(value_ri->valuestring);
     if (search_byri(*head, value_ri->valuestring) != NULL) {
         responseMessage(response,400,"Bad Request","ri (resource id) key already exist");
-        return false;
+        return FALSE;
     }
 
     
     char uri[60];
     snprintf(uri, sizeof(uri), "/%s",destination->value);
-    cJSON *value_rn = cJSON_GetObjectItem(content, "rn");  // retrieve the value associated with "key_name"
+    cJSON *value_rn = cJSON_GetObjectItem(content, "rn");
+    if (value_rn == NULL) {
+        responseMessage(response, 400, "Bad Request", "rn (resource name) key not found");
+        return FALSE;
+    }
     snprintf(uri, sizeof(uri), "%s/%s",uri ,value_rn->valuestring);
     to_lowercase(uri);
-    if (value_rn == NULL) {
-        responseMessage(response,400,"Bad Request","rn (resource name) key not found");
-        return false;
-    }
     if (search_byrn_ty(*head, value_rn->valuestring, AE) != NULL) {
         responseMessage(response,400,"Bad Request","rn (resource name) key already exist in this ty (resource type)");
-        return false;
+        return FALSE;
     }
 
     pthread_mutex_t db_mutex;
 
     // initialize mutex
-    pthread_mutex_init(&db_mutex, NULL);
+    if (pthread_mutex_init(&db_mutex, NULL) != 0) {
+        responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
+        return FALSE;
+    }
 
     // Sqlite3 initialization opening/creating database
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
         responseMessage(response,500,"Internal Server Error","Could not open the database");
-		return false;
+		return FALSE;
 	}
 
     printf("Creating AE\n");
-
     AEStruct ae;
-
     // Should be garantee that the content (json object) dont have this keys
     cJSON_AddStringToObject(content, "pi", destination->ri);
 
@@ -216,13 +242,15 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     pthread_mutex_lock(&db_mutex);
     
     rs = init_ae(&ae, content, db);
-    if (rs == false) {
-        responseMessage(response,400,"Bad Request","Verify the request body");
-        return false;
+    if (rs == FALSE) {
+        responseMessage(response, 400, "Bad Request", "Verify the request body");
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        closeDatabase(db);
+        return FALSE;
     }
 
     // Add New Routes
-
     to_lowercase(uri);
     addRoute(head, uri, ae.ri, ae.ty, ae.rn);
     printf("New Route: %s -> %s -> %d -> %s \n", uri, ae.ri, ae.ty, ae.rn);
@@ -233,24 +261,44 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     // clean up
     pthread_mutex_destroy(&db_mutex);
 
+    closeDatabase(db);
+
     // Convert the AE struct to json and the Json Object to Json String
     cJSON *root = ae_to_json(&ae);
     char *str = cJSON_Print(root);
+    if (str == NULL) {
+        responseMessage(response, 500, "Internal Server Error", "Could not print cJSON object");
+        cJSON_Delete(root);
+        return FALSE;
+    }
     strcat(response, str);
 
-    return true;
+    // Free allocated resources
+    cJSON_Delete(root);
+    cJSON_free(str);
+
+    return TRUE;
 }
 
 char retrieve_ae(struct Route * destination, char *response) {
     char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, et, lt, ct FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
-    printf("%s\n",sql);
+    if (sql == NULL) {
+        fprintf(stderr, "Failed to allocate memory for SQL query.\n");
+        return FALSE;
+    }
     sqlite3_stmt *stmt;
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
+    if (db == NULL) {
+        fprintf(stderr, "Failed to initialize the database.\n");
+        sqlite3_free(sql);
+        return FALSE;
+    }
     short rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         closeDatabase(db);
+        return FALSE;
     }
 
     printf("Creating the json object\n");
@@ -267,10 +315,21 @@ char retrieve_ae(struct Route * destination, char *response) {
     }
 
     cJSON* root = ae_to_json(&ae);
+    if (root == NULL) {
+        fprintf(stderr, "Failed to convert AEStruct to JSON.\n");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
 
-    printf("Coonvert to json string\n");
     char *json_str = cJSON_PrintUnformatted(root);
-    printf("%s\n", json_str);
+    if (json_str == NULL) {
+        fprintf(stderr, "Failed to print JSON as a string.\n");
+        cJSON_Delete(root);
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
 
     char * response_data = json_str;
     
@@ -280,10 +339,10 @@ char retrieve_ae(struct Route * destination, char *response) {
 
     cJSON_Delete(root);
     sqlite3_finalize(stmt);
-    sqlite3_close(db);
+    closeDatabase(db);
     free(json_str);
 
-    return true;
+    return TRUE;
 }
 
 char validate_keys(cJSON *object, char *keys[], int num_keys, char *response) {
@@ -297,7 +356,7 @@ char validate_keys(cJSON *object, char *keys[], int num_keys, char *response) {
         }
     }
 
-    return strcmp(response, "") == 0 ? true : false;  // all keys were found in object
+    return strcmp(response, "") == 0 ? TRUE : FALSE;  // all keys were found in object
 }
 
 char delete_resource(struct Route * destination, char *response) {
@@ -308,7 +367,7 @@ char delete_resource(struct Route * destination, char *response) {
     sqlite3 *db;
     db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
-		return false;
+		return FALSE;
 	}
 
     // Delete record from SQLite3 table
@@ -321,7 +380,7 @@ char delete_resource(struct Route * destination, char *response) {
         fprintf(stderr, "Error deleting record: %s\n", errMsg);
         sqlite3_free(errMsg);
         closeDatabase(db);
-        return false;
+        return FALSE;
     }
 
     printf("Resource deleted from the database\n");
@@ -335,14 +394,14 @@ char delete_resource(struct Route * destination, char *response) {
     if (destination->left == NULL) {
         destination->right->left = NULL;
         responseMessage(response,200,"OK","Record deleted");
-        return true;
+        return TRUE;
     }
 
 
     if (destination->right == NULL) {
         destination->left->right = NULL;
         responseMessage(response,200,"OK","Record deleted");
-        return true;
+        return TRUE;
     }
 
     
@@ -354,39 +413,35 @@ char delete_resource(struct Route * destination, char *response) {
 
     printf("Record deleted ri = %s\n", destination->ri);
     
-    // free(destination); Verificar se o free funciona
-
-    // }
-
     responseMessage(response,200,"OK","Record deleted");
     
-    return true;
+    return TRUE;
 }
 
-char update_ae(struct Route* destination, cJSON *content, char* response){
+char update_ae(struct Route* destination, cJSON *content, char* response) {
     char *keys[] = {"et"};  // array of keys to validate
     int num_keys = 1;  // number of keys in the array
     char aux_response[300] = "";
 
-    // Validate rn key exists
+    // Validate et key exists
     char rs = validate_keys(content, keys, num_keys, aux_response);
-    if (rs == false) {
-        responseMessage(response,400,"Bad Request",aux_response);
-        return false;
+    if (rs == FALSE) {
+        responseMessage(response, 400, "Bad Request", aux_response);
+        return FALSE;
     }
     // Retrieve the AE
-    char * sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, et, lt, ct FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
-    printf("%s\n",sql);
+    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, et, lt, ct FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
+    printf("%s\n", sql);
     sqlite3_stmt *stmt;
-    struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
+    struct sqlite3 *db = initDatabase("tiny-oneM2M.db");
     short rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         closeDatabase(db);
-        return false;
+        return FALSE;
     }
-    
+
     AEStruct ae;
     CSEBaseStruct csebase;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -395,28 +450,28 @@ char update_ae(struct Route* destination, cJSON *content, char* response){
         strncpy(ae.rn, (char *)sqlite3_column_text(stmt, 2), 50);
         strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 50);
         strncpy(ae.et, (char *)sqlite3_column_text(stmt, 4), 25);
-        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 4), 25);
-        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 5), 25);
+        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 5), 25);
+        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 6), 25);
         break;
     }
     
     // Validate if the et value is different than current
     cJSON *value_et = cJSON_GetObjectItem(content, "et");  // retrieve the value associated with "key_name"
-    if(strcmp(ae.et,value_et->valuestring) == 0){
-        responseMessage(response,400,"Bad Request","Resource expiration time is equal to the current one");
+    if (strcmp(ae.et, value_et->valuestring) == 0) {
+        responseMessage(response, 400, "Bad Request", "Resource expiration time is equal to the current one");
         sqlite3_finalize(stmt);
         closeDatabase(db);
-        return false;
+        return FALSE;
     }
 
     struct tm time_struct;
-    int result = strptime(value_et->valuestring, "%Y%m%dT%H%M%S", &time_struct);
+    char *result = strptime(value_et->valuestring, "%Y%m%dT%H%M%S", &time_struct);
     if (result == NULL) {
         // The date string did not match the expected format
-        responseMessage(response,400,"Bad Request","Invalid date format");
+        responseMessage(response, 400, "Bad Request", "Invalid date format");
         sqlite3_finalize(stmt);
         closeDatabase(db);
-        return false;
+        return FALSE;
     }
 
     time_t current_time, input_time;
@@ -428,43 +483,33 @@ char update_ae(struct Route* destination, cJSON *content, char* response){
 
     // Compare input time with current time
     if (current_time >= input_time) {
-        responseMessage(response,400,"Bad Request","Expiration time is in the past");
+        responseMessage(response, 400, "Bad Request", "Expiration time is in the past");
         sqlite3_finalize(stmt);
         closeDatabase(db);
-        return false;
+        return FALSE;
     }
 
-    // verify date is not in past
+    // Update the expiration time
     sql = sqlite3_mprintf("UPDATE mtc SET et='%s' WHERE ri = '%s' AND ty = %d;", value_et->valuestring, destination->ri, destination->ty);
-    printf("%s\n",sql);
+    printf("%s\n", sql);
 
-    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    rc = sqlite3_exec(db, sql, NULL, NULL, NULL);
     if (rc != SQLITE_OK) {
-        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
-        sqlite3_finalize(stmt);
-        closeDatabase(db);
-        return false;
-    }
-    
-    // Execute the statement
-    rc = sqlite3_step(stmt);
-    if (rc != SQLITE_DONE) {
         printf("Failed to execute statement: %s\n", sqlite3_errmsg(db));
-        sqlite3_finalize(stmt);
         closeDatabase(db);
-        return false;
+        return FALSE;
     }
 
-    // Retrieve the AE
+    // Retrieve the AE with the updated expiration time
     sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, et, lt, ct FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
-    printf("%s\n",sql);
+    printf("%s\n", sql);
 
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         closeDatabase(db);
-        return false;
+        return FALSE;
     }
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -473,26 +518,24 @@ char update_ae(struct Route* destination, cJSON *content, char* response){
         strncpy(ae.rn, (char *)sqlite3_column_text(stmt, 2), 50);
         strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 50);
         strncpy(ae.et, (char *)sqlite3_column_text(stmt, 4), 25);
-        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 4), 25);
-        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 5), 25);
+        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 5), 25);
+        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 6), 25);
         break;
     }
 
-    cJSON * root = ae_to_json(&ae);
+    cJSON *root = ae_to_json(&ae);
 
     printf("Convert to json string\n");
-    char * json_str = cJSON_PrintUnformatted(root);
-    char * response_data = json_str;
+    char *json_str = cJSON_PrintUnformatted(root);
+    char *response_data = json_str;
     printf("%s\n", json_str);
     strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
-
     strcat(response, response_data);
-    
+
     cJSON_Delete(root);
     sqlite3_finalize(stmt);
     closeDatabase(db);
     free(json_str);
-     
-    return true;
-   
+
+    return TRUE;
 }

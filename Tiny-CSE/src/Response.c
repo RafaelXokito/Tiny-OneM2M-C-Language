@@ -39,104 +39,17 @@ void responseMessage(char* response, int status_code, char* status_message, char
         sprintf(response, "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\n\r\n{\"status_code\": %d, \"message\":\"%s\"}", status_code, status_message, status_code, message);
 }
 
-void *handle_connection(void *connectioninfo) {
-	ConnectionInfo* info = (ConnectionInfo*) connectioninfo;
+void close_socket_and_exit(ConnectionInfo *info) {
+    close(info->socket_desc);
+    free(info);
+    pthread_exit(NULL);
+}
 
-	printf("\n");
-
-	char client_msg[4096] = "";
-
-    char buffer[1024] = {0};
-    int valread;
-    
-    // read data from the client
-    read(info->socket_desc, client_msg, 1024);
-	char request[1024];
-	strcpy(request, client_msg);
-
-    // printf("%s\n", client_msg);
-
-	// parsing client socket header to get HTTP method, route
-	char *method = "";
-	char *urlRoute = "";
-
-	char *client_http_header = strtok(client_msg, "\n");
-	
-	// printf("\n\n%s\n\n", client_http_header);
-
-	char *header_token = strtok(client_http_header, " ");
-	
-	int header_parse_counter = 0;
-
-	while (header_token != NULL) {
-
-		switch (header_parse_counter) {
-			case 0:
-				method = header_token;
-			case 1:
-				urlRoute = header_token;
-		}
-		header_token = strtok(NULL, " ");
-		header_parse_counter++;
-	}
-
-	to_lowercase(urlRoute);
-	printf("The method is %s\n", method);
-	printf("The route is %s\n", urlRoute);
-
-	struct Route * destination = search(info->route, urlRoute);
-
-	printf("Check if route was founded\n");
-	if (destination == NULL) {
-		char response[4096] = "";
-
-        responseMessage(response,404,"Not found","Resource not found");
-
-        printf("http_header: %s\n", response);
-
-        send(info->socket_desc, response, strlen(response), 0);
-
-        // close the client socket
-        close(info->socket_desc);
-        // free the socket descriptor pointer
-        free(info);
-        // exit the thread
-        pthread_exit(NULL);
-	}
-
-	printf("Check if is the default route\n");
-	if (strcmp(destination->key, "/") == 0) {
-		char template[100] = "templates/";
-
-		strcat(template, destination->value);
-		char * response_data = render_static_file(template);
-
-		char response[4096] = "HTTP/1.1 200 OK\r\n\r\n";
-		strcat(response, response_data);
-		strcat(response, "\r\n\r\n");
-
-		printf("http_header: %s\n", response);
-
-		send(info->socket_desc, response, strlen(response), 0);
-
-		// close the client socket
-		close(info->socket_desc);
-		// free the socket descriptor pointer
-		free(info);
-		// exit the thread
-		pthread_exit(NULL);
-	}
-
-	// Creating the response
-	char response[4096] = "";
-	
-	if (strcmp(method, "GET") == 0) {
-        // Get Request
-		switch (destination->ty)
-		{
+void handle_get(ConnectionInfo *info, const char *method, struct Route *destination, char *response) {
+    switch (destination->ty) {
 		case CSEBASE: {
 			char rs = retrieve_csebase(destination,response);
-			if (rs == false) {
+			if (rs == FALSE) {
 				responseMessage(response,500,"Internal Server Error","Error retrieving the data");
 				fprintf(stderr,"Could not retrieve CSE_Base resource\n");
 			}
@@ -144,7 +57,7 @@ void *handle_connection(void *connectioninfo) {
 			}
 		case AE: {
 			char rs = retrieve_ae(destination,response);
-			if (rs == false) {
+			if (rs == FALSE) {
 				responseMessage(response,500,"Internal Server Error","Error retrieving the data");
 				fprintf(stderr,"Could not retrieve AE resource\n");
 			}
@@ -152,185 +65,278 @@ void *handle_connection(void *connectioninfo) {
 			break;
 		default:
 			break;
-		}
-		
-    } else if (strcmp(method, "POST") == 0) {
-		char* json_start = strstr(request, "{"); // find the start of the JSON data
-		if (json_start != NULL) {
-			size_t json_length = strlen(json_start); // calculate the length of the JSON data
-			char json_data[json_length + 1]; // create a buffer to hold the JSON data
-			strncpy(json_data, json_start, json_length); // copy the JSON data to the buffer
-			json_data[json_length] = '\0'; // add a null terminator to the end of the buffer
-
-			// Parse the JSON string into a cJSON object
-    		cJSON* json_object = cJSON_Parse(json_data);
-
-			// Retrieve the first key-value pair in the object
-			cJSON* first = json_object->child;
-			if (first != NULL) {
-				// Print the key and value
-				printf("First key: %s\n", first->string);
-
-				char* pattern = "^m2m:.*$";  // Regex pattern to match
-				// Compile the regex pattern
-				regex_t regex;
-				int ret = regcomp(&regex, pattern, 0);
-				if (ret) {
-					responseMessage(response,500,"Internal Server Error","Error compiling regex");
-					fprintf(stderr, "Error compiling regex\n");
-				}
-
-				// Test if the string matches the regex pattern
-				ret = regexec(&regex, first->string, 0, NULL, 0);
-				if (!ret) {
-					printf("String matches regex pattern\n");
-					// first->string comes like "m2m:ae"
-					char aux[50];
-					strcpy(aux, first->string);
-					char *key = strtok(aux, ":");
-					key = strtok(NULL, ":");
-					to_lowercase(key);
-					// search in the types hash table for the 'ty' (resourceType) by the key (resourceName)
-					short ty = search_type(&types, key);
-					
-					// Get the JSON string from a specific element (let's say "age")
-					cJSON *content = cJSON_GetObjectItemCaseSensitive(json_object, first->string);
-					if (content == NULL) {
-						fprintf(stderr, "Error while getting the content from request\n");
-						responseMessage(response,500,"Internal Server Error","Error while getting the content from request");
-					} else {
-						// If everything was ok, we proced to the creation of resource
-						switch (ty) {
-						case AE: {
-							strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
-							char rs = create_ae(&info->route, destination, content, response);
-							if (rs == false) {
-								// The method it self already change the response properly
-								fprintf(stderr, "Could not create AE resource\n");
-							}
-							break;
-						}
-						default:
-							responseMessage(response,400,"Bad Request","Invalid resource");
-							fprintf(stderr, "Theres no available resource for %s\n", key);
-							break;
-						}
-					}
-				} else if (ret == REG_NOMATCH) {
-					responseMessage(response,400,"Bad Request","Invalid json root name, should match m2m:<resource> (e.g m2m:ae)");
-					fprintf(stderr, "Invalid json root name\n");
-				} else {
-					char buf[100];
-					regerror(ret, &regex, buf, sizeof(buf));
-					responseMessage(response,500,"Bad Request","Error matching regex");
-					fprintf(stderr, "Error matching regex: %s\n", buf);
-				}
-			} else {
-				responseMessage(response,400,"Bad Request","Invalid request body");
-				fprintf(stderr, "Object is empty\n");
-			}
-
-		} else {
-			responseMessage(response,400,"Bad Request","Invalid request body");
-			fprintf(stderr, "JSON data not found.\n");
-		}
-    } else if (strcmp(method, "DELETE") == 0) {
-		// Delete Request
-		delete_resource(destination, response);
-	} else if (strcmp(method, "PUT") == 0){
-		char* json_start = strstr(request, "{"); // find the start of the JSON data
-		if (json_start != NULL) {
-			size_t json_length = strlen(json_start); // calculate the length of the JSON data
-			char json_data[json_length + 1]; // create a buffer to hold the JSON data
-			strncpy(json_data, json_start, json_length); // copy the JSON data to the buffer
-			json_data[json_length] = '\0'; // add a null terminator to the end of the buffer
-
-			// Parse the JSON string into a cJSON object
-    		cJSON* json_object = cJSON_Parse(json_data);
-
-			// Retrieve the first key-value pair in the object
-			cJSON* first = json_object->child;
-			if (first != NULL) {
-				// Print the key and value
-				printf("First key: %s\n", first->string);
-
-				char* pattern = "^m2m:.*$";  // Regex pattern to match
-				// Compile the regex pattern
-				regex_t regex;
-				int ret = regcomp(&regex, pattern, 0);
-				if (ret) {
-					responseMessage(response,500,"Internal Server Error","Error compiling regex");
-					fprintf(stderr, "Error compiling regex\n");
-				}
-
-				// Test if the string matches the regex pattern
-				ret = regexec(&regex, first->string, 0, NULL, 0);
-				if (!ret) {
-					printf("String matches regex pattern\n");
-					// first->string comes like "m2m:ae"
-					char aux[50];
-					strcpy(aux, first->string);
-					char *key = strtok(aux, ":");
-					key = strtok(NULL, ":");
-					to_lowercase(key);
-					// search in the types hash table for the 'ty' (resourceType) by the key (resourceName)
-					short ty = search_type(&types, key);
-					
-					// Get the JSON string from a specific element (let's say "age")
-					cJSON *content = cJSON_GetObjectItemCaseSensitive(json_object, first->string);
-					if (content == NULL) {
-						fprintf(stderr, "Error while getting the content from request\n");
-						responseMessage(response,500,"Internal Server Error","Error while getting the content from request");
-					} else {
-						// If everything was ok, we proced to the creation of resource
-						switch (ty) {
-						case AE: {
-							strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
-							char rs = update_ae(destination, content, response);
-							if (rs == false) {
-								// The method it self already change the response properly
-								fprintf(stderr, "Could not update AE resource\n");
-							}
-							break;
-						}
-						default:
-							responseMessage(response,400,"Bad Request","Invalid resource");
-							fprintf(stderr, "Theres no available resource for %s\n", key);
-							break;
-						}
-					}
-				} else if (ret == REG_NOMATCH) {
-					responseMessage(response,400,"Bad Request","Invalid json root name, should match m2m:<resource> (e.g m2m:ae)");
-					fprintf(stderr, "Invalid json root name\n");
-				} else {
-					char buf[100];
-					regerror(ret, &regex, buf, sizeof(buf));
-					responseMessage(response,500,"Bad Request","Error matching regex");
-					fprintf(stderr, "Error matching regex: %s\n", buf);
-				}
-			} else {
-				responseMessage(response,400,"Bad Request","Invalid request body");
-				fprintf(stderr, "Object is empty\n");
-			}
-
-		} else {
-			responseMessage(response,400,"Bad Request","Invalid request body");
-			fprintf(stderr, "JSON data not found.\n");
-		}
 	}
+}
 
-	// printf("response: %s\n\n", response);
+void handle_post(ConnectionInfo *info, const char *request, struct Route *destination, char *response) {
+    char* json_start = strstr(request, "{"); // find the start of the JSON data
+	if (json_start != NULL) {
+		size_t json_length = strlen(json_start); // calculate the length of the JSON data
+		char json_data[json_length + 1]; // create a buffer to hold the JSON data
+		strncpy(json_data, json_start, json_length); // copy the JSON data to the buffer
+		json_data[json_length] = '\0'; // add a null terminator to the end of the buffer
 
-    int response_len = strlen(response);
+		// Parse the JSON string into a cJSON object
+		cJSON* json_object = cJSON_Parse(json_data);
 
-	send(info->socket_desc, response, response_len, 0);
+		// Retrieve the first key-value pair in the object
+		cJSON* first = json_object->child;
+		if (first != NULL) {
+			// Print the key and value
+			printf("First key: %s\n", first->string);
 
-    // close the children socket
-    close(info->socket_desc);
-    
-    // free the socket descriptor pointer
-    free(info);
-    
-    // exit the thread
-    pthread_exit(NULL);
+			char* pattern = "^m2m:.*$";  // Regex pattern to match
+			// Compile the regex pattern
+			regex_t regex;
+			int ret = regcomp(&regex, pattern, 0);
+			if (ret) {
+				responseMessage(response,500,"Internal Server Error","Error compiling regex");
+				fprintf(stderr, "Error compiling regex\n");
+			}
+
+			// Test if the string matches the regex pattern
+			ret = regexec(&regex, first->string, 0, NULL, 0);
+			if (!ret) {
+				printf("String matches regex pattern\n");
+				// first->string comes like "m2m:ae"
+				char aux[50];
+				strcpy(aux, first->string);
+				char *key = strtok(aux, ":");
+				key = strtok(NULL, ":");
+				to_lowercase(key);
+				// search in the types hash table for the 'ty' (resourceType) by the key (resourceName)
+				short ty = search_type(&types, key);
+				
+				// Get the JSON string from a specific element (let's say "age")
+				cJSON *content = cJSON_GetObjectItemCaseSensitive(json_object, first->string);
+				if (content == NULL) {
+					fprintf(stderr, "Error while getting the content from request\n");
+					responseMessage(response,500,"Internal Server Error","Error while getting the content from request");
+				} else {
+					// If everything was ok, we proced to the creation of resource
+					switch (ty) {
+					case AE: {
+						strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
+						char rs = create_ae(&info->route, destination, content, response);
+						if (rs == FALSE) {
+							// The method it self already change the response properly
+							fprintf(stderr, "Could not create AE resource\n");
+						}
+						break;
+					}
+					default:
+						responseMessage(response,400,"Bad Request","Invalid resource");
+						fprintf(stderr, "Theres no available resource for %s\n", key);
+						break;
+					}
+				}
+			} else if (ret == REG_NOMATCH) {
+				responseMessage(response,400,"Bad Request","Invalid json root name, should match m2m:<resource> (e.g m2m:ae)");
+				fprintf(stderr, "Invalid json root name\n");
+			} else {
+				char buf[100];
+				regerror(ret, &regex, buf, sizeof(buf));
+				responseMessage(response,500,"Bad Request","Error matching regex");
+				fprintf(stderr, "Error matching regex: %s\n", buf);
+			}
+		} else {
+			responseMessage(response,400,"Bad Request","Invalid request body");
+			fprintf(stderr, "Object is empty\n");
+		}
+
+	} else {
+		responseMessage(response,400,"Bad Request","Invalid request body");
+		fprintf(stderr, "JSON data not found.\n");
+	}
+}
+
+void handle_delete(ConnectionInfo *info, struct Route *destination, char *response) {
+	delete_resource(destination, response);
+}
+
+void handle_put(ConnectionInfo *info, const char *request, struct Route *destination, char *response) {
+    char* json_start = strstr(request, "{"); // find the start of the JSON data
+	if (json_start != NULL) {
+		size_t json_length = strlen(json_start); // calculate the length of the JSON data
+		char json_data[json_length + 1]; // create a buffer to hold the JSON data
+		strncpy(json_data, json_start, json_length); // copy the JSON data to the buffer
+		json_data[json_length] = '\0'; // add a null terminator to the end of the buffer
+
+		// Parse the JSON string into a cJSON object
+		cJSON* json_object = cJSON_Parse(json_data);
+
+		// Retrieve the first key-value pair in the object
+		cJSON* first = json_object->child;
+		if (first != NULL) {
+			// Print the key and value
+			printf("First key: %s\n", first->string);
+
+			char* pattern = "^m2m:.*$";  // Regex pattern to match
+			// Compile the regex pattern
+			regex_t regex;
+			int ret = regcomp(&regex, pattern, 0);
+			if (ret) {
+				responseMessage(response,500,"Internal Server Error","Error compiling regex");
+				fprintf(stderr, "Error compiling regex\n");
+			}
+
+			// Test if the string matches the regex pattern
+			ret = regexec(&regex, first->string, 0, NULL, 0);
+			if (!ret) {
+				printf("String matches regex pattern\n");
+				// first->string comes like "m2m:ae"
+				char aux[50];
+				strcpy(aux, first->string);
+				char *key = strtok(aux, ":");
+				key = strtok(NULL, ":");
+				to_lowercase(key);
+				// search in the types hash table for the 'ty' (resourceType) by the key (resourceName)
+				short ty = search_type(&types, key);
+				
+				// Get the JSON string from a specific element (let's say "age")
+				cJSON *content = cJSON_GetObjectItemCaseSensitive(json_object, first->string);
+				if (content == NULL) {
+					fprintf(stderr, "Error while getting the content from request\n");
+					responseMessage(response,500,"Internal Server Error","Error while getting the content from request");
+				} else {
+					// If everything was ok, we proced to the creation of resource
+					switch (ty) {
+					case AE: {
+						strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
+						char rs = update_ae(destination, content, response);
+						if (rs == FALSE) {
+							// The method it self already change the response properly
+							fprintf(stderr, "Could not update AE resource\n");
+						}
+						break;
+					}
+					default:
+						responseMessage(response,400,"Bad Request","Invalid resource");
+						fprintf(stderr, "Theres no available resource for %s\n", key);
+						break;
+					}
+				}
+			} else if (ret == REG_NOMATCH) {
+				responseMessage(response,400,"Bad Request","Invalid json root name, should match m2m:<resource> (e.g m2m:ae)");
+				fprintf(stderr, "Invalid json root name\n");
+			} else {
+				char buf[100];
+				regerror(ret, &regex, buf, sizeof(buf));
+				responseMessage(response,500,"Bad Request","Error matching regex");
+				fprintf(stderr, "Error matching regex: %s\n", buf);
+			}
+		} else {
+			responseMessage(response,400,"Bad Request","Invalid request body");
+			fprintf(stderr, "Object is empty\n");
+		}
+
+	} else {
+		responseMessage(response,400,"Bad Request","Invalid request body");
+		fprintf(stderr, "JSON data not found.\n");
+	}
+}
+
+void *handle_connection(void *connectioninfo) {
+    ConnectionInfo* info = (ConnectionInfo*) connectioninfo;
+
+    printf("\n");
+
+    char client_msg[4096] = "";
+
+    int valread;
+
+    // read data from the client
+    valread = read(info->socket_desc, client_msg, sizeof(client_msg));
+    if (valread < 0) {
+        perror("read");
+        close_socket_and_exit(info);
+    }
+
+    char request[1024];
+    strncpy(request, client_msg, sizeof(request) - 1);
+    request[sizeof(request) - 1] = '\0';
+
+    // parsing client socket header to get HTTP method, route
+    char *method = "";
+    char *urlRoute = "";
+
+    char *client_http_header = strtok(client_msg, "\n");
+
+    char *header_token = strtok(client_http_header, " ");
+
+    int header_parse_counter = 0;
+
+    while (header_token != NULL) {
+
+        switch (header_parse_counter) {
+            case 0:
+                method = header_token;
+                break;
+            case 1:
+                urlRoute = header_token;
+                break;
+        }
+        header_token = strtok(NULL, " ");
+        header_parse_counter++;
+    }
+
+    to_lowercase(urlRoute);
+    printf("The method is %s\n", method);
+    printf("The route is %s\n", urlRoute);
+
+    struct Route * destination = search(info->route, urlRoute);
+
+    printf("Check if route was founded\n");
+    if (destination == NULL) {
+        char response[4096] = "";
+
+        responseMessage(response, 404, "Not found", "Resource not found");
+
+        printf("http_header: %s\n", response);
+
+        send(info->socket_desc, response, strlen(response), 0);
+
+        close_socket_and_exit(info);
+    }
+
+    printf("Check if is the default route\n");
+    if (strcmp(destination->key, "/") == 0) {
+        char template[100] = "templates/";
+
+        strncat(template, destination->value, sizeof(template) - strlen(template) - 1);
+        char * response_data = render_static_file(template);
+
+        char response[4096] = "HTTP/1.1 200 OK\r\n\r\n";
+        strncat(response, response_data, sizeof(response) - strlen(response) - 1);
+        strncat(response, "\r\n\r\n", sizeof(response) - strlen(response) - 1);
+
+        printf("http_header: %s\n", response);
+
+        send(info->socket_desc, response, strlen(response), 0);
+
+        close_socket_and_exit(info);
+    }
+
+    // Creating the response
+    char response[4096] = "";
+
+    if (strcmp(method, "GET") == 0) {
+        handle_get(info, method, destination, response);
+	} else if (strcmp(method, "POST") == 0) {
+        handle_post(info, request, destination, response);
+    } else if (strcmp(method, "PUT") == 0) {
+        handle_put(info, request, destination, response);
+    } else if (strcmp(method, "DELETE") == 0) {
+        handle_delete(info, destination, response);
+    } else {
+        responseMessage(response, 405, "Method Not Allowed", "HTTP method not supported");
+    }
+
+    printf("http_header: %s\n", response);
+
+    send(info->socket_desc, response, strlen(response), 0);
+
+    close_socket_and_exit(info);
+
+    return NULL;
 }

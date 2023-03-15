@@ -55,5 +55,5 @@ char init_types() {
     // printf("%d\n", search_type(&types, "ae")); 2
     // printf("%d\n", search_type(&types, "three")); -1
 
-    return true;
+    return TRUE;
 }

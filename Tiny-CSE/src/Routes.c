@@ -80,14 +80,14 @@ char init_routes(struct Route** head) {
 	sqlite3 *db;
     db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
-		return false;
+		return FALSE;
 	}
 
     sqlite3_stmt *stmt;
     short rc = sqlite3_prepare_v2(db, "SELECT ri, pi, ty, rn FROM mtc;", -1, &stmt, 0);
     if(rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", sqlite3_errmsg(db));
-        return false;
+        return FALSE;
     }
     
     while(sqlite3_step(stmt) == SQLITE_ROW) {
@@ -115,12 +115,12 @@ char init_routes(struct Route** head) {
     sqlite3_finalize(stmt);
 
 	// The DB connection should exist in each thread and should not be shared
-    if (closeDatabase(db) == false) {
+    if (closeDatabase(db) == FALSE) {
         fprintf(stderr, "Error closing database.\n");
-        return false;
+        return FALSE;
     }
 
-	return true;
+	return TRUE;
 }
 
 void inorder(struct Route* head)

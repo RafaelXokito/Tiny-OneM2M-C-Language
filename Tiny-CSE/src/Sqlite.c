@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <sqlite3.h>
 
-#define true 1
-#define false 0
+#define TRUE 1
+#define FALSE 0
 
 int callback(void *NotUsed, int argc, char **argv, char **azColName) {
     int i;
@@ -32,7 +32,7 @@ sqlite3 *initDatabase(const char* databasename) {
 short execDatabaseScript(char* query, struct sqlite3 *db, short isCallback) {
     char *err_msg = 0;
     short rc = -1;
-    if (isCallback == false) {
+    if (isCallback == FALSE) {
         rc = sqlite3_exec(db, query, NULL, NULL, &err_msg);
     } else {
         rc = sqlite3_exec(db, query, callback, NULL, &err_msg);
@@ -41,9 +41,9 @@ short execDatabaseScript(char* query, struct sqlite3 *db, short isCallback) {
         fprintf(stderr, "SQL error: %s\n", err_msg);
         sqlite3_free(err_msg);
         sqlite3_close(db);
-        return false;
+        return FALSE;
     }
-    return true;
+    return TRUE;
 }
 
 int closeDatabase(sqlite3 *db) {
@@ -66,7 +66,7 @@ int closeDatabase(sqlite3 *db) {
     rc = sqlite3_close(db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error closing database: %s\n", sqlite3_errmsg(db));
-        return false;
+        return FALSE;
     }
-    return true;
+    return TRUE;
 }

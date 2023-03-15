@@ -21,7 +21,7 @@ char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
         closeDatabase(db);
-        return false;
+        return FALSE;
     }
 
     // Bind the values to the statement
@@ -40,7 +40,7 @@ char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
         printf("Failed to execute statement: %s\n", sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         closeDatabase(db);
-        return false;
+        return FALSE;
     }
 
     // Finalize the statement and close the database
@@ -49,7 +49,7 @@ char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
 
     printf("AE data inserted successfully.\n");
 
-    return true;
+    return TRUE;
 }
 
 cJSON *ae_to_json(const AEStruct *ae) {
