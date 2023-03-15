@@ -214,15 +214,21 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
         return FALSE;
     }
     char temp_uri[60];
-    snprintf(temp_uri, sizeof(temp_uri), "%s/%s",uri ,value_rn->valuestring);
-    to_lowercase(temp_uri);
-    if (search_byrn_ty(*head, value_rn->valuestring, AE) != NULL) {
-        responseMessage(response,400,"Bad Request","rn (resource name) key already exist in this ty (resource type)");
+    int result = snprintf(temp_uri, sizeof(temp_uri), "%s/%s", uri, value_rn->valuestring);
+    if (result < 0 || result >= sizeof(temp_uri)) {
+        responseMessage(response, 400, "Bad Request", "URI is too long");
         return FALSE;
     }
+    
     // Copy the result from the temporary buffer to the uri buffer
     strncpy(uri, temp_uri, sizeof(uri));
     uri[sizeof(uri) - 1] = '\0'; // Ensure null termination
+
+    to_lowercase(uri);
+    if (search_byrn_ty(*head, value_rn->valuestring, AE) != NULL) {
+        responseMessage(response, 400, "Bad Request", "rn (resource name) key already exist in this ty (resource type)");
+        return FALSE;
+    }
 
     pthread_mutex_t db_mutex;
 
