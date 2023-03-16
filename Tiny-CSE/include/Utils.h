@@ -1,4 +1,4 @@
-#define MAX_CONFIG_LINE_LENGTH 256  
+#define MAX_CONFIG_LINE_LENGTH 64  
 
 char* getCurrentTime();
 void to_lowercase(char* str);
