@@ -29,6 +29,7 @@ Linux:
 ```
 //sudo apt install sqlite3 // serviço de sqlite
 sudo apt -y install libsqlite3-dev // Biblioteca de sqlite
+sudo apt-get install sqlite3 libsqlite3-dev // Ou corres este comando se os de cima não funcionarem
 sudo apt-get install libcjson-dev // Não é precisa
 ```
 # Postman
