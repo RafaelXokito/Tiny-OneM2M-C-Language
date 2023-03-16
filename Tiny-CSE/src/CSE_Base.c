@@ -47,8 +47,16 @@ char init_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
         short rc = sqlite3_exec(db, createTableSQL, NULL, NULL, NULL);
         if (rc != SQLITE_OK) {
             printf("Failed to create table: %s\n", sqlite3_errmsg(db));
-            sqlite3_close(db);
+            closeDatabase(db);
             return FALSE;
+        }
+
+        // Create the lbl table
+        rc = create_multivalue_table(db);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Can't create multivalue table\n");
+            closeDatabase(db);
+            return rc;
         }
     }
 

@@ -191,8 +191,13 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     char aux_response[300] = "";
     char rs = validate_keys(content, keys, num_keys, aux_response);
     if (rs == FALSE) {
-        responseMessage(response,400,"Bad Request",aux_response);
-        return FALSE;
+        // Se não tiver "rn" geramos um com "AE-<UniqueID>"
+        char unique_id[MAX_CONFIG_LINE_LENGTH];
+        generate_unique_id(unique_id);
+        
+        char unique_name[MAX_CONFIG_LINE_LENGTH];
+        snprintf(unique_name, sizeof(unique_name), "AE-%s", unique_id);
+        cJSON_AddStringToObject(content, "rn", unique_name);
     }
     
     char uri[60];

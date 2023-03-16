@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "Utils.h"
 
@@ -78,4 +79,17 @@ void load_config_file(const char* filename) {
     }
 
     fclose(file);
+}
+
+void generate_unique_id(char *id_str) {
+    static int counter = 0;
+    
+    // Get the current time
+    time_t t = time(NULL);
+    
+    // Get the process ID
+    pid_t pid = getpid();
+    
+    // Create the unique ID string
+    snprintf(id_str, MAX_CONFIG_LINE_LENGTH, "%lx%lx%x", (unsigned long) t, (unsigned long) pid, counter++);
 }
