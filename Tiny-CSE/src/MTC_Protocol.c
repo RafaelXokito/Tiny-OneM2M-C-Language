@@ -219,20 +219,13 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
         return FALSE;
     }
 
-    // pthread_mutex_t db_mutex;
+    pthread_mutex_t db_mutex;
 
     // initialize mutex
-    // if (pthread_mutex_init(&db_mutex, NULL) != 0) {
-    //     responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
-    //     return FALSE;
-    // }
-
-    // Sqlite3 initialization opening/creating database
-    struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
-    if (db == NULL) {
-        responseMessage(response,500,"Internal Server Error","Could not open the database");
-		return FALSE;
-	}
+     if (pthread_mutex_init(&db_mutex, NULL) != 0) {
+         responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
+         return FALSE;
+    }
 
     printf("Creating AE\n");
     AEStruct ae;
@@ -245,24 +238,21 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     cJSON_AddStringToObject(content, "pi", destination->ri);
 
     // perform database operations
-    // pthread_mutex_lock(&db_mutex);
+    pthread_mutex_lock(&db_mutex);
     
-    rs = init_ae(&ae, content, db);
+    rs = init_ae(&ae, content, response);
     if (rs == FALSE) {
-        responseMessage(response, 400, "Bad Request", "Verify the request body");
-        // pthread_mutex_unlock(&db_mutex);
-        // pthread_mutex_destroy(&db_mutex);
-        closeDatabase(db);
+        //responseMessage(response, 400, "Bad Request", "Verify the request body");
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
         return FALSE;
     }
-
+    
     // Add New Routes
     to_lowercase(uri);
     addRoute(head, uri, ae.ri, ae.ty, ae.rn);
     printf("New Route: %s -> %s -> %d -> %s \n", uri, ae.ri, ae.ty, ae.rn);
-
-    closeDatabase(db);
-
+    
     // Convert the AE struct to json and the Json Object to Json String
     cJSON *root = ae_to_json(&ae);
     char *str = cJSON_Print(root);
@@ -278,10 +268,10 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     cJSON_free(str);
 
     // // access database here
-    // pthread_mutex_unlock(&db_mutex);
+    pthread_mutex_unlock(&db_mutex);
 
     // // clean up
-    // pthread_mutex_destroy(&db_mutex);
+    pthread_mutex_destroy(&db_mutex);
 
     return TRUE;
 }

@@ -2,8 +2,14 @@
 
 extern int DAYS_PLUS_ET;
 
-char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
-    
+char init_ae(AEStruct * ae, cJSON *content, char* response) {
+    // Sqlite3 initialization opening/creating database
+    struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
+    if (db == NULL) {
+        responseMessage(response,500,"Internal Server Error","Could not open the database");
+		return FALSE;
+	}
+
     // Convert the JSON object to a C structure
     ae->ty = AE;
     strcpy(ae->ri, cJSON_GetObjectItemCaseSensitive(content, "ri")->valuestring);
@@ -22,6 +28,7 @@ char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
     short rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Verify the request body");
         closeDatabase(db);
         return FALSE;
     }
@@ -39,6 +46,7 @@ char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
         printf("Failed to execute statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Verify the request body");
         sqlite3_finalize(stmt);
         closeDatabase(db);
         return FALSE;

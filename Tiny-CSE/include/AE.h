@@ -8,6 +8,6 @@ typedef struct {
     char lt[25]; // lastModifiedTime
 } AEStruct;
 
-char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db);
+char init_ae(AEStruct * ae, cJSON *content, char* response);
 
 cJSON *ae_to_json(const AEStruct *ae);
