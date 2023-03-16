@@ -301,12 +301,12 @@ char retrieve_ae(struct Route * destination, char *response) {
         AEStruct ae;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         ae.ty = sqlite3_column_int(stmt, 0);
-        strncpy(ae.ri, (char *)sqlite3_column_text(stmt, 1), 50);
+        strncpy(ae.ri, (char *)sqlite3_column_text(stmt, 1), 10);
         strncpy(ae.rn, (char *)sqlite3_column_text(stmt, 2), 50);
-        strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 50);
-        strncpy(ae.et, (char *)sqlite3_column_text(stmt, 4), 25);
-        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 4), 25);
-        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 5), 25);
+        strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 10);
+        strncpy(ae.et, (char *)sqlite3_column_text(stmt, 4), 20);
+        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 4), 20);
+        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 5), 20);
         break;
     }
 
@@ -441,12 +441,12 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
     AEStruct ae;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         ae.ty = sqlite3_column_int(stmt, 0);
-        strncpy(ae.ri, (char *)sqlite3_column_text(stmt, 1), 50);
+        strncpy(ae.ri, (char *)sqlite3_column_text(stmt, 1), 10);
         strncpy(ae.rn, (char *)sqlite3_column_text(stmt, 2), 50);
-        strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 50);
-        strncpy(ae.et, (char *)sqlite3_column_text(stmt, 4), 25);
-        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 5), 25);
-        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 6), 25);
+        strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 10);
+        strncpy(ae.et, (char *)sqlite3_column_text(stmt, 4), 20);
+        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 5), 20);
+        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 6), 20);
         break;
     }
     
@@ -516,12 +516,12 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         ae.ty = sqlite3_column_int(stmt, 0);
-        strncpy(ae.ri, (char *)sqlite3_column_text(stmt, 1), 50);
+        strncpy(ae.ri, (char *)sqlite3_column_text(stmt, 1), 10);
         strncpy(ae.rn, (char *)sqlite3_column_text(stmt, 2), 50);
-        strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 50);
-        strncpy(ae.et, (char *)sqlite3_column_text(stmt, 4), 25);
-        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 5), 25);
-        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 6), 25);
+        strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 10);
+        strncpy(ae.et, (char *)sqlite3_column_text(stmt, 4), 20);
+        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 5), 20);
+        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 6), 20);
         break;
     }
 
