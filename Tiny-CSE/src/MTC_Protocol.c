@@ -186,26 +186,14 @@ char retrieve_csebase(struct Route * destination, char *response) {
 
 char create_ae(struct Route** head, struct Route* destination, cJSON *content, char* response) {
 
-    char *keys[] = {"ri", "rn"};  // array of keys to validate
-    int num_keys = 2;  // number of keys in the array
+    char *keys[] = {"rn"};  // array of keys to validate
+    int num_keys = 1;  // number of keys in the array
     char aux_response[300] = "";
     char rs = validate_keys(content, keys, num_keys, aux_response);
     if (rs == FALSE) {
         responseMessage(response,400,"Bad Request",aux_response);
         return FALSE;
     }
-
-    cJSON *value_ri = cJSON_GetObjectItem(content, "ri");  // retrieve the value associated with "key_name"
-    if (value_ri == NULL) {
-        responseMessage(response,400,"Bad Request","ri (resource id) key not found");
-        return FALSE;
-    }
-    to_lowercase(value_ri->valuestring);
-    if (search_byri(*head, value_ri->valuestring) != NULL) {
-        responseMessage(response,400,"Bad Request","ri (resource id) key already exist");
-        return FALSE;
-    }
-
     
     char uri[60];
     snprintf(uri, sizeof(uri), "/%s",destination->value);
@@ -249,6 +237,11 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     printf("Creating AE\n");
     AEStruct ae;
     // Should be garantee that the content (json object) dont have this keys
+    char ri[50] = "";
+    int countAE = count_same_types(*head, AE);
+    snprintf(ri, sizeof(ri), "CAE%d", countAE);
+    printf("%s\n", ri);
+    cJSON_AddStringToObject(content, "ri", ri);
     cJSON_AddStringToObject(content, "pi", destination->ri);
 
     // perform database operations

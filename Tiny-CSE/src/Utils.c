@@ -2,8 +2,13 @@
 #include <time.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "Utils.h"
+
+extern int DAYS_PLUS_ET;
+extern char BASE_RI[MAX_CONFIG_LINE_LENGTH];
+extern char BASE_RN[MAX_CONFIG_LINE_LENGTH];
 
 char* getCurrentTime() {
     static char timestamp[30];
@@ -21,7 +26,7 @@ void to_lowercase(char* str) {
     }
 }
 
-char* get_datetime_one_month_later() {
+char* get_datetime_days_later(int days) {
     // Allocate memory for the datetime string
     char* datetime_str = (char*) malloc(20 * sizeof(char));
 
@@ -38,4 +43,39 @@ char* get_datetime_one_month_later() {
 
     // Return the datetime string
     return datetime_str;
+}
+
+void parse_config_line(char* line) {
+    char key[MAX_CONFIG_LINE_LENGTH] = "";
+    char value[MAX_CONFIG_LINE_LENGTH] = "";
+
+    if (sscanf(line, "%[^= ] = %s", key, value) == 2) {
+        if (strcmp(key, "DAYS_PLUS_ET") == 0) {
+            DAYS_PLUS_ET = atoi(value);
+        } else if (strcmp(key, "BASE_RI") == 0) {
+            strcpy(BASE_RI, value);
+        } else if (strcmp(key, "BASE_RN") == 0) {
+            strcpy(BASE_RN, value);
+        } else {
+            printf("Unknown key: %s\n", key);
+        }
+    }
+}
+
+void load_config_file(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        fprintf(stderr, "Error opening config file: %s\n", filename);
+        exit(1);
+    }
+
+    char line[MAX_CONFIG_LINE_LENGTH];
+    while (fgets(line, sizeof(line), file)) {
+        if (line[0] == '#' || strlen(line) <= 1) {
+            continue;
+        }
+        parse_config_line(line);
+    }
+
+    fclose(file);
 }

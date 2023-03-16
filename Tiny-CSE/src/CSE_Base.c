@@ -1,5 +1,8 @@
 #include "Common.h"
 
+extern char BASE_RI[MAX_CONFIG_LINE_LENGTH];
+extern char BASE_RN[MAX_CONFIG_LINE_LENGTH];
+
 char init_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
 
     // {
@@ -19,7 +22,8 @@ char init_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
 	}
 
 	// Parse the JSON object
-    char jsonString[] = "{\"ty\": 5, \"ri\": \"onem2m\", \"rn\": \"cse-in\", \"pi\": \"\"}";
+    char jsonString[256]; // Adjust the size of the buffer as needed to fit the largest possible jsonString
+    snprintf(jsonString, sizeof(jsonString), "{\"ty\": 5, \"ri\": \"%s\", \"rn\": \"%s\", \"pi\": \"\"}", BASE_RI, BASE_RN);
     cJSON *json = cJSON_Parse(jsonString);
     if (json == NULL) {
         printf("Failed to parse JSON.\n");

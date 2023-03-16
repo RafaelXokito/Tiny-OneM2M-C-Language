@@ -133,22 +133,17 @@ void inorder(struct Route* head)
     }
 }
 
-// struct Route * addRoute(struct Route * root, char* key, char* ri, short ty, char* value) {
-// 	if (root == NULL) {
-// 		return initRoute(key, ri, ty, value);
-// 	}
-
-// 	if (strcmp(key, root->key) == 0) {
-// 		printf("============ WARNING ============\n");
-// 		printf("A Route For \"%s\" Already Exists\n", key);
-// 	}else if (strcmp(key, root->key) > 0) {
-// 		root->right = addRoute(root->right, key, ri, ty, value);
-// 	}else {
-// 		root->left = addRoute(root->left, key, ri, ty, value);
-// 	}
-
-// 	return root;
-// }
+int count_same_types(struct Route* head, int type) {
+    int count = 0;
+    struct Route* current = head;
+    while (current != NULL) {
+        if (current->ty == type) {
+            count++;
+        }
+        current = current->right;
+    }
+    return count;
+}
 
 struct Route * addRoute(struct Route **head, char* key, char* ri, short ty, char* value) {
 	// create a new node with the given fields

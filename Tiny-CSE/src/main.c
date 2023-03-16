@@ -12,10 +12,20 @@
 
 int client_socket;
 
+int DAYS_PLUS_ET = 0;
+char BASE_RI[MAX_CONFIG_LINE_LENGTH] = "";
+char BASE_RN[MAX_CONFIG_LINE_LENGTH] = "";
+
 int main() {
 
     // Register the SIGINT signal handler
     signal(SIGINT, sigint_handler);
+
+	load_config_file(".config");
+	if (DAYS_PLUS_ET == 0 || strcmp(BASE_RI, "") == 0 || strcmp(BASE_RN, "") == 0) {
+		perror("Configuration variables are missing. Should follow this regex %[^= ] = %s (e.g. BASE_RI = onem2m)");
+		exit(EXIT_FAILURE);
+	}
 
     pthread_t thread_id;
 
@@ -25,13 +35,13 @@ int main() {
 
     short rs = init_protocol(&head);
     if (rs == FALSE) {
-        printf("Error initializing protocol.\n");
+		perror("Error initializing protocol.");
         exit(EXIT_FAILURE);
     }
 
     rs = init_routes(&head);
     if (rs == FALSE) {
-        printf("Error initializing routes.\n");
+		perror("Error initializing routes.");
         exit(EXIT_FAILURE);
     }
 

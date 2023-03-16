@@ -43,6 +43,7 @@
         "iosfwd": "c",
         "utils.h": "c",
         "atomic": "c",
-        "cstddef": "c"
+        "cstddef": "c",
+        "*.config": "c"
     }
 }

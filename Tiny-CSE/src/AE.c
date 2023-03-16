@@ -1,5 +1,7 @@
 #include "Common.h"
 
+extern int DAYS_PLUS_ET;
+
 char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
     
     // Convert the JSON object to a C structure
@@ -7,7 +9,7 @@ char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
     strcpy(ae->ri, cJSON_GetObjectItemCaseSensitive(content, "ri")->valuestring);
     strcpy(ae->rn, cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
     strcpy(ae->pi, cJSON_GetObjectItemCaseSensitive(content, "pi")->valuestring);
-    strcpy(ae->et, get_datetime_one_month_later());
+    strcpy(ae->et, get_datetime_days_later(DAYS_PLUS_ET));
     strcpy(ae->ct, getCurrentTime());
     strcpy(ae->lt, getCurrentTime());
 
@@ -26,7 +28,6 @@ char init_ae(AEStruct * ae, cJSON *content, struct sqlite3 * db) {
 
     // Bind the values to the statement
     sqlite3_bind_int(stmt, 1, ae->ty);
-    to_lowercase(ae->ri);
     sqlite3_bind_text(stmt, 2, ae->ri, strlen(ae->ri), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 3, ae->rn, strlen(ae->rn), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 4, ae->pi, strlen(ae->pi), SQLITE_STATIC);
