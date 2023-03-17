@@ -43,7 +43,7 @@ char init_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
 
     if (isTableCreated == FALSE) {
         // Create the table if it doesn't exist
-        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT, rn TEXT, pi TEXT, et TEXT, ct TEXT, lt TEXT)";
+        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT PRIMARY KEY, rn TEXT, pi TEXT, aei TEXT, api TEXT, rr TEXT, et TEXT, ct TEXT, lt TEXT)";
         short rc = sqlite3_exec(db, createTableSQL, NULL, NULL, NULL);
         if (rc != SQLITE_OK) {
             printf("Failed to create table: %s\n", sqlite3_errmsg(db));
@@ -51,12 +51,12 @@ char init_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
             return FALSE;
         }
 
-        // Create the lbl table
+        // Create the multivalue table
         rc = create_multivalue_table(db);
         if (rc != SQLITE_OK) {
             fprintf(stderr, "Can't create multivalue table\n");
             closeDatabase(db);
-            return rc;
+            return FALSE;
         }
     }
 

@@ -186,18 +186,31 @@ char retrieve_csebase(struct Route * destination, char *response) {
 
 char create_ae(struct Route** head, struct Route* destination, cJSON *content, char* response) {
 
-    char *keys[] = {"rn"};  // array of keys to validate
+    // JSON Validation
+
+    // "rn" is an optional, but if dont come with it we need to generate a resource name
+    char *keys_rn[] = {"rn"};  // Resource Name
     int num_keys = 1;  // number of keys in the array
     char aux_response[300] = "";
-    char rs = validate_keys(content, keys, num_keys, aux_response);
+    char rs = validate_keys(content, keys_rn, num_keys, aux_response);
     if (rs == FALSE) {
         // Se não tiver "rn" geramos um com "AE-<UniqueID>"
         char unique_id[MAX_CONFIG_LINE_LENGTH];
         generate_unique_id(unique_id);
-        
+
         char unique_name[MAX_CONFIG_LINE_LENGTH];
         snprintf(unique_name, sizeof(unique_name), "AE-%s", unique_id);
         cJSON_AddStringToObject(content, "rn", unique_name);
+    }
+
+    // Mandatory Atributes
+    char *keys_m[] = {"api", "rr"};  // App-ID, requestReachability
+    num_keys = 2;  // number of keys in the array
+    strcpy(aux_response, "");
+    rs = validate_keys(content, keys_m, num_keys, aux_response);
+    if (rs == FALSE) {
+        responseMessage(response, 400, "Bad Request", aux_response);
+        return FALSE;
     }
     
     char uri[60];
@@ -544,5 +557,67 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
     closeDatabase(db);
     free(json_str);
 
+    return TRUE;
+}
+
+static int insert_element_into_multivalue_table(sqlite3 *db, const char *mtc_ri, int parent_id, const char *key, const char *value, const char *type) {
+    sqlite3_stmt *stmt;
+    const char *sql = "INSERT INTO multivalue (mtc_ri, parent_id, key, value, type) VALUES (?, ?, ?, ?, ?);";
+
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
+        return rc;
+    }
+
+    sqlite3_bind_text(stmt, 1, mtc_ri, strlen(mtc_ri), SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 2, parent_id);
+    sqlite3_bind_text(stmt, 3, key, strlen(key), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 4, value, strlen(value), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 5, type, strlen(type), SQLITE_STATIC);
+
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+        fprintf(stderr, "Execution failed: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        return rc;
+    }
+
+    sqlite3_finalize(stmt);
+    return SQLITE_OK;
+}
+
+char insert_multivalue_element(cJSON *element, const char *mtc_ri, int parent_id, const char *key, sqlite3 *db) {
+    if (cJSON_IsObject(element)) {
+        cJSON *item;
+        cJSON_ArrayForEach(item, element) {
+            insert_multivalue_element(item, mtc_ri, parent_id, item->string, db);
+        }
+    } else if (cJSON_IsArray(element)) {
+        cJSON *item;
+        cJSON_ArrayForEach(item, element) {
+            insert_multivalue_element(item, mtc_ri, parent_id, NULL, db);
+        }
+    } else {
+        const char *type;
+        char value_str[64];
+
+        if (cJSON_IsString(element)) {
+            type = "string";
+            strncpy(value_str, element->valuestring, sizeof(value_str) - 1);
+            value_str[sizeof(value_str) - 1] = '\0';
+        } else if (cJSON_IsNumber(element)) {
+            type = "number";
+            snprintf(value_str, sizeof(value_str), "%lf", element->valuedouble);
+        } else {
+            fprintf(stderr, "Unsupported cJSON type\n");
+            return FALSE;
+        }
+
+        if (insert_element_into_multivalue_table(db, mtc_ri, parent_id, key, value_str, type) != SQLITE_OK) {
+            fprintf(stderr, "Failed to insert multivalue element\n");
+            return FALSE;
+        }
+    }
     return TRUE;
 }

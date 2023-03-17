@@ -32,3 +32,5 @@ char retrieve_ae(struct Route * destination, char *response);
 char validate_keys(cJSON *object, char *keys[], int num_keys, char *response);
 char delete_resource(struct Route * destination, char *response);
 char update_ae(struct Route* destination, cJSON *content, char* response);
+char insert_multivalue_element(cJSON *element, const char *mtc_id, int parent_id, const char *key, sqlite3 *db);
+static int insert_element_into_multivalue_table(sqlite3 *db, const char *mtc_ri, int parent_id, const char *key, const char *value, const char *type);

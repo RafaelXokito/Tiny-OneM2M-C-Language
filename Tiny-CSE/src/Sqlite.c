@@ -73,16 +73,55 @@ int closeDatabase(sqlite3 *db) {
 int create_multivalue_table(sqlite3 *db) {
     const char *sql = "CREATE TABLE IF NOT EXISTS multivalue ("
                       "id INTEGER PRIMARY KEY,"
-                      "mtc_id INTEGER,"
+                      "mtc_ri INTEGER,"
                       "parent_id INTEGER,"
                       "key TEXT,"
                       "value TEXT,"
                       "type TEXT,"
-                      "FOREIGN KEY (mtc_id) REFERENCES mtc (id),"
+                      "FOREIGN KEY (mtc_ri) REFERENCES mtc (ri),"
                       "FOREIGN KEY (parent_id) REFERENCES multivalue (id));";
 
     char *errmsg = 0;
     int rc = sqlite3_exec(db, sql, 0, 0, &errmsg);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "SQL error: %s\n", errmsg);
+        sqlite3_free(errmsg);
+        return rc;
+    }
+
+    return SQLITE_OK;
+}
+
+int begin_transaction(sqlite3 *db) {
+    char *errmsg = 0;
+    int rc = sqlite3_exec(db, "BEGIN;", 0, 0, &errmsg);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "SQL error: %s\n", errmsg);
+        sqlite3_free(errmsg);
+        return rc;
+    }
+
+    return SQLITE_OK;
+}
+
+int commit_transaction(sqlite3 *db) {
+    char *errmsg = 0;
+    int rc = sqlite3_exec(db, "COMMIT;", 0, 0, &errmsg);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "SQL error: %s\n", errmsg);
+        sqlite3_free(errmsg);
+        return rc;
+    }
+
+    return SQLITE_OK;
+}
+
+int rollback_transaction(sqlite3 *db) {
+    char *errmsg = 0;
+    int rc = sqlite3_exec(db, "ROLLBACK;", 0, 0, &errmsg);
 
     if (rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", errmsg);

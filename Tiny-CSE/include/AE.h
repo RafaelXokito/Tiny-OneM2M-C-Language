@@ -13,7 +13,7 @@ typedef struct {
     char aei[5]; // AE ID
     char rn[50]; // resourceName
     char api[20]; // App ID
-    char rr; // Request Reachability
+    char rr[5]; // Request Reachability
     char csz[50]; // Content Serialization
     char ri[10]; // resourceID
     char nl[20]; // Node Link
