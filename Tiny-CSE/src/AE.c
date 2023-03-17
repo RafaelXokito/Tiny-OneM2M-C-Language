@@ -56,18 +56,25 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
     strcpy(ae->et, get_datetime_days_later(DAYS_PLUS_ET));
     strcpy(ae->ct, getCurrentTime());
     strcpy(ae->lt, getCurrentTime());
-    cJSON *lbl_array = cJSON_GetObjectItemCaseSensitive(content, "lbl");
-    if (lbl_array) {
-        char *json_lbl_str = cJSON_Print(lbl_array);
-        if (json_lbl_str) {
-            ae->json_lbl = strdup(json_lbl_str);
-            if (ae->json_lbl == NULL) {
-                fprintf(stderr, "Failed to allocate memory for the JSON lbl string\n");
-                responseMessage(response, 400, "Bad Request", "Verify the request body");
-                closeDatabase(db);
-                return FALSE;
+
+    const char *keys[] = {"acpi", "lbl", "daci", "poa", "ch", "at"};
+    short num_keys = sizeof(keys) / sizeof(keys[0]);
+    char **json_strings[] = {&ae->json_acpi, &ae->json_lbl, &ae->json_daci, &ae->json_poa, &ae->json_ch, &ae->json_at};
+
+    for (int i = 0; i < num_keys; i++) {
+        cJSON *json_array = cJSON_GetObjectItemCaseSensitive(content, keys[i]);
+        if (json_array) {
+            char *json_str = cJSON_Print(json_array);
+            if (json_str) {
+                *json_strings[i] = strdup(json_str);
+                if (*json_strings[i] == NULL) {
+                    fprintf(stderr, "Failed to allocate memory for the JSON %s string\n", keys[i]);
+                    responseMessage(response, 400, "Bad Request", "Verify the request body");
+                    closeDatabase(db);
+                    return FALSE;
+                }
+                free(json_str);
             }
-            free(json_lbl_str);
         }
     }
 
@@ -107,7 +114,7 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
 
     // Keys to check in the JSON object
     const char *keys_to_check[] = {"acpi", "lbl", "daci", "poa"};
-    int num_keys = sizeof(keys_to_check) / sizeof(keys_to_check[0]);
+    num_keys = sizeof(keys_to_check) / sizeof(keys_to_check[0]);
 
     // Initialize an array of strings to store the keys that are arrays
     const char *array_keys[num_keys];
@@ -182,9 +189,10 @@ cJSON *ae_to_json(const AEStruct *ae) {
 
     // Add JSON string attributes back into cJSON object
     const char *keys[] = {"acpi", "lbl", "daci", "poa", "ch", "at"};
+    short num_keys = sizeof(keys) / sizeof(keys[0]);
     const char *json_strings[] = {ae->json_acpi, ae->json_lbl, ae->json_daci, ae->json_poa, ae->json_ch, ae->json_at};
 
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < num_keys; i++) {
         if (json_strings[i] != NULL) {
             cJSON *json_object = cJSON_Parse(json_strings[i]);
             if (json_object) {

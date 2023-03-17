@@ -322,7 +322,7 @@ char retrieve_ae(struct Route * destination, char *response) {
         strncpy(ae->ri, (char *)sqlite3_column_text(stmt, 1), 10);
         strncpy(ae->rn, (char *)sqlite3_column_text(stmt, 2), 50);
         strncpy(ae->pi, (char *)sqlite3_column_text(stmt, 3), 10);
-        strncpy(ae->aei, (char *)sqlite3_column_text(stmt, 4), 5);
+        strncpy(ae->aei, (char *)sqlite3_column_text(stmt, 4), 10);
         strncpy(ae->api, (char *)sqlite3_column_text(stmt, 5), 20);
         strncpy(ae->rr, (char *)sqlite3_column_text(stmt, 6), 5);
         strncpy(ae->et, (char *)sqlite3_column_text(stmt, 7), 20);
@@ -339,8 +339,6 @@ char retrieve_ae(struct Route * destination, char *response) {
         return FALSE;
     }
 
-
-    // Create the parent JSON object
     add_arrays_to_json(db, ae, cJSON_GetObjectItem(root, "m2m:ae"));
 
     char *json_str = cJSON_PrintUnformatted(root);
@@ -430,8 +428,6 @@ char delete_resource(struct Route * destination, char *response) {
     destination->right->left = destination->left;
     responseMessage(response,200,"OK","Record deleted");
 
-    printf("ola\n");
-
     printf("Record deleted ri = %s\n", destination->ri);
     
     responseMessage(response,200,"OK","Record deleted");
@@ -514,7 +510,6 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
         closeDatabase(db);
         return FALSE;
     }
-
 
     // Update the expiration time
     sql = sqlite3_mprintf("UPDATE mtc SET et='%s' WHERE ri = '%s' AND ty = %d;", value_et->valuestring, destination->ri, destination->ty);
@@ -786,11 +781,11 @@ void add_arrays_to_json(sqlite3 *db, const AEStruct *ae, cJSON *parent_json) {
     for (int i = 0; i < num_keys; i++) {
         char *current_key = keys[i];
 
-        cJSON *labels = retrieve_multivalue_elements(db, ae->ri, current_key);
+        cJSON *arrays = retrieve_multivalue_elements(db, ae->ri, current_key);
 
-        if (labels != NULL) {
-            // Add the labels cJSON object to the parent_json object
-            cJSON_AddItemToObject(parent_json, current_key, labels);
+        if (arrays != NULL) {
+            // Add the arrays cJSON object to the parent_json object
+            cJSON_ReplaceItemInObject(parent_json, current_key, arrays);
         }
     }
 }

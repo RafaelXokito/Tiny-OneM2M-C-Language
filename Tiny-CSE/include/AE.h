@@ -10,7 +10,7 @@ typedef struct {
     char *json_poa; // Point of Access
     char *json_ch; // Childrens ??????
     char aa[50]; // Announced Atribute 
-    char aei[5]; // AE ID
+    char aei[10]; // AE ID
     char rn[50]; // resourceName
     char api[20]; // App ID
     char rr[5]; // Request Reachability
