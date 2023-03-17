@@ -38,4 +38,5 @@ char insert_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *
 char *get_element_value_as_string(cJSON *element);
 cJSON* retrieve_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *key);
 void add_arrays_to_json(sqlite3 *db, const AEStruct *ae, cJSON *parent_json);
-cJSON *build_json_recursively(sqlite3 *db, int parent_rowid);
+cJSON *build_json_recursively(sqlite3 *db, int parent_rowid, char is_root_array);
+void remove_empty_keys(cJSON *json);

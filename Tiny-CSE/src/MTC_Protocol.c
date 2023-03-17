@@ -696,11 +696,11 @@ char *get_element_value_as_string(cJSON *element) {
     return value_str;
 }
 
-cJSON *build_json_recursively(sqlite3 *db, int parent_rowid) {
+cJSON *build_json_recursively(sqlite3 *db, int parent_rowid, char is_root_array) {
     sqlite3_stmt *stmt;
     cJSON *result = NULL;
 
-    const char *sql = "SELECT rowid, parent_id, type, value FROM multivalue WHERE parent_id = ? ORDER BY rowid";
+    const char *sql = "SELECT rowid, parent_id, type, key, value FROM multivalue WHERE parent_id = ? ORDER BY rowid";
 
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
@@ -711,23 +711,21 @@ cJSON *build_json_recursively(sqlite3 *db, int parent_rowid) {
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         int rowid = sqlite3_column_int(stmt, 0);
-        const char *value_type = (const char *) sqlite3_column_text(stmt, 2);
-        const char *value = (const char *) sqlite3_column_text(stmt, 3);
+        const char *value_type = (const char *)sqlite3_column_text(stmt, 2);
+        const char *key = (const char *)sqlite3_column_text(stmt, 3);
+        const char *value = (const char *)sqlite3_column_text(stmt, 4);
 
         cJSON *item = NULL;
 
         if (strcmp(value_type, "object") == 0) {
-            item = cJSON_CreateObject();
-            cJSON *child = build_json_recursively(db, rowid);
-            if (child) {
-                cJSON_AddItemToObject(item, value, child);
+            item = build_json_recursively(db, rowid, FALSE);
+            if (strcmp(key, "root") == 0) {
+                cJSON *temp = item;
+                item = cJSON_Duplicate(cJSON_GetObjectItem(temp, "root"), 1);
+                cJSON_Delete(temp);
             }
         } else if (strcmp(value_type, "array") == 0) {
-            item = cJSON_CreateArray();
-            cJSON *child = build_json_recursively(db, rowid);
-            if (child) {
-                cJSON_AddItemToArray(item, child);
-            }
+            item = build_json_recursively(db, rowid, TRUE);
         } else if (strcmp(value_type, "number") == 0) {
             double num_value = atof(value);
             item = cJSON_CreateNumber(num_value);
@@ -736,22 +734,41 @@ cJSON *build_json_recursively(sqlite3 *db, int parent_rowid) {
         }
 
         if (!result) {
-            if (parent_rowid == 0) {
+            if (is_root_array == TRUE) {
                 result = cJSON_CreateArray();
             } else {
                 result = cJSON_CreateObject();
             }
         }
 
-        if (parent_rowid == 0) {
+        if (is_root_array) {
             cJSON_AddItemToArray(result, item);
         } else {
-            cJSON_AddItemToObject(result, value_type, item);
+            cJSON_AddItemToObject(result, key, item);
         }
     }
 
     sqlite3_finalize(stmt);
     return result;
+}
+
+
+
+void remove_empty_keys(cJSON *json) {
+    cJSON *item = json->child;
+    while (item) {
+        cJSON *next_item = item->next;
+        
+        if (item->type == cJSON_Object) {
+            remove_empty_keys(item);
+        }
+        
+        if (strlen(item->string) == 0) {
+            cJSON_DeleteItemFromObject(json, item->string);
+        }
+        
+        item = next_item;
+    }
 }
 
 cJSON *retrieve_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *key) {
@@ -778,7 +795,8 @@ cJSON *retrieve_multivalue_elements(sqlite3 *db, const char *parent_ri, const ch
         return NULL;
     }
 
-    cJSON *result = build_json_recursively(db, rowid);
+    cJSON *result = build_json_recursively(db, rowid, TRUE);
+    // remove_empty_keys(result);
     return result;
 }
 
