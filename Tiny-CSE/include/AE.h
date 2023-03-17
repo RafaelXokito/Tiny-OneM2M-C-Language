@@ -23,6 +23,7 @@ typedef struct {
 } AEStruct;
 
 
-char init_ae(AEStruct * ae, cJSON *content, char* response);
+AEStruct *init_ae();
+char create_ae(AEStruct * ae, cJSON *content, char* response);
 
 cJSON *ae_to_json(const AEStruct *ae);

@@ -184,7 +184,7 @@ char retrieve_csebase(struct Route * destination, char *response) {
     return TRUE;
 }
 
-char create_ae(struct Route** head, struct Route* destination, cJSON *content, char* response) {
+char post_ae(struct Route** head, struct Route* destination, cJSON *content, char* response) {
 
     // JSON Validation
 
@@ -246,7 +246,7 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     }
 
     printf("Creating AE\n");
-    AEStruct ae;
+    AEStruct *ae = init_ae();
     // Should be garantee that the content (json object) dont have this keys
     char ri[50] = "";
     int countAE = count_same_types(*head, AE);
@@ -258,7 +258,7 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     // perform database operations
     pthread_mutex_lock(&db_mutex);
     
-    rs = init_ae(&ae, content, response);
+    rs = create_ae(ae, content, response);
     if (rs == FALSE) {
         //responseMessage(response, 400, "Bad Request", "Verify the request body");
         pthread_mutex_unlock(&db_mutex);
@@ -268,11 +268,11 @@ char create_ae(struct Route** head, struct Route* destination, cJSON *content, c
     
     // Add New Routes
     to_lowercase(uri);
-    addRoute(head, uri, ae.ri, ae.ty, ae.rn);
-    printf("New Route: %s -> %s -> %d -> %s \n", uri, ae.ri, ae.ty, ae.rn);
+    addRoute(head, uri, ae->ri, ae->ty, ae->rn);
+    printf("New Route: %s -> %s -> %d -> %s \n", uri, ae->ri, ae->ty, ae->rn);
     
     // Convert the AE struct to json and the Json Object to Json String
-    cJSON *root = ae_to_json(&ae);
+    cJSON *root = ae_to_json(ae);
     char *str = cJSON_Print(root);
     if (str == NULL) {
         responseMessage(response, 500, "Internal Server Error", "Could not print cJSON object");
@@ -316,22 +316,22 @@ char retrieve_ae(struct Route * destination, char *response) {
     }
 
     printf("Creating the json object\n");
-        AEStruct ae;
+    AEStruct *ae = init_ae();
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        ae.ty = sqlite3_column_int(stmt, 0);
-        strncpy(ae.ri, (char *)sqlite3_column_text(stmt, 1), 10);
-        strncpy(ae.rn, (char *)sqlite3_column_text(stmt, 2), 50);
-        strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 10);
-        strncpy(ae.aei, (char *)sqlite3_column_text(stmt, 4), 5);
-        strncpy(ae.api, (char *)sqlite3_column_text(stmt, 5), 20);
-        strncpy(ae.rr, (char *)sqlite3_column_text(stmt, 6), 5);
-        strncpy(ae.et, (char *)sqlite3_column_text(stmt, 7), 20);
-        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 8), 20);
-        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 9), 20);
+        ae->ty = sqlite3_column_int(stmt, 0);
+        strncpy(ae->ri, (char *)sqlite3_column_text(stmt, 1), 10);
+        strncpy(ae->rn, (char *)sqlite3_column_text(stmt, 2), 50);
+        strncpy(ae->pi, (char *)sqlite3_column_text(stmt, 3), 10);
+        strncpy(ae->aei, (char *)sqlite3_column_text(stmt, 4), 5);
+        strncpy(ae->api, (char *)sqlite3_column_text(stmt, 5), 20);
+        strncpy(ae->rr, (char *)sqlite3_column_text(stmt, 6), 5);
+        strncpy(ae->et, (char *)sqlite3_column_text(stmt, 7), 20);
+        strncpy(ae->ct, (char *)sqlite3_column_text(stmt, 8), 20);
+        strncpy(ae->lt, (char *)sqlite3_column_text(stmt, 9), 20);
         break;
     }
 
-    cJSON* root = ae_to_json(&ae);
+    cJSON* root = ae_to_json(ae);
     if (root == NULL) {
         fprintf(stderr, "Failed to convert AEStruct to JSON.\n");
         sqlite3_finalize(stmt);
@@ -341,7 +341,7 @@ char retrieve_ae(struct Route * destination, char *response) {
 
 
     // Create the parent JSON object
-    add_arrays_to_json(db, &ae, cJSON_GetObjectItem(root, "m2m:ae"));
+    add_arrays_to_json(db, ae, cJSON_GetObjectItem(root, "m2m:ae"));
 
     char *json_str = cJSON_PrintUnformatted(root);
     if (json_str == NULL) {
@@ -463,21 +463,21 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
         return FALSE;
     }
 
-    AEStruct ae;
+    AEStruct *ae = init_ae();
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        ae.ty = sqlite3_column_int(stmt, 0);
-        strncpy(ae.ri, (char *)sqlite3_column_text(stmt, 1), 10);
-        strncpy(ae.rn, (char *)sqlite3_column_text(stmt, 2), 50);
-        strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 10);
-        strncpy(ae.et, (char *)sqlite3_column_text(stmt, 4), 20);
-        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 5), 20);
-        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 6), 20);
+        ae->ty = sqlite3_column_int(stmt, 0);
+        strncpy(ae->ri, (char *)sqlite3_column_text(stmt, 1), 10);
+        strncpy(ae->rn, (char *)sqlite3_column_text(stmt, 2), 50);
+        strncpy(ae->pi, (char *)sqlite3_column_text(stmt, 3), 10);
+        strncpy(ae->et, (char *)sqlite3_column_text(stmt, 4), 20);
+        strncpy(ae->ct, (char *)sqlite3_column_text(stmt, 5), 20);
+        strncpy(ae->lt, (char *)sqlite3_column_text(stmt, 6), 20);
         break;
     }
     
     // Validate if the et value is different than current
     cJSON *value_et = cJSON_GetObjectItem(content, "et");  // retrieve the value associated with "key_name"
-    if (strcmp(ae.et, value_et->valuestring) == 0) {
+    if (strcmp(ae->et, value_et->valuestring) == 0) {
         responseMessage(response, 400, "Bad Request", "Resource expiration time is equal to the current one");
         sqlite3_finalize(stmt);
         closeDatabase(db);
@@ -540,17 +540,17 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
     }
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        ae.ty = sqlite3_column_int(stmt, 0);
-        strncpy(ae.ri, (char *)sqlite3_column_text(stmt, 1), 10);
-        strncpy(ae.rn, (char *)sqlite3_column_text(stmt, 2), 50);
-        strncpy(ae.pi, (char *)sqlite3_column_text(stmt, 3), 10);
-        strncpy(ae.et, (char *)sqlite3_column_text(stmt, 4), 20);
-        strncpy(ae.ct, (char *)sqlite3_column_text(stmt, 5), 20);
-        strncpy(ae.lt, (char *)sqlite3_column_text(stmt, 6), 20);
+        ae->ty = sqlite3_column_int(stmt, 0);
+        strncpy(ae->ri, (char *)sqlite3_column_text(stmt, 1), 10);
+        strncpy(ae->rn, (char *)sqlite3_column_text(stmt, 2), 50);
+        strncpy(ae->pi, (char *)sqlite3_column_text(stmt, 3), 10);
+        strncpy(ae->et, (char *)sqlite3_column_text(stmt, 4), 20);
+        strncpy(ae->ct, (char *)sqlite3_column_text(stmt, 5), 20);
+        strncpy(ae->lt, (char *)sqlite3_column_text(stmt, 6), 20);
         break;
     }
 
-    cJSON *root = ae_to_json(&ae);
+    cJSON *root = ae_to_json(ae);
 
     printf("Convert to json string\n");
     char *json_str = cJSON_PrintUnformatted(root);
@@ -568,8 +568,7 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
 }
 
 static int insert_element_into_multivalue_table(sqlite3 *db, const char *mtc_ri, int parent_id, const char *key, const char *value, const char *type) {
-    fprintf(stderr, "mtc_ri: %s, parent_id: %d, key: %s, value: %s, type: %s\n", mtc_ri, parent_id, key, value, type); // Debugging output
-    
+
     sqlite3_stmt *stmt;
     const char *sql = "INSERT INTO multivalue (mtc_ri, parent_id, key, value, type) VALUES (?, ?, ?, ?, ?);";
 
@@ -597,7 +596,6 @@ static int insert_element_into_multivalue_table(sqlite3 *db, const char *mtc_ri,
 }
 
 char insert_multivalue_element(cJSON *element, const char *mtc_ri, int parent_id, const char *key, sqlite3 *db) {
-    fprintf(stderr, "element: %s, mtc_ri: %s, parent_id: %d, key: %s\n", cJSON_Print(element), mtc_ri, parent_id, key); // Debugging output
     if (cJSON_IsObject(element)) {
         // Insert root entry for the object
         if (insert_element_into_multivalue_table(db, mtc_ri, parent_id, key, "root", "object") != SQLITE_OK) {
@@ -609,7 +607,6 @@ char insert_multivalue_element(cJSON *element, const char *mtc_ri, int parent_id
 
         cJSON *item;
         cJSON_ArrayForEach(item, element) {
-            printf("%s - %s\n", item->string, cJSON_Print(item));
             insert_multivalue_element(item, mtc_ri, root_id, item->string, db);
         }
     } else if (cJSON_IsArray(element)) {
@@ -663,7 +660,6 @@ char insert_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *
     for (int i = 0; i < cJSON_GetArraySize(atr_array); i++) {
         cJSON *element = cJSON_GetArrayItem(atr_array, i);
         if (element) {
-            printf("%d - %s\n", i, cJSON_Print(element));
             if (!insert_multivalue_element(element, parent_ri, root_id, "", db)) {
                 return FALSE;
             }
@@ -752,25 +748,6 @@ cJSON *build_json_recursively(sqlite3 *db, int parent_rowid, char is_root_array)
     return result;
 }
 
-
-
-void remove_empty_keys(cJSON *json) {
-    cJSON *item = json->child;
-    while (item) {
-        cJSON *next_item = item->next;
-        
-        if (item->type == cJSON_Object) {
-            remove_empty_keys(item);
-        }
-        
-        if (strlen(item->string) == 0) {
-            cJSON_DeleteItemFromObject(json, item->string);
-        }
-        
-        item = next_item;
-    }
-}
-
 cJSON *retrieve_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *key) {
     sqlite3_stmt *stmt;
 
@@ -796,7 +773,6 @@ cJSON *retrieve_multivalue_elements(sqlite3 *db, const char *parent_ri, const ch
     }
 
     cJSON *result = build_json_recursively(db, rowid, TRUE);
-    // remove_empty_keys(result);
     return result;
 }
 

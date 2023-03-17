@@ -27,7 +27,7 @@
 
 char init_protocol(struct Route** head);
 char retrieve_csebase(struct Route * destination, char *response);
-char create_ae(struct Route** route, struct Route* destination, cJSON *content, char* response);
+char post_ae(struct Route** route, struct Route* destination, cJSON *content, char* response);
 char retrieve_ae(struct Route * destination, char *response);
 char validate_keys(cJSON *object, char *keys[], int num_keys, char *response);
 char delete_resource(struct Route * destination, char *response);
@@ -39,4 +39,3 @@ char *get_element_value_as_string(cJSON *element);
 cJSON* retrieve_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *key);
 void add_arrays_to_json(sqlite3 *db, const AEStruct *ae, cJSON *parent_json);
 cJSON *build_json_recursively(sqlite3 *db, int parent_rowid, char is_root_array);
-void remove_empty_keys(cJSON *json);

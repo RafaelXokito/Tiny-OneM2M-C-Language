@@ -117,7 +117,7 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 					switch (ty) {
 					case AE: {
 						strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
-						char rs = create_ae(&info->route, destination, content, response);
+						char rs = post_ae(&info->route, destination, content, response);
 						if (rs == FALSE) {
 							// The method it self already change the response properly
 							fprintf(stderr, "Could not create AE resource\n");

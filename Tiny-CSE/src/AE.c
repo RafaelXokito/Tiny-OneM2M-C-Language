@@ -2,7 +2,35 @@
 
 extern int DAYS_PLUS_ET;
 
-char init_ae(AEStruct * ae, cJSON *content, char* response) {
+AEStruct *init_ae() {
+    AEStruct *ae = (AEStruct *) malloc(sizeof(AEStruct));
+    if (ae) {
+        ae->apn[0] = '\0';
+        ae->ct[0] = '\0';
+        ae->ty = 0;
+        ae->json_acpi = NULL;
+        ae->et[0] = '\0';
+        ae->json_lbl = NULL;
+        ae->pi[0] = '\0';
+        ae->json_daci = NULL;
+        ae->json_poa = NULL;
+        ae->json_ch = NULL;
+        ae->aa[0] = '\0';
+        ae->aei[0] = '\0';
+        ae->rn[0] = '\0';
+        ae->api[0] = '\0';
+        ae->rr[0] = '\0';
+        ae->csz[0] = '\0';
+        ae->ri[0] = '\0';
+        ae->nl[0] = '\0';
+        ae->json_at = NULL;
+        ae->or[0] = '\0';
+        ae->lt[0] = '\0';
+    }
+    return ae;
+}
+
+char create_ae(AEStruct * ae, cJSON *content, char* response) {
     // Sqlite3 initialization opening/creating database
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
@@ -129,14 +157,19 @@ char init_ae(AEStruct * ae, cJSON *content, char* response) {
 
 cJSON *ae_to_json(const AEStruct *ae) {
     cJSON *innerObject = cJSON_CreateObject();
+    cJSON_AddStringToObject(innerObject, "apn", ae->apn);
+    cJSON_AddStringToObject(innerObject, "ct", ae->ct);
     cJSON_AddNumberToObject(innerObject, "ty", ae->ty);
     cJSON_AddStringToObject(innerObject, "ri", ae->ri);
     cJSON_AddStringToObject(innerObject, "rn", ae->rn);
     cJSON_AddStringToObject(innerObject, "pi", ae->pi);
+    cJSON_AddStringToObject(innerObject, "aa", ae->aa);
     cJSON_AddStringToObject(innerObject, "aei", ae->aei);
     cJSON_AddStringToObject(innerObject, "api", ae->api);
+    cJSON_AddStringToObject(innerObject, "csz", ae->csz);
     cJSON_AddStringToObject(innerObject, "et", ae->et);
-    cJSON_AddStringToObject(innerObject, "ct", ae->ct);
+    cJSON_AddStringToObject(innerObject, "nl", ae->nl);
+    cJSON_AddStringToObject(innerObject, "or", ae->or);
     cJSON_AddStringToObject(innerObject, "lt", ae->lt);
 
     short rr_bool = 0;
@@ -147,16 +180,23 @@ cJSON *ae_to_json(const AEStruct *ae) {
     }
     cJSON_AddBoolToObject(innerObject, "rr", rr_bool);
 
-    // Add "lbl" attribute back into cJSON object
-    if (ae->json_lbl != NULL) {
-        cJSON *lbl_object = cJSON_Parse(ae->json_lbl);
-        if (lbl_object) {
-            cJSON_AddItemToObject(innerObject, "lbl", lbl_object);
+    // Add JSON string attributes back into cJSON object
+    const char *keys[] = {"acpi", "lbl", "daci", "poa", "ch", "at"};
+    const char *json_strings[] = {ae->json_acpi, ae->json_lbl, ae->json_daci, ae->json_poa, ae->json_ch, ae->json_at};
+
+    for (int i = 0; i < 6; i++) {
+        if (json_strings[i] != NULL) {
+            cJSON *json_object = cJSON_Parse(json_strings[i]);
+            if (json_object) {
+                cJSON_AddItemToObject(innerObject, keys[i], json_object);
+            } else {
+                fprintf(stderr, "Failed to parse JSON string for key '%s' back into cJSON object\n", keys[i]);
+            }
         } else {
-            fprintf(stderr, "Failed to parse 'json_lbl' back into cJSON object\n");
+            cJSON *empty_array = cJSON_CreateArray();
+            cJSON_AddItemToObject(innerObject, keys[i], empty_array);
         }
     }
-    // TODO - Adicionar os restantes arrays
 
     // Create the outer JSON object with the key "m2m:ae" and the value set to the inner object
     cJSON* root = cJSON_CreateObject();
