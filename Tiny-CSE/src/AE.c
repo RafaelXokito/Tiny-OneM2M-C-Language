@@ -28,6 +28,20 @@ char init_ae(AEStruct * ae, cJSON *content, char* response) {
     strcpy(ae->et, get_datetime_days_later(DAYS_PLUS_ET));
     strcpy(ae->ct, getCurrentTime());
     strcpy(ae->lt, getCurrentTime());
+    cJSON *lbl_array = cJSON_GetObjectItemCaseSensitive(content, "lbl");
+    if (lbl_array) {
+        char *json_lbl_str = cJSON_Print(lbl_array);
+        if (json_lbl_str) {
+            ae->json_lbl = strdup(json_lbl_str);
+            if (ae->json_lbl == NULL) {
+                fprintf(stderr, "Failed to allocate memory for the JSON lbl string\n");
+                responseMessage(response, 400, "Bad Request", "Verify the request body");
+                closeDatabase(db);
+                return FALSE;
+            }
+            free(json_lbl_str);
+        }
+    }
 
     // Prepare the insert statement
     const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, aei, api, rr, et, ct, lt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -132,6 +146,17 @@ cJSON *ae_to_json(const AEStruct *ae) {
         rr_bool = 0;
     }
     cJSON_AddBoolToObject(innerObject, "rr", rr_bool);
+
+    // Add "lbl" attribute back into cJSON object
+    if (ae->json_lbl != NULL) {
+        cJSON *lbl_object = cJSON_Parse(ae->json_lbl);
+        if (lbl_object) {
+            cJSON_AddItemToObject(innerObject, "lbl", lbl_object);
+        } else {
+            fprintf(stderr, "Failed to parse 'json_lbl' back into cJSON object\n");
+        }
+    }
+    // TODO - Adicionar os restantes arrays
 
     // Create the outer JSON object with the key "m2m:ae" and the value set to the inner object
     cJSON* root = cJSON_CreateObject();

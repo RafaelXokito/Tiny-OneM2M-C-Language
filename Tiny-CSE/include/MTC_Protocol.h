@@ -36,3 +36,6 @@ char insert_multivalue_element(cJSON *element, const char *mtc_id, int parent_id
 static int insert_element_into_multivalue_table(sqlite3 *db, const char *mtc_ri, int parent_id, const char *key, const char *value, const char *type);
 char insert_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *key, cJSON *atr_array);
 char *get_element_value_as_string(cJSON *element);
+cJSON* retrieve_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *key);
+void add_arrays_to_json(sqlite3 *db, const AEStruct *ae, cJSON *parent_json);
+cJSON *build_json_recursively(sqlite3 *db, int parent_rowid);
