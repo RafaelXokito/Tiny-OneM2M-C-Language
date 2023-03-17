@@ -561,6 +561,8 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
 }
 
 static int insert_element_into_multivalue_table(sqlite3 *db, const char *mtc_ri, int parent_id, const char *key, const char *value, const char *type) {
+    fprintf(stderr, "mtc_ri: %s, parent_id: %d, key: %s, value: %s, type: %s\n", mtc_ri, parent_id, key, value, type); // Debugging output
+    
     sqlite3_stmt *stmt;
     const char *sql = "INSERT INTO multivalue (mtc_ri, parent_id, key, value, type) VALUES (?, ?, ?, ?, ?);";
 
@@ -588,15 +590,17 @@ static int insert_element_into_multivalue_table(sqlite3 *db, const char *mtc_ri,
 }
 
 char insert_multivalue_element(cJSON *element, const char *mtc_ri, int parent_id, const char *key, sqlite3 *db) {
+    fprintf(stderr, "element: %s, mtc_ri: %s, parent_id: %d, key: %s\n", cJSON_Print(element), mtc_ri, parent_id, key); // Debugging output
     if (cJSON_IsObject(element)) {
         cJSON *item;
         cJSON_ArrayForEach(item, element) {
+            printf("%s - %s\n", item->string, cJSON_Print(item));
             insert_multivalue_element(item, mtc_ri, parent_id, item->string, db);
         }
     } else if (cJSON_IsArray(element)) {
         cJSON *item;
         cJSON_ArrayForEach(item, element) {
-            insert_multivalue_element(item, mtc_ri, parent_id, NULL, db);
+            insert_multivalue_element(item, mtc_ri, parent_id, get_element_value_as_string(item), db);
         }
     } else {
         const char *type;
@@ -618,6 +622,60 @@ char insert_multivalue_element(cJSON *element, const char *mtc_ri, int parent_id
             fprintf(stderr, "Failed to insert multivalue element\n");
             return FALSE;
         }
+
+        // Get the ID of the last inserted row and pass it as the parent_id for the next recursive call
+        int last_inserted_id = (int)sqlite3_last_insert_rowid(db);
+        cJSON *item;
+        cJSON_ArrayForEach(item, element) {
+            insert_multivalue_element(item, mtc_ri, last_inserted_id, item->string, db);
+        }
     }
     return TRUE;
+}
+
+char insert_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *key, cJSON *atr_array) {
+
+    // Insert root entry for the array attribute
+    if (insert_element_into_multivalue_table(db, parent_ri, 0, key, "root", "root") != SQLITE_OK) {
+        fprintf(stderr, "Failed to insert root entry for the multivalue element\n");
+        return FALSE;
+    }
+    // Retrieve the ID of the root entry
+    int root_id = (int)sqlite3_last_insert_rowid(db);
+    int parent_id = root_id;
+
+    for (int i = 0; i < cJSON_GetArraySize(atr_array); i++) {
+        cJSON *element = cJSON_GetArrayItem(atr_array, i);
+        if (element) {
+            printf("%d - %s\n", i, cJSON_Print(element));
+            if (!insert_multivalue_element(element, parent_ri, parent_id, get_element_value_as_string(element), db)) {
+                return FALSE;
+            }
+        }
+    }
+    return TRUE;
+}
+
+char *get_element_value_as_string(cJSON *element) {
+    if (element == NULL) {
+        return NULL;
+    }
+
+    char *value_str = NULL;
+
+    if (cJSON_IsString(element)) {
+        value_str = strdup(element->valuestring);
+    } else if (cJSON_IsNumber(element)) {
+        char buffer[64];
+        if (element->valuedouble == (double)element->valueint) {
+            snprintf(buffer, sizeof(buffer), "%d", element->valueint);
+        } else {
+            snprintf(buffer, sizeof(buffer), "%lf", element->valuedouble);
+        }
+        value_str = strdup(buffer);
+    } else if (cJSON_IsBool(element)) {
+        value_str = strdup(cJSON_IsTrue(element) ? "true" : "false");
+    }
+
+    return value_str;
 }
