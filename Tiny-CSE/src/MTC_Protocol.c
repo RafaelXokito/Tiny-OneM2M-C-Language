@@ -187,7 +187,7 @@ char retrieve_csebase(struct Route * destination, char *response) {
 char post_ae(struct Route** head, struct Route* destination, cJSON *content, char* response) {
 
     // JSON Validation
-
+    
     // "rn" is an optional, but if dont come with it we need to generate a resource name
     char *keys_rn[] = {"rn"};  // Resource Name
     int num_keys = 1;  // number of keys in the array
@@ -210,6 +210,15 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     rs = validate_keys(content, keys_m, num_keys, aux_response);
     if (rs == FALSE) {
         responseMessage(response, 400, "Bad Request", aux_response);
+        return FALSE;
+    }
+
+    const char *allowed_keys[] = {"apn", "ct", "ty", "acpi", "et", "lbl", "pi", "daci", "poa", "ch", "aa", "aei", "rn", "api", "rr", "csz", "ri", "nl", "at", "or", "lt"};
+    size_t num_allowed_keys = sizeof(allowed_keys) / sizeof(allowed_keys[0]);
+    char disallowed = has_disallowed_keys(content, allowed_keys, num_allowed_keys);
+    if (disallowed == TRUE) {
+        fprintf(stderr, "The cJSON object has disallowed keys.\n");
+        responseMessage(response, 400, "Bad Request", "Found keys not allowed");
         return FALSE;
     }
     
@@ -251,7 +260,6 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     char ri[50] = "";
     int countAE = count_same_types(*head, AE);
     snprintf(ri, sizeof(ri), "CAE%d", countAE);
-    printf("%s\n", ri);
     cJSON_AddStringToObject(content, "ri", ri);
     cJSON_AddStringToObject(content, "pi", destination->ri);
 
@@ -376,6 +384,22 @@ char validate_keys(cJSON *object, char *keys[], int num_keys, char *response) {
     }
 
     return strcmp(response, "") == 0 ? TRUE : FALSE;  // all keys were found in object
+}
+
+char has_disallowed_keys(cJSON *json_object, const char **allowed_keys, size_t num_allowed_keys) {
+    for (cJSON *item = json_object->child; item != NULL; item = item->next) {
+        char is_allowed = FALSE;
+        for (size_t i = 0; i < num_allowed_keys; i++) {
+            if (strcmp(item->string, allowed_keys[i]) == 0) {
+                is_allowed = TRUE;
+                break;
+            }
+        }
+        if (!is_allowed) {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 char delete_resource(struct Route * destination, char *response) {
@@ -770,7 +794,6 @@ cJSON *retrieve_multivalue_elements(sqlite3 *db, const char *parent_ri, const ch
     cJSON *result = build_json_recursively(db, rowid, TRUE);
     return result;
 }
-
 
 void add_arrays_to_json(sqlite3 *db, const AEStruct *ae, cJSON *parent_json) {
     // Array of keys to iterate

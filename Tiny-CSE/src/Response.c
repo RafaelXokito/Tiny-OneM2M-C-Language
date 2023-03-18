@@ -69,22 +69,15 @@ void handle_get(ConnectionInfo *info, const char *method, struct Route *destinat
 }
 
 void handle_post(ConnectionInfo *info, const char *request, struct Route *destination, char *response) {
-    char* json_start = strstr(request, "{"); // find the start of the JSON data
-	if (json_start != NULL) {
-		size_t json_length = strlen(json_start); // calculate the length of the JSON data
-		char json_data[json_length + 1]; // create a buffer to hold the JSON data
-		strncpy(json_data, json_start, json_length); // copy the JSON data to the buffer
-		json_data[json_length] = '\0'; // add a null terminator to the end of the buffer
+	cJSON *json_object = get_json_from_request(request);
 
-		// Parse the JSON string into a cJSON object
-		cJSON* json_object = cJSON_Parse(json_data);
-
-		// Retrieve the first key-value pair in the object
-		cJSON* first = json_object->child;
+	if (json_object == NULL) {
+        responseMessage(response, 400, "Bad Request", "Invalid request body");
+        fprintf(stderr, "JSON data not found.\n");
+    } else {
+		cJSON *first = get_first_child(json_object);
 		if (first != NULL) {
-			// Print the key and value
-			printf("First key: %s\n", first->string);
-
+            // Print the key and value
 			char* pattern = "^m2m:.*$";  // Regex pattern to match
 			// Compile the regex pattern
 			regex_t regex;
@@ -139,14 +132,10 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 				responseMessage(response,500,"Bad Request","Error matching regex");
 				fprintf(stderr, "Error matching regex: %s\n", buf);
 			}
-		} else {
-			responseMessage(response,400,"Bad Request","Invalid request body");
-			fprintf(stderr, "Object is empty\n");
-		}
-
-	} else {
-		responseMessage(response,400,"Bad Request","Invalid request body");
-		fprintf(stderr, "JSON data not found.\n");
+        } else {
+            responseMessage(response, 400, "Bad Request", "Invalid request body");
+            fprintf(stderr, "Object is empty\n");
+        }
 	}
 }
 
@@ -252,7 +241,7 @@ void *handle_connection(void *connectioninfo) {
         close_socket_and_exit(info);
     }
 
-    char request[1024];
+    char request[4096];
     strncpy(request, client_msg, sizeof(request) - 1);
     request[sizeof(request) - 1] = '\0';
 
@@ -320,6 +309,7 @@ void *handle_connection(void *connectioninfo) {
     // Creating the response
     char response[4096] = "";
 
+	printf("Check the HTTP method\n");
     if (strcmp(method, "GET") == 0) {
         handle_get(info, method, destination, response);
 	} else if (strcmp(method, "POST") == 0) {
@@ -332,11 +322,39 @@ void *handle_connection(void *connectioninfo) {
         responseMessage(response, 405, "Method Not Allowed", "HTTP method not supported");
     }
 
-    printf("http_header: %s\n", response);
+    // printf("http_header: %s\n", response);
 
     send(info->socket_desc, response, strlen(response), 0);
 
     close_socket_and_exit(info);
 
     return NULL;
+}
+
+cJSON *get_json_from_request(const char *request) {
+    char *json_start = strstr(request, "{");
+    if (json_start == NULL) {
+        return NULL;
+    }
+
+    size_t json_length = strlen(json_start);
+    char *json_data = (char *)malloc(json_length + 1);
+    if (json_data == NULL) {
+        return NULL;
+    }
+
+    strncpy(json_data, json_start, json_length);
+    json_data[json_length] = '\0';
+
+    cJSON *json_object = cJSON_Parse(json_data);
+    free(json_data);
+    return json_object;
+}
+
+cJSON *get_first_child(cJSON *json_object) {
+    if (json_object == NULL) {
+        return NULL;
+    }
+
+    return json_object->child;
 }

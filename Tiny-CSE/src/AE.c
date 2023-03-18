@@ -130,7 +130,6 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
     for (int i = 0; i < count; i++) {
         cJSON *atr_array = cJSON_GetObjectItemCaseSensitive(content, array_keys[i]);
         char *str = cJSON_Print(atr_array);
-        printf("%s\n", str);
         if (cJSON_IsArray(atr_array)) {
             if (insert_multivalue_elements(db, ae->ri, array_keys[i], atr_array) == FALSE) {
                 rollback_transaction(db); // Rollback transaction
