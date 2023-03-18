@@ -413,14 +413,45 @@ char delete_resource(struct Route * destination, char *response) {
 		return FALSE;
 	}
 
+    short rc = begin_transaction(db);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Can't begin transaction\n");
+        closeDatabase(db);
+        return FALSE;
+    }
+
     // Delete record from SQLite3 table
-    char* sql = sqlite3_mprintf("DELETE FROM mtc WHERE ri='%q'", destination->ri);
-    int rs = sqlite3_exec(db, sql, NULL, NULL, &errMsg);
-    sqlite3_free(sql);
+    char* sql_mtc = sqlite3_mprintf("DELETE FROM mtc WHERE ri='%q'", destination->ri);
+    int rs = sqlite3_exec(db, sql_mtc, NULL, NULL, &errMsg);
+    sqlite3_free(sql_mtc);
 
     if (rs != SQLITE_OK) {
         responseMessage(response,400,"Bad Request","Error deleting record");
         fprintf(stderr, "Error deleting record: %s\n", errMsg);
+        rollback_transaction(db); // Rollback transaction
+        sqlite3_free(errMsg);
+        closeDatabase(db);
+        return FALSE;
+    }
+
+    // Delete record from SQLite3 table
+    char* sql_multi = sqlite3_mprintf("DELETE FROM multivalue WHERE mtc_ri='%q'", destination->ri);
+    rs = sqlite3_exec(db, sql_multi, NULL, NULL, &errMsg);
+    sqlite3_free(sql_multi);
+
+    if (rs != SQLITE_OK) {
+        responseMessage(response,400,"Bad Request","Error deleting record");
+        fprintf(stderr, "Error deleting record: %s\n", errMsg);
+        rollback_transaction(db); // Rollback transaction
+        sqlite3_free(errMsg);
+        closeDatabase(db);
+        return FALSE;
+    }
+
+    // Commit transaction
+    rc = commit_transaction(db);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Can't commit transaction\n");
         sqlite3_free(errMsg);
         closeDatabase(db);
         return FALSE;
