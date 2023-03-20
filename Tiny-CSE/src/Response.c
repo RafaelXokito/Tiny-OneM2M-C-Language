@@ -140,6 +140,7 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 }
 
 void handle_delete(ConnectionInfo *info, struct Route *destination, char *response) {
+	fprintf(stderr, "%s\n", destination->key);
 	delete_resource(destination, response);
 }
 

@@ -190,20 +190,18 @@ struct Route * addRoute(struct Route **head, char* key, char* ri, short ty, char
 	return NULL;
 }
 
-struct Route * search(struct Route * root, char* key) {
-	if (root == NULL) {
-		return NULL;
-	} 
-
-	if (strcmp(key, root->key) == 0){
-		return root;
-	}else if (strcmp(key, root->key) > 0) {
-		return search(root->right, key);
-	}else if (strcmp(key, root->key) < 0) {
-		return search(root->left, key);
-	}  
-
-	return root;
+struct Route* search(struct Route *root, const char *key) {
+    struct Route *current = root;
+    while (current != NULL) {
+        if (strcmp(key, current->key) == 0) {
+            return current;
+        } else if (strcmp(key, current->key) > 0) {
+            current = current->right;
+        } else {
+            break;
+        }
+    }
+    return NULL;
 }
 
 struct Route* search_byri(struct Route* head, char* ri) {
