@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <pthread.h>
-#include <sqlite3.h>
+#include "sqlite3.h"
 #include <unistd.h>
 #include <regex.h>
 

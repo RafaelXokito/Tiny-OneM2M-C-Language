@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <sqlite3.h>
+#include "sqlite3.h"
 
 #define TRUE 1
 #define FALSE 0

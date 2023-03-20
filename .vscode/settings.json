@@ -44,6 +44,7 @@
         "utils.h": "c",
         "atomic": "c",
         "cstddef": "c",
-        "*.config": "c"
+        "*.config": "c",
+        "sqlite3.h": "c"
     }
 }
