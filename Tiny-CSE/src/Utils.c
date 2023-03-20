@@ -8,8 +8,11 @@
 #include "Utils.h"
 
 extern int DAYS_PLUS_ET;
+extern int PORT;
 extern char BASE_RI[MAX_CONFIG_LINE_LENGTH];
 extern char BASE_RN[MAX_CONFIG_LINE_LENGTH];
+extern char BASE_CSI[MAX_CONFIG_LINE_LENGTH];
+extern char BASE_POA[MAX_CONFIG_LINE_LENGTH];
 
 char* getCurrentTime() {
     static char timestamp[30];
@@ -53,10 +56,16 @@ void parse_config_line(char* line) {
     if (sscanf(line, "%[^= ] = %s", key, value) == 2) {
         if (strcmp(key, "DAYS_PLUS_ET") == 0) {
             DAYS_PLUS_ET = atoi(value);
+        } else if (strcmp(key, "PORT") == 0) {
+            PORT = atoi(value);
         } else if (strcmp(key, "BASE_RI") == 0) {
             strcpy(BASE_RI, value);
         } else if (strcmp(key, "BASE_RN") == 0) {
             strcpy(BASE_RN, value);
+        } else if (strcmp(key, "BASE_CSI") == 0) {
+            strcpy(BASE_CSI, value);
+        } else if (strcmp(key, "BASE_POA") == 0) {
+            strcpy(BASE_POA, value);
         } else {
             printf("Unknown key: %s\n", key);
         }

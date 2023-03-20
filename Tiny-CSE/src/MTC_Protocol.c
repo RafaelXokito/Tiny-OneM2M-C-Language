@@ -41,7 +41,7 @@ char init_protocol(struct Route** head) {
         return FALSE;
     }
 
-    CSEBaseStruct *csebase = malloc(sizeof(CSEBaseStruct));
+    CSEBaseStruct *csebase = init_cse_base();
     if (csebase == NULL) {
         fprintf(stderr, "Error allocating memory for CSEBaseStruct.\n");
         pthread_mutex_unlock(&db_mutex);
@@ -57,7 +57,7 @@ char init_protocol(struct Route** head) {
         printf("The table does not exist.\n");
         sqlite3_finalize(stmt);
         
-        char rs = init_cse_base(csebase, FALSE);
+        char rs = create_cse_base(csebase, FALSE);
         if (rs == FALSE) {
             fprintf(stderr, "Error initializing CSE base.\n");
             pthread_mutex_unlock(&db_mutex);
@@ -100,7 +100,7 @@ char init_protocol(struct Route** head) {
         if (rowCount == 0) {
             printf("The mtc table doesn't have CSE_Base resources.\n");
 
-            char rs = init_cse_base(csebase, TRUE);
+            char rs = create_cse_base(csebase, TRUE);
             if (rs == FALSE) {
                 fprintf(stderr, "Error initializing CSE base.\n");
                 pthread_mutex_unlock(&db_mutex);
@@ -145,7 +145,7 @@ char init_protocol(struct Route** head) {
 }
 
 char retrieve_csebase(struct Route * destination, char *response) {
-    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, ct, lt FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
+    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, csi, cst, ct, lt FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
     printf("%s\n",sql);
     sqlite3_stmt *stmt;
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
@@ -158,21 +158,39 @@ char retrieve_csebase(struct Route * destination, char *response) {
     }
 
     printf("Creating the json object\n");
-    CSEBaseStruct csebase;
+    CSEBaseStruct *csebase = init_cse_base();
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        csebase.ty = sqlite3_column_int(stmt, 0);
-        strncpy(csebase.ri, (char *)sqlite3_column_text(stmt, 1), 50);
-        strncpy(csebase.rn, (char *)sqlite3_column_text(stmt, 2), 50);
-        strncpy(csebase.pi, (char *)sqlite3_column_text(stmt, 3), 50);
-        strncpy(csebase.ct, (char *)sqlite3_column_text(stmt, 4), 25);
-        strncpy(csebase.lt, (char *)sqlite3_column_text(stmt, 5), 25);
+        csebase->ty = sqlite3_column_int(stmt, 0);
+        strncpy(csebase->ri, (char *)sqlite3_column_text(stmt, 1), 50);
+        strncpy(csebase->rn, (char *)sqlite3_column_text(stmt, 2), 50);
+        strncpy(csebase->pi, (char *)sqlite3_column_text(stmt, 3), 50);
+        csebase->cst = sqlite3_column_int(stmt, 4);
+        strncpy(csebase->csi, (char *)sqlite3_column_text(stmt, 5), 50);
+        strncpy(csebase->ct, (char *)sqlite3_column_text(stmt, 6), 25);
+        strncpy(csebase->lt, (char *)sqlite3_column_text(stmt, 7), 25);
         break;
     }
 
-    cJSON *root = csebase_to_json(&csebase);
+    cJSON *root = csebase_to_json(csebase);
+    if (root == NULL) {
+        fprintf(stderr, "Failed to convert CSEBaseStruct to JSON.\n");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
+
+    char *keys[] = {"srt", "lbl", "poa", "acpi"};
+    int num_keys = sizeof(keys) / sizeof(keys[0]);
+    add_arrays_to_json(db, csebase->ri, cJSON_GetObjectItem(root, "m2m:cb"), keys, num_keys);
 
     char *json_str = cJSON_PrintUnformatted(root);
-    printf("%s\n", json_str);
+    if (json_str == NULL) {
+        fprintf(stderr, "Failed to print JSON as a string.\n");
+        cJSON_Delete(root);
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
     
     snprintf(response, 1024, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", json_str);
 
@@ -347,7 +365,9 @@ char retrieve_ae(struct Route * destination, char *response) {
         return FALSE;
     }
 
-    add_arrays_to_json(db, ae, cJSON_GetObjectItem(root, "m2m:ae"));
+    char *keys[] = {"acpi", "lbl", "daci", "poa", "ch", "at"};
+    int num_keys = sizeof(keys) / sizeof(keys[0]);
+    add_arrays_to_json(db, ae->ri, cJSON_GetObjectItem(root, "m2m:ae"), keys, num_keys);
 
     char *json_str = cJSON_PrintUnformatted(root);
     if (json_str == NULL) {
@@ -826,16 +846,12 @@ cJSON *retrieve_multivalue_elements(sqlite3 *db, const char *parent_ri, const ch
     return result;
 }
 
-void add_arrays_to_json(sqlite3 *db, const AEStruct *ae, cJSON *parent_json) {
-    // Array of keys to iterate
-    char *keys[] = {"acpi", "lbl", "daci", "poa", "ch", "at"};
-    int num_keys = sizeof(keys) / sizeof(keys[0]);
-
+void add_arrays_to_json(sqlite3 *db, const char *ri, cJSON *parent_json, char **keys, int num_keys) {
     // Loop through the keys array
     for (int i = 0; i < num_keys; i++) {
         char *current_key = keys[i];
 
-        cJSON *arrays = retrieve_multivalue_elements(db, ae->ri, current_key);
+        cJSON *arrays = retrieve_multivalue_elements(db, ri, current_key);
 
         if (arrays != NULL) {
             // Add the arrays cJSON object to the parent_json object

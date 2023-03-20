@@ -38,13 +38,6 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
 		return FALSE;
 	}
 
-    short rc = begin_transaction(db);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Can't begin transaction\n");
-        closeDatabase(db);
-        return FALSE;
-    }
-
     // Convert the JSON object to a C structure
     ae->ty = AE;
     strcpy(ae->ri, cJSON_GetObjectItemCaseSensitive(content, "ri")->valuestring);
@@ -76,6 +69,13 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
                 free(json_str);
             }
         }
+    }
+
+    short rc = begin_transaction(db);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Can't begin transaction\n");
+        closeDatabase(db);
+        return FALSE;
     }
 
     // Prepare the insert statement

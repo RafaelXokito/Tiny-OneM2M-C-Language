@@ -37,6 +37,6 @@ static int insert_element_into_multivalue_table(sqlite3 *db, const char *mtc_ri,
 char insert_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *key, cJSON *atr_array);
 char *get_element_value_as_string(cJSON *element);
 cJSON* retrieve_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *key);
-void add_arrays_to_json(sqlite3 *db, const AEStruct *ae, cJSON *parent_json);
+void add_arrays_to_json(sqlite3 *db, const char *ri, cJSON *parent_json, char **keys, int num_keys);
 cJSON *build_json_recursively(sqlite3 *db, int parent_rowid, char is_root_array);
 char has_disallowed_keys(cJSON *json_object, const char **allowed_keys, size_t num_allowed_keys);

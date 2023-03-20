@@ -13,8 +13,11 @@
 int client_socket;
 
 int DAYS_PLUS_ET = 0;
+int PORT = 6000;
 char BASE_RI[MAX_CONFIG_LINE_LENGTH] = "";
 char BASE_RN[MAX_CONFIG_LINE_LENGTH] = "";
+char BASE_CSI[MAX_CONFIG_LINE_LENGTH] = "";
+char BASE_POA[MAX_CONFIG_LINE_LENGTH] = "";
 
 int main() {
 
@@ -52,7 +55,7 @@ int main() {
 
     // initiate HTTP_Server
     HTTP_Server http_server;
-    init_server(&http_server, 6969);
+    init_server(&http_server, PORT);
 
     // accept incoming client connections and handle them in separate threads
     while (TRUE) {
