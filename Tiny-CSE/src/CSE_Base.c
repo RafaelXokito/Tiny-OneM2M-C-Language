@@ -44,7 +44,7 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
 		return FALSE;
 	}
 
-    char jsonString[256]; // Adjust the size of the buffer as needed to fit the largest possible jsonString
+    char jsonString[512]; // Adjust the size of the buffer as needed to fit the largest possible jsonString
     snprintf(jsonString, sizeof(jsonString), "{\"rn\":\"%s\",\"cst\":2,\"srt\":[4,1,24,16,23,3,5,2],\"lbl\":[],\"csi\":\"/mn-cse-1\",\"nl\":null,\"ri\":\"%s\",\"poa\":[\"http://127.0.0.1:%d\",\"%s\"],\"acpi\":[],\"ty\":5,\"pi\": \"\"}", BASE_RN, BASE_RI, PORT, BASE_POA);
     cJSON *json = cJSON_Parse(jsonString);
     if (json == NULL) {
