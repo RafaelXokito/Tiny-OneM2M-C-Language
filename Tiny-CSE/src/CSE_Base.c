@@ -91,7 +91,7 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
 
     if (isTableCreated == FALSE) {
         // Create the table if it doesn't exist
-        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT PRIMARY KEY, rn TEXT, pi TEXT, aei TEXT, csi TEXT, cst INTEGER, api TEXT, rr TEXT, et TEXT, ct TEXT, lt TEXT)";
+        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT PRIMARY KEY, rn TEXT, pi TEXT, aei TEXT, csi TEXT, cst INTEGER, api TEXT, rr TEXT, et DATETIME, ct DATETIME, lt DATETIME)";
         short rc = sqlite3_exec(db, createTableSQL, NULL, NULL, NULL);
         if (rc != SQLITE_OK) {
             printf("Failed to create table: %s\n", sqlite3_errmsg(db));
@@ -127,8 +127,14 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     sqlite3_bind_text(stmt, 4, csebase->pi, strlen(csebase->pi), SQLITE_STATIC);
     sqlite3_bind_int(stmt, 5, csebase->cst);
     sqlite3_bind_text(stmt, 6, csebase->csi, strlen(csebase->csi), SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 7, csebase->ct, strlen(csebase->ct), SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 8, csebase->lt, strlen(csebase->lt), SQLITE_STATIC);
+    struct tm ct_tm, lt_tm;
+    strptime(csebase->ct, "%Y%m%dT%H%M%S", &ct_tm);
+    strptime(csebase->lt, "%Y%m%dT%H%M%S", &lt_tm);
+    char ct_iso[30], lt_iso[30];
+    strftime(ct_iso, sizeof(ct_iso), "%Y-%m-%d %H:%M:%S", &ct_tm);
+    strftime(lt_iso, sizeof(lt_iso), "%Y-%m-%d %H:%M:%S", &lt_tm);
+    sqlite3_bind_text(stmt, 7, ct_iso, strlen(ct_iso), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 8, lt_iso, strlen(lt_iso), SQLITE_STATIC);
 
     // Execute the statement
     rc = sqlite3_step(stmt);
@@ -159,7 +165,7 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
         cJSON *atr_array = cJSON_GetObjectItemCaseSensitive(json, array_keys[i]);
         char *str = cJSON_Print(atr_array);
         if (cJSON_IsArray(atr_array)) {
-            if (insert_multivalue_elements(db, csebase->ri, array_keys[i], atr_array) == FALSE) {
+            if (insert_multivalue_elements(db, csebase->ri, array_keys[i], array_keys[i], atr_array) == FALSE) {
                 rollback_transaction(db); // Rollback transaction
                 closeDatabase(db);
                 cJSON_Delete(json);

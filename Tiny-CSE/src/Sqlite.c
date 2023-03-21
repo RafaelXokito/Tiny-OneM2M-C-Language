@@ -75,6 +75,7 @@ int create_multivalue_table(sqlite3 *db) {
                       "id INTEGER PRIMARY KEY,"
                       "mtc_ri INTEGER,"
                       "parent_id INTEGER,"
+                      "atr TEXT,"
                       "key TEXT,"
                       "value TEXT,"
                       "type TEXT,"

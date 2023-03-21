@@ -45,6 +45,7 @@
         "atomic": "c",
         "cstddef": "c",
         "*.config": "c",
-        "sqlite3.h": "c"
+        "sqlite3.h": "c",
+        "sstream": "c"
     }
 }

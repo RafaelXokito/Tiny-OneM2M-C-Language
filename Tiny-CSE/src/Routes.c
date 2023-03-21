@@ -204,7 +204,7 @@ struct Route* search(struct Route *root, const char *key) {
     return NULL;
 }
 
-struct Route* search_byri(struct Route* head, char* ri) {
+struct Route* search_byri(struct Route* head, const char* ri) {
     struct Route* current = head;
 
     while (current != NULL) {

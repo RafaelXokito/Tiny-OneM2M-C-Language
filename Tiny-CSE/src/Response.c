@@ -45,7 +45,16 @@ void close_socket_and_exit(ConnectionInfo *info) {
     pthread_exit(NULL);
 }
 
-void handle_get(ConnectionInfo *info, const char *method, struct Route *destination, char *response) {
+void handle_get(ConnectionInfo *info, const char *queryString, struct Route *destination, char *response) {
+	
+	if (queryString != NULL && strlen(queryString) > 0 && strstr(queryString, "fu=1") != NULL) {
+		char rs = discovery(info->route, destination, queryString, response);
+		if (rs == FALSE) {
+			responseMessage(response,500,"Internal Server Error","Error retrieving the data");
+			fprintf(stderr,"Could not discover resource\n");
+		}
+		return;
+	}
     switch (destination->ty) {
 		case CSEBASE: {
 			char rs = retrieve_csebase(destination,response);
@@ -271,8 +280,17 @@ void *handle_connection(void *connectioninfo) {
     }
 
     to_lowercase(urlRoute);
+
+	char *queryString = strtok(urlRoute, "?");
+	
+	urlRoute = queryString;
+	queryString = strtok(NULL, "?");
+
     printf("The method is %s\n", method);
     printf("The route is %s\n", urlRoute);
+	if (queryString != NULL && strcmp(queryString, "") != 0) {
+		printf("The query string is %s\n", queryString);
+	}
 
     struct Route * destination = search(info->route, urlRoute);
 
@@ -312,7 +330,7 @@ void *handle_connection(void *connectioninfo) {
 
 	printf("Check the HTTP method\n");
     if (strcmp(method, "GET") == 0) {
-        handle_get(info, method, destination, response);
+        handle_get(info, queryString, destination, response);
 	} else if (strcmp(method, "POST") == 0) {
         handle_post(info, request, destination, response);
     } else if (strcmp(method, "PUT") == 0) {

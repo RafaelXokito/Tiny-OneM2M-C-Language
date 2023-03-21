@@ -97,9 +97,17 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
     sqlite3_bind_text(stmt, 5, ae->aei, strlen(ae->aei), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 6, ae->api, strlen(ae->api), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 7, ae->rr, strlen(ae->rr), SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 8, ae->et, strlen(ae->et), SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 9, ae->ct, strlen(ae->ct), SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 10, ae->lt, strlen(ae->lt), SQLITE_STATIC);
+    struct tm ct_tm, lt_tm, et_tm;
+    strptime(ae->ct, "%Y%m%dT%H%M%S", &ct_tm);
+    strptime(ae->lt, "%Y%m%dT%H%M%S", &lt_tm);
+    strptime(ae->et, "%Y%m%dT%H%M%S", &et_tm);
+    char ct_iso[30], lt_iso[30], et_iso[30];
+    strftime(ct_iso, sizeof(ct_iso), "%Y-%m-%d %H:%M:%S", &ct_tm);
+    strftime(lt_iso, sizeof(lt_iso), "%Y-%m-%d %H:%M:%S", &lt_tm);
+    strftime(et_iso, sizeof(et_iso), "%Y-%m-%d %H:%M:%S", &et_tm);
+    sqlite3_bind_text(stmt, 8, et_iso, strlen(et_iso), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 9, ct_iso, strlen(ct_iso), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 10, lt_iso, strlen(lt_iso), SQLITE_STATIC);
 
     // Execute the statement
     rc = sqlite3_step(stmt);
@@ -131,7 +139,7 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
         cJSON *atr_array = cJSON_GetObjectItemCaseSensitive(content, array_keys[i]);
         char *str = cJSON_Print(atr_array);
         if (cJSON_IsArray(atr_array)) {
-            if (insert_multivalue_elements(db, ae->ri, array_keys[i], atr_array) == FALSE) {
+            if (insert_multivalue_elements(db, ae->ri, array_keys[i], array_keys[i], atr_array) == FALSE) {
                 rollback_transaction(db); // Rollback transaction
                 closeDatabase(db);
                 cJSON_Delete(content);

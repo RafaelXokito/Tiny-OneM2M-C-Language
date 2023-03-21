@@ -15,7 +15,7 @@ struct Route * initRoute(char* key, char* ri, short ty, char* value);
 struct Route *addRoute(struct Route **head, char *key, char *ri, short ty, char *value);
 
 struct Route* search(struct Route *root, const char *key);
-struct Route * search_byri(struct Route * root, char* ri);
+struct Route* search_byri(struct Route* head, const char* ri);
 struct Route * search_byrn_ty(struct Route * root, char* rn, short ty);
 int count_same_types(struct Route* head, int type);
 
