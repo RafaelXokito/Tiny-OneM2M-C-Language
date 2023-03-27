@@ -46,6 +46,7 @@
         "cstddef": "c",
         "*.config": "c",
         "sqlite3.h": "c",
-        "sstream": "c"
+        "sstream": "c",
+        "time.h": "c"
     }
 }

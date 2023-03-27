@@ -1,6 +1,3 @@
-#define _XOPEN_SOURCE 700
-#include <time.h>
-
 #include "Common.h"
 
 char init_protocol(struct Route** head) {
