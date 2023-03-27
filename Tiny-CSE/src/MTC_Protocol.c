@@ -222,9 +222,6 @@ char discovery(struct Route * head, struct Route *destination, const char *query
     char *query_copy = strdup(queryString);
     char *query_copy2 = strdup(queryString);
 
-    // Tokenize the query string
-    char *token = strtok(query_copy, "&");
-
     // Define condition strings for different types of conditions
     char *MVconditions = NULL;
     char *MTCconditions = NULL;
@@ -234,22 +231,28 @@ char discovery(struct Route * head, struct Route *destination, const char *query
     const char *keysA[] = {"lbl"};
     const char *keysT[] = {"createdbefore", "createdafter", "modifiedsince", "unmodifiedsince", "expirebefore", "expireafter"};
 
+
+    char *saveptr_fo;
+
+    // Tokenize the query string
+    char *token = strtok_r(query_copy, "&", &saveptr_fo);
+
     // Determine filter operation
-    const char *filter_operation = NULL;
+    char filter_operation[4] = ""; // Allocate a char array to store the filter operation
     while (token != NULL) {
         char *key = strtok(token, "=");
         char *value = strtok(NULL, "=");
-
-        if (strcmp(key, "filterOperation") == 0) {
-            filter_operation = value;
+        if (strcmp(key, "filteroperation") == 0) {
+            strncpy(filter_operation, value, sizeof(filter_operation) - 1); // Copy the value to filter_operation using strncpy to avoid buffer overflow
+            filter_operation[sizeof(filter_operation) - 1] = '\0'; // Ensure the string is null-terminated
+            break;
         }
-
-        token = strtok(NULL, "&");
+        token = strtok_r(NULL, "&", &saveptr_fo);
     }
 
     // Set default filter operation if not specified
-    if (filter_operation == NULL) {
-        filter_operation = "AND";
+    if (strcmp(filter_operation, "") == 0) {
+        strncpy(filter_operation, "AND", sizeof(filter_operation) - 1);
     }
 
     // Create the conditions string
@@ -260,6 +263,11 @@ char discovery(struct Route * head, struct Route *destination, const char *query
     while (token2 != NULL) {
         char *key = strtok(token2, "=");
         char *value = strtok(NULL, "=");
+
+        if (strcmp(key, "filteroperation") == 0) {
+            token2 = strtok_r(NULL, "&", &saveptr);
+            continue;
+        }
 
         // Skip if fu=1
         if (strcmp(key, "fu") == 0 && strcmp(value, "1") == 0) {
@@ -281,7 +289,11 @@ char discovery(struct Route * head, struct Route *destination, const char *query
                 } else {  // String key
                     condition = sqlite3_mprintf("%s %s LIKE \"%%%s%%\"", filter_operation, key, value);
                 }
-                MTCconditions = sqlite3_mprintf("%s%s ", MTCconditions, condition);
+                
+                char *newMTCconditions = sqlite3_mprintf("%s%s ", MTCconditions ? MTCconditions : "", condition);
+                if (MTCconditions) sqlite3_free(MTCconditions);
+                
+                MTCconditions = newMTCconditions;
                 sqlite3_free(condition);
                 break;
             }
@@ -293,9 +305,9 @@ char discovery(struct Route * head, struct Route *destination, const char *query
                 if (strcmp(key, keysA[i]) == 0) {
                     found = 1;
                     // Add the condition to the query string
-                    char *condition = sqlite3_mprintf(" %s EXISTS (SELECT 1 FROM multivalue WHERE mtc_ri = m.mtc_ri AND atr = %Q AND value = %Q)", filter_operation, key, value);
-                    MVconditions = sqlite3_mprintf("%s %s", MVconditions, condition);
-                    sqlite3_free(condition);
+                    char *newMVconditions = sqlite3_mprintf("%s %s EXISTS (SELECT 1 FROM multivalue WHERE mtc_ri = m.mtc_ri AND atr = %Q AND value = %Q)", MVconditions ? MVconditions : "", filter_operation, key, value);
+                    if (MVconditions) sqlite3_free(MVconditions);
+                    MVconditions = newMVconditions;
                     break;
                 }
             }
@@ -312,7 +324,7 @@ char discovery(struct Route * head, struct Route *destination, const char *query
 
                     // Convert the struct tm to the desired format
                     char *formatted_datetime = (char *)calloc(20, sizeof(char)); // Allocate enough space for the resulting string
-                    strftime(formatted_datetime, sizeof(formatted_datetime), "%Y-%m-%d %H:%M:%S", &tm);
+                    strftime(formatted_datetime, 20, "%Y-%m-%d %H:%M:%S", &tm);
 
                     // Add a condition to the SQL query
                     char *condition;
@@ -336,7 +348,10 @@ char discovery(struct Route * head, struct Route *destination, const char *query
                         }
                     }
 
-                    MTCconditions = sqlite3_mprintf("%s%s", MTCconditions, condition);
+                    char *newMTCconditions = sqlite3_mprintf("%s%s ", MTCconditions ? MTCconditions : "", condition);
+                    if (MTCconditions) sqlite3_free(MTCconditions);
+                    
+                    MTCconditions = newMTCconditions;
                     sqlite3_free(condition);
                     free(formatted_datetime);
                     break;
@@ -358,24 +373,32 @@ char discovery(struct Route * head, struct Route *destination, const char *query
     }
 
     // Remove the first AND/OR from MTCconditions
-    char *pos = strstr(MTCconditions, filter_operation);
-    if (pos == MTCconditions) {
-        memmove(MTCconditions, pos + strlen(filter_operation), strlen(pos + strlen(filter_operation)) + 1);
-    }
+    if (MTCconditions != NULL) {
+        char *pos = strstr(MTCconditions, filter_operation);
+        if (pos == MTCconditions) {
+            memmove(MTCconditions, pos + strlen(filter_operation), strlen(pos + strlen(filter_operation)) + 1);
+        }
 
-    if (strcmp(MTCconditions, "") != 0) {
-        MTCconditions = sqlite3_mprintf(" AND (%s)", MTCconditions);
+        if (strcmp(MTCconditions, "") != 0) {
+            MTCconditions = sqlite3_mprintf(" AND (%s)", MTCconditions);
+        }
     }
 
     // Execute the dynamic SELECT statement
-    char *query = sqlite3_mprintf("SELECT ri FROM mtc WHERE  ri = \"%s\" AND 1 = 1%s "
-                                  "UNION "
-                                  "SELECT mtc.ri FROM mtc "
-                                  "INNER JOIN ( "
-                                  "SELECT DISTINCT mtc_ri as ri FROM multivalue AS m WHERE 1 = 1 %s "
-                                  ") AS res ON res.ri = mtc.ri "
-                                  "WHERE mtc.pi = \"%s\" AND 1=1%s ",
-                                  destination->ri, MTCconditions, MVconditions, destination->ri, MTCconditions);
+    char *query = sqlite3_mprintf("SELECT ri FROM mtc WHERE ri = \"%s\" AND 1 = 1%s "
+                              "UNION "
+                              "SELECT mtc.ri FROM mtc "
+                              "INNER JOIN ( "
+                              "SELECT DISTINCT mtc_ri as ri FROM multivalue AS m WHERE 1 = 1 %s "
+                              ") AS res ON res.ri = mtc.ri "
+                              "WHERE mtc.pi = \"%s\" AND 1=1%s ",
+                              destination->ri,
+                              MTCconditions ? MTCconditions : "",
+                              MVconditions ? MVconditions : "",
+                              destination->ri,
+                              MTCconditions ? MTCconditions : "");
+
+    printf("%s\n",query);
 
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {
