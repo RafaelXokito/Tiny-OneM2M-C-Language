@@ -22,6 +22,14 @@ char* getCurrentTime() {
     return timestamp;
 }
 
+char* getCurrentTimeLong() {
+    static char timestamp[30];
+    time_t now = time(NULL);
+    struct tm *timeinfo = localtime(&now);
+    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", timeinfo);
+    return timestamp;
+}
+
 void to_lowercase(char* str) {
     int i = 0;
     while (str[i]) {
