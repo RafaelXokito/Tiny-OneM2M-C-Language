@@ -660,8 +660,9 @@ char delete_resource(struct Route * destination, char *response) {
     sqlite3 *db;
     db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
-		return FALSE;
-	}
+        fprintf(stderr, "Failed to initialize the database.\n");
+        return FALSE;
+    }
 
     short rc = begin_transaction(db);
     if (rc != SQLITE_OK) {
@@ -768,14 +769,19 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
     printf("%s\n", sql);
     sqlite3_stmt *stmt;
     struct sqlite3 *db = initDatabase("tiny-oneM2M.db");
+    if (db == NULL) {
+        fprintf(stderr, "Failed to initialize the database.\n");
+        return FALSE;
+    }
+    
     short rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response,400,"Bad Request","Error in select");
         sqlite3_finalize(stmt);
         closeDatabase(db);
         return FALSE;
     }
-
     AEStruct *ae = init_ae();
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         ae->ty = sqlite3_column_int(stmt, 0);
@@ -802,11 +808,12 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
 
     struct tm parsed_time;
     time_t datetime_timestamp, current_time;
-
+    char* errMsg = NULL;
     // Clear the struct to avoid garbage values
     memset(&parsed_time, 0, sizeof(parsed_time));
 
-
+    rc = begin_transaction(db);
+    
     for (int i = 0; i < num_keys; i++) {
         key = cJSON_GetArrayItem(content, i)->string;
 
@@ -870,6 +877,7 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
                     if (parse_result == NULL) {
                         // The date string did not match the expected format
                         responseMessage(response, 400, "Bad Request", "Invalid date format");
+                        rollback_transaction(db);
                         sqlite3_finalize(stmt);
                         closeDatabase(db);
                         return FALSE;
@@ -884,14 +892,12 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
                     // Compare the times
                     if (difftime(datetime_timestamp, current_time) < 0) {
                         responseMessage(response, 400, "Bad Request", "Expiration time is in the past");
+                        rollback_transaction(db);
                         sqlite3_finalize(stmt);
                         closeDatabase(db);
                         return FALSE;
                     }
                 }
-
-                printf("ALLOWED:: %s \n",json_strITEM);
-                printf("KEY:: %s \n",key);
                 /* do something with the value */
 
                 if(strcmp(key, allowed_keysMTC[j]) == 0) { //as keys que sao da tabela MTC
@@ -900,19 +906,14 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
                     strcat(updateQueryMTC, key);
                     strcat(updateQueryMTC," =");
                     strcat(updateQueryMTC,json_strITEM);
-                    
                     strcat(updateQueryMTC,", ");
                 }
             }
         }
-        char* errMsg = NULL;
         for(int k = 0; k < num_allowed_keysMULTIVALUE; k++){
             if(strcmp(key, allowed_keysMULTIVALUE[k]) == 0) { // as keys sao da tabela multivalue
                 itemMULTI = cJSON_GetObjectItemCaseSensitive(content, key);
                 char *json_strITEMULti = cJSON_Print(itemMULTI);
-                printf("1 ALLOWED:: %s \n",json_strITEMULti);
-                printf("1 KEY:: %s \n",key);
-                printf("1 KEY: %s, INDEX: %d \n",key,k);
                 
                 char* sql_multi = sqlite3_mprintf("DELETE FROM multivalue WHERE mtc_ri='%q' AND atr='%s'", destination->ri, key);
                 rc = sqlite3_exec(db, sql_multi, NULL, NULL, &errMsg);
@@ -944,29 +945,31 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
         strcat(updateQueryMTC,"' AND ty=");
         strcat(updateQueryMTC,my_string);
         strcat(updateQueryMTC,";");
-
-        printf("CONCATENAÇÃO:: %s \n",updateQueryMTC);
     
         sql = updateQueryMTC;
         printf("%s\n", sql);
 
-        rc = sqlite3_exec(db, sql, NULL, NULL, NULL);
+        rc = sqlite3_exec(db, sql, NULL, NULL, &errMsg);
         if (rc != SQLITE_OK) {
-            printf("1º \n");
-
+            rollback_transaction(db);
+            responseMessage(response,400,"Bad Request","Error updating");
             printf("Failed to execute statement: %s\n", sqlite3_errmsg(db));
+            sqlite3_free(errMsg);
             closeDatabase(db);
             return FALSE;
         }
-
+        
         // Retrieve the AE with the updated expiration time
         sql = sqlite3_mprintf("SELECT ty, ri, pi, rr, et, lt FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
         printf("%s\n", sql);
 
         rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
         if (rc != SQLITE_OK) {
+            rollback_transaction(db);
             printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+            responseMessage(response,400,"Bad Request","Error running select"); 
             sqlite3_finalize(stmt);
+            sqlite3_free(errMsg);
             closeDatabase(db);
             return FALSE;
         }
@@ -982,6 +985,13 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
         break;
     }
 
+    rc = commit_transaction(db);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Can't commit transaction\n");
+        sqlite3_free(errMsg);
+        closeDatabase(db);
+        return FALSE;
+    }
     printf("Updating AE\n");
 
     cJSON *root = ae_to_json(ae);
