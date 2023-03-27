@@ -226,8 +226,8 @@ char discovery(struct Route * head, struct Route *destination, const char *query
     char *token = strtok(query_copy, "&");
 
     // Define condition strings for different types of conditions
-    char *MVconditions = "";
-    char *MTCconditions = "";
+    char *MVconditions = NULL;
+    char *MTCconditions = NULL;
 
     // Define arrays of allowed non-array keys, array keys, and time keys
     const char *keysNA[] = {"ty"};
@@ -311,7 +311,7 @@ char discovery(struct Route * head, struct Route *destination, const char *query
                     strptime(value, "%Y%m%dt%H%M%S", &tm); // Correct format to parse the input datetime string
 
                     // Convert the struct tm to the desired format
-                    char formatted_datetime[20]; // Allocate enough space for the resulting string
+                    char *formatted_datetime = (char *)calloc(20, sizeof(char)); // Allocate enough space for the resulting string
                     strftime(formatted_datetime, sizeof(formatted_datetime), "%Y-%m-%d %H:%M:%S", &tm);
 
                     // Add a condition to the SQL query
@@ -338,6 +338,7 @@ char discovery(struct Route * head, struct Route *destination, const char *query
 
                     MTCconditions = sqlite3_mprintf("%s%s", MTCconditions, condition);
                     sqlite3_free(condition);
+                    free(formatted_datetime);
                     break;
                 }
             }
@@ -375,11 +376,13 @@ char discovery(struct Route * head, struct Route *destination, const char *query
                                   ") AS res ON res.ri = mtc.ri "
                                   "WHERE mtc.pi = \"%s\" AND 1=1%s ",
                                   destination->ri, MTCconditions, MVconditions, destination->ri, MTCconditions);
-    printf("%s\n",query);
+
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {
         fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
         responseMessage(response, 400, "Bad Request", "Cannot prepare statement");
+        sqlite3_free(query_copy);
+        sqlite3_free(query_copy2);
         closeDatabase(db);
         return FALSE;
     }
@@ -409,8 +412,8 @@ char discovery(struct Route * head, struct Route *destination, const char *query
     closeDatabase(db);
     sqlite3_free(query_copy);
     sqlite3_free(query_copy2);
-    // sqlite3_free(MVconditions); Por alguma razão dar free a esta variável dá erro
-    // sqlite3_free(MTCconditions); Por alguma razão dar free a esta variável dá erro
+    sqlite3_free(MVconditions);
+    sqlite3_free(MTCconditions);
     sqlite3_free(query);
     cJSON_Delete(root);
     free(json_str);
