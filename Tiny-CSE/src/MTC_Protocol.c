@@ -232,7 +232,7 @@ char discovery(struct Route * head, struct Route *destination, const char *query
     // Define arrays of allowed non-array keys, array keys, and time keys
     const char *keysNA[] = {"ty"};
     const char *keysA[] = {"lbl"};
-    const char *keysT[] = {"createdBefore", "createdAfter", "modifiedSince", "unmodifiedSince", "expireBefore", "expireAfter"};
+    const char *keysT[] = {"createdbefore", "createdafter", "modifiedsince", "unmodifiedsince", "expirebefore", "expireafter"};
 
     // Determine filter operation
     const char *filter_operation = NULL;
@@ -308,20 +308,35 @@ char discovery(struct Route * head, struct Route *destination, const char *query
                     found = 1;
                     // Extract the date/time information from the value
                     struct tm tm;
-                    strptime(value, "%Y-%m-%dT%H:%M:%S", &tm);
-                    time_t time = mktime(&tm);
+                    strptime(value, "%Y%m%dt%H%M%S", &tm); // Correct format to parse the input datetime string
+
+                    // Convert the struct tm to the desired format
+                    char formatted_datetime[20]; // Allocate enough space for the resulting string
+                    strftime(formatted_datetime, sizeof(formatted_datetime), "%Y-%m-%d %H:%M:%S", &tm);
 
                     // Add a condition to the SQL query
                     char *condition;
-                    if (strstr(key, "Before") != NULL) {
-                        condition = sqlite3_mprintf("%s %s < %ld", filter_operation, key, time);
-                    } else if (strstr(key, "After") != NULL) {
-                        condition = sqlite3_mprintf("%s %s > %ld", filter_operation, key, time);
-                    } else if (strstr(key, "Since") != NULL) {
-                        condition = sqlite3_mprintf("%s %s >= %ld", filter_operation, key, time);
+                    if (strstr(key, "before") != NULL) {
+                        if (strstr(key, "created") != NULL) {
+                            condition = sqlite3_mprintf("%s ct < %Q", filter_operation, formatted_datetime);
+                        } else if (strstr(key, "expire") != NULL) {
+                            condition = sqlite3_mprintf("%s et < %Q", filter_operation, formatted_datetime);
+                        }
+                    } else if (strstr(key, "after") != NULL) {
+                        if (strstr(key, "created") != NULL) {
+                            condition = sqlite3_mprintf("%s ct > %Q", filter_operation, formatted_datetime);
+                        } else if (strstr(key, "expire") != NULL) {
+                            condition = sqlite3_mprintf("%s et > %Q", filter_operation, formatted_datetime);
+                        }
+                    } else if (strstr(key, "since") != NULL) {
+                        if (strstr(key, "modified") != NULL) {
+                            condition = sqlite3_mprintf("%s lt >= %Q", filter_operation, formatted_datetime);
+                        } else if (strstr(key, "unmodified") != NULL) {
+                            condition = sqlite3_mprintf("%s lt <= %Q", filter_operation, formatted_datetime);
+                        }
                     }
 
-                    MTCconditions = sqlite3_mprintf("%s %s", MTCconditions, condition);
+                    MTCconditions = sqlite3_mprintf("%s%s", MTCconditions, condition);
                     sqlite3_free(condition);
                     break;
                 }
@@ -402,8 +417,6 @@ char discovery(struct Route * head, struct Route *destination, const char *query
 
     return TRUE;
 }
-
-
 
 char post_ae(struct Route** head, struct Route* destination, cJSON *content, char* response) {
 
