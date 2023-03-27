@@ -886,9 +886,6 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
                         return FALSE;
                     }
                 }
-
-                printf("ALLOWED:: %s \n",json_strITEM);
-                printf("KEY:: %s \n",key);
                 /* do something with the value */
 
                 if(strcmp(key, allowed_keysMTC[j]) == 0) { //as keys que sao da tabela MTC
@@ -907,9 +904,6 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
             if(strcmp(key, allowed_keysMULTIVALUE[k]) == 0) { // as keys sao da tabela multivalue
                 itemMULTI = cJSON_GetObjectItemCaseSensitive(content, key);
                 char *json_strITEMULti = cJSON_Print(itemMULTI);
-                printf("1 ALLOWED:: %s \n",json_strITEMULti);
-                printf("1 KEY:: %s \n",key);
-                printf("1 KEY: %s, INDEX: %d \n",key,k);
                 
                 char* sql_multi = sqlite3_mprintf("DELETE FROM multivalue WHERE mtc_ri='%q' AND atr='%s'", destination->ri, key);
                 rc = sqlite3_exec(db, sql_multi, NULL, NULL, &errMsg);
@@ -941,15 +935,12 @@ char update_ae(struct Route* destination, cJSON *content, char* response) {
         strcat(updateQueryMTC,"' AND ty=");
         strcat(updateQueryMTC,my_string);
         strcat(updateQueryMTC,";");
-
-        printf("CONCATENAÇÃO:: %s \n",updateQueryMTC);
     
         sql = updateQueryMTC;
         printf("%s\n", sql);
 
         rc = sqlite3_exec(db, sql, NULL, NULL, NULL);
         if (rc != SQLITE_OK) {
-            printf("1º \n");
 
             printf("Failed to execute statement: %s\n", sqlite3_errmsg(db));
             closeDatabase(db);
