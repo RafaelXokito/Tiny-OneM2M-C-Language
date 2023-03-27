@@ -47,6 +47,28 @@
         "*.config": "c",
         "sqlite3.h": "c",
         "sstream": "c",
-        "time.h": "c"
-    }
+        "time.h": "c",
+        "unistd.h": "c",
+        "inet.h": "c"
+    },
+    "fileHeaderComment.parameter":{
+		"*":{
+			"commentbegin": "/*",
+            "author": "Rafael Pereira (Rafael_Pereira_2000@hotmail.com)",
+			"commentprefix": " *",
+			"commentend": " */",
+			"company": "IPLeiria"
+		}
+	},
+	"fileHeaderComment.template":{
+		"*":[
+			"${commentbegin}",
+			"${commentprefix} Created on ${date}",
+			"${commentprefix}",
+            "${commentprefix} Author(s): ${author}",
+            "${commentprefix}",
+			"${commentprefix} Copyright (c) ${year} ${company}",
+			"${commentend}"
+		]
+	}
 }
