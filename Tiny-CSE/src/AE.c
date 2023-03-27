@@ -54,7 +54,32 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
     strcpy(ae->aei, cJSON_GetObjectItemCaseSensitive(content, "ri")->valuestring); // AEI igual ao RI
     strcpy(ae->api, cJSON_GetObjectItemCaseSensitive(content, "api")->valuestring);
     strcpy(ae->rr, cJSON_GetObjectItemCaseSensitive(content, "rr")->valuestring);
-    strcpy(ae->et, get_datetime_days_later(DAYS_PLUS_ET));
+    cJSON *et = cJSON_GetObjectItemCaseSensitive(content, "et");
+    if (et) {
+        struct tm et_tm;
+        char *parse_result = strptime(et->valuestring, "%Y%m%dT%H%M%S", &et_tm);
+        if (parse_result == NULL) {
+            // The date string did not match the expected format
+            responseMessage(response, 400, "Bad Request", "Invalid date format");
+            return FALSE;
+        }
+
+        time_t datetime_timestamp, current_time;
+        
+        // Convert the parsed time to a timestamp
+        datetime_timestamp = mktime(&et_tm);
+        // Get the current time
+        current_time = time(NULL);
+
+        // Compara o timestamp atual com o timestamp recebido, caso o timestamp está no passado dá excepção
+        if (difftime(datetime_timestamp, current_time) < 0) {
+            responseMessage(response, 400, "Bad Request", "Expiration time is in the past");
+            return FALSE;
+        }        
+        strcpy(ae->et, et->valuestring);
+    } else {
+        strcpy(ae->et, get_datetime_days_later(DAYS_PLUS_ET));
+    }
     strcpy(ae->ct, getCurrentTime());
     strcpy(ae->lt, getCurrentTime());
 

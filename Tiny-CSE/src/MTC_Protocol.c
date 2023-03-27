@@ -158,9 +158,14 @@ char retrieve_csebase(struct Route * destination, char *response) {
     printf("%s\n",sql);
     sqlite3_stmt *stmt;
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
+    if (db == NULL) {
+        responseMessage(response, 500, "Internal Server Error", "Could not open the database");
+        return FALSE;
+    }
     short rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 500, "Internal Server Error", "Failed to prepare statement");
         sqlite3_finalize(stmt);
         closeDatabase(db);
         return FALSE;
@@ -191,6 +196,7 @@ char retrieve_csebase(struct Route * destination, char *response) {
     cJSON *root = csebase_to_json(csebase);
     if (root == NULL) {
         fprintf(stderr, "Failed to convert CSEBaseStruct to JSON.\n");
+        responseMessage(response, 500, "Internal Server Error", "Failed to prepare statement");
         sqlite3_finalize(stmt);
         closeDatabase(db);
         return FALSE;
