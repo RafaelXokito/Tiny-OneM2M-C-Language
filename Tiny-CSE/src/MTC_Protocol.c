@@ -589,6 +589,7 @@ char retrieve_ae(struct Route * destination, char *response) {
         pthread_mutex_destroy(&db_mutex);
         return FALSE;
     }
+    return TRUE;
 }
 
 char validate_keys(cJSON *object, char *keys[], int num_keys, char *response) {
