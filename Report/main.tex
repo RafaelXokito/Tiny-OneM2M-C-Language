@@ -186,7 +186,7 @@ In order to thoroughly evaluate the effectiveness and applicability of our propo
 
 \subsection{Assessing the Efficiency of Meeting Expiration Time Field Objectives in Database Queries on Performance}
 
-In this section, we focus on a specific test case that aims to assess the efficiency of meeting expiration time field objectives in database queries on performance, using codebase version 1.0. The "expiration time" field's purpose is to ensure that resources are deleted or become unused after their expiration. Three distinct approaches were considered, with the first one being the primary focus of this study:
+In this section, we concentrate on a specific test case that evaluates the efficiency of meeting expiration time field objectives in database queries on performance, using codebase version 1.0. The "expiration time" field's purpose is to ensure that resources are deleted or become unused after their expiration. Three distinct approaches were considered, with the first one being the primary focus of this study:
 
 \begin{itemize}
 	\item Selective Query Filtering - This approach filters out expired records by adding a condition to consultation, update, and removal queries to apply only to records with a valid "expiration time" field. A REST route is created to delete invalid records. This method is advantageous because it minimizes the overhead associated with constantly checking and deleting expired records while still maintaining data integrity. The performance of this approach will be compared with two other scenarios in terms of query time.
@@ -194,9 +194,11 @@ In this section, we focus on a specific test case that aims to assess the effici
 	\item Periodic Expiration Check - A thread is created that remains active indefinitely, checking every X time if there are fields with an exceeded "expiration time". However, there is a chance that expired records would still be present when queries are made on the main threads. This approach can lead to additional resource consumption and potential race conditions, making it less ideal than the first approach.
 \end{itemize}
 
-The test case under examination focuses on the first approach, "Selective Query Filtering," and examines its performance in three different scenarios using codebase version 1.0: the codebase with the "expiration time" field as a condition in database queries, the codebase with the "expiration time" field as a condition in database queries when it is indexed in the database, and the original codebase without the "expiration time" field as a condition. By evaluating the efficiency of these scenarios in meeting the objectives of the "expiration time" field, we can identify the most effective method for ensuring proper resource management.
+The test case under examination focuses on the first approach, "Selective Query Filtering," and examines its performance in three different scenarios using codebase version 1.0: the codebase with the "expiration time" field as a condition in database queries, the codebase with the "expiration time" field as a condition in database queries when it is indexed in the database, and the original codebase without the "expiration time" field as a condition. The test will be performed by executing 500 SELECT queries in each of the three scenarios on "Machine 1," as shown in Table \ref{tab:machinesSpecs}. By evaluating the efficiency of these scenarios in meeting the objectives of the "expiration time" field, we can identify the most effective method for ensuring proper resource management.
 
 The first approach, "Selective Query Filtering," has been chosen as the primary focus of this study due to its potential for minimizing overhead while maintaining data integrity. The comparative analysis of the three scenarios will provide valuable insights into the impact of different handling techniques for the "expiration time" field on system performance using codebase version 1.0. This assessment will help identify potential optimizations and guide the selection of the most suitable approach for managing resources with an expiration time, ultimately enhancing the overall efficiency of the system.
+
+
 
 \subsection{Comparative Analysis of Latency for CRUD Operations Using the Proposed Solution and OpenMTC}
 
@@ -227,9 +229,6 @@ Minimal hardware compatibility is an essential aspect of computer science, as ma
 This test case will involve the adaptation, deployment, and execution of our solution on the ESP32 platform. The evaluation will not only focus on the successful completion of these tasks but also on identifying any hardware-specific issues, discrepancies, or bottlenecks that may arise during the process. Additionally, we will assess the resource usage, including memory and processing overhead, to ensure that the solution remains viable and efficient in resource-constrained scenarios.
 
 The insights gained from this minimal hardware compatibility testing will contribute to the ongoing refinement of our solution, ensuring that it remains both robust and versatile, capable of meeting the demands of a diverse range of applications in the context of the oneM2M standard.
-
-
-
 
 
 
