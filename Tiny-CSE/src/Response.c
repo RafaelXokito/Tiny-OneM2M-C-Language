@@ -211,7 +211,7 @@ void handle_put(ConnectionInfo *info, const char *request, struct Route *destina
 					switch (ty) {
 					case AE: {
 						strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
-						char rs = update_ae(destination, content, response);
+						char rs = put_ae(destination, content, response);
 						if (rs == FALSE) {
 							// The method it self already change the response properly
 							fprintf(stderr, "Could not update AE resource\n");
