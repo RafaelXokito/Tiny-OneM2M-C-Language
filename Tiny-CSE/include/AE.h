@@ -35,3 +35,7 @@ AEStruct *init_ae();
 char create_ae(AEStruct * ae, cJSON *content, char* response);
 
 cJSON *ae_to_json(const AEStruct *ae);
+
+char update_ae(struct Route* destination, cJSON *content, char* response);
+
+char get_ae(struct Route* destination, char* response);
