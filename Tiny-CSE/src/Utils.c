@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "Utils.h"
 
@@ -118,4 +119,19 @@ void generate_unique_id(char *id_str) {
     
     // Create the unique ID string
     snprintf(id_str, MAX_CONFIG_LINE_LENGTH, "%lx%lx%x", (unsigned long) t, (unsigned long) pid, counter++);
+}
+
+char is_number(const char *str) {
+    if (*str == '\0') {
+        return 0;
+    }
+
+    while (*str) {
+        if (!isdigit((unsigned char)*str)) {
+            return 0;
+        }
+        str++;
+    }
+
+    return 1;
 }

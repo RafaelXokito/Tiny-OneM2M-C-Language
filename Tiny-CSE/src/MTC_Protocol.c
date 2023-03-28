@@ -242,6 +242,7 @@ char discovery(struct Route * head, struct Route *destination, const char *query
     const char *keysA[] = {"lbl"};
     const char *keysT[] = {"createdbefore", "createdafter", "modifiedsince", "unmodifiedsince", "expirebefore", "expireafter"};
 
+    short limit = 50;
 
     char *saveptr_fo;
 
@@ -282,6 +283,13 @@ char discovery(struct Route * head, struct Route *destination, const char *query
 
         // Skip if fu=1
         if (strcmp(key, "fu") == 0 && strcmp(value, "1") == 0) {
+            token2 = strtok_r(NULL, "&", &saveptr);
+            continue;
+        }
+
+        if (strcmp(key, "limit") == 0 && is_number(value)) {
+            limit = atoi(value);
+
             token2 = strtok_r(NULL, "&", &saveptr);
             continue;
         }
@@ -396,18 +404,21 @@ char discovery(struct Route * head, struct Route *destination, const char *query
     }
 
     // Execute the dynamic SELECT statement
-    char *query = sqlite3_mprintf("SELECT ri FROM mtc WHERE ri = \"%s\" AND 1 = 1%s "
+    char *query = sqlite3_mprintf("SELECT * FROM (SELECT ri FROM mtc WHERE ri = \"%s\" AND 1 = 1%s LIMIT %d) "
                               "UNION "
                               "SELECT mtc.ri FROM mtc "
                               "INNER JOIN ( "
-                              "SELECT DISTINCT mtc_ri as ri FROM multivalue AS m WHERE 1 = 1 %s "
+                              "SELECT DISTINCT mtc_ri as ri FROM multivalue AS m WHERE 1 = 1 %s LIMIT %d"
                               ") AS res ON res.ri = mtc.ri "
-                              "WHERE mtc.pi = \"%s\" AND 1=1%s ",
+                              "WHERE mtc.pi = \"%s\" AND 1=1%s LIMIT %d",
                               destination->ri,
                               MTCconditions ? MTCconditions : "",
+                              limit,
                               MVconditions ? MVconditions : "",
+                              limit,
                               destination->ri,
-                              MTCconditions ? MTCconditions : "");
+                              MTCconditions ? MTCconditions : "",
+                              limit);
 
     printf("%s\n",query);
 
