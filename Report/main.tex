@@ -208,7 +208,7 @@ To assess the performance of the three scenarios in the test case, we have desig
 \State Initialize $\textit{count}$, $\textit{sum}$, $\textit{min}$, $\textit{max}$, $\textit{sq\_diff\_sum} \gets 0$
 \State $\textit{min} \gets$ large value
 \For{$i \gets 1$ to $500$}
-    \State Send a request to the target URL
+    \State Send a request to the target route
     \State Measure the time taken for the request ($\textit{time\_ms}$)
     \If{$\textit{time\_ms} < \textit{min}$}
         \State $\textit{min} \gets \textit{time\_ms}$
