@@ -2,7 +2,7 @@
  * Filename: MTC_Protocol.c
  * Created Date: Monday, March 27th 2023, 5:24:39 pm
  * Author: Rafael Pereira (rafael_pereira_2000@hotmail.com), 
- *         Carla Mendes (CarlaEmail), 
+ *         Carla Mendes (carlasofiamendes@outlook.com) 
  *         Ana Cassia (AnaCassiaEmail)
  * 
  * Copyright (c) 2023 IPLeiria

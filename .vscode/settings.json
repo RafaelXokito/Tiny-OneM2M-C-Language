@@ -55,6 +55,7 @@
 		"*":{
 			"commentbegin": "/*",
             "author": "Rafael Pereira (Rafael_Pereira_2000@hotmail.com)",
+			"author2": "Carla Mendes (carlasofiamendes@outlook.com)",
 			"commentprefix": " *",
 			"commentend": " */",
 			"company": "IPLeiria"
@@ -66,6 +67,7 @@
 			"${commentprefix} Created on ${date}",
 			"${commentprefix}",
             "${commentprefix} Author(s): ${author}",
+			"${commentprefix}			 ${author2}",
             "${commentprefix}",
 			"${commentprefix} Copyright (c) ${year} ${company}",
 			"${commentend}"
