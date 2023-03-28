@@ -115,6 +115,57 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
             closeDatabase(db);
             return FALSE;
         }
+
+        char *zErrMsg = 0;
+        const char *sql1 = "CREATE INDEX IF NOT EXISTS idx_mtc_pi ON mtc(pi);";
+        rc = sqlite3_exec(db, sql1, callback, 0, &zErrMsg);
+
+        if(rc != SQLITE_OK) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        } else {
+            fprintf(stdout, "Index idx_mtc_pi created successfully\n");
+        }
+
+        const char *sql2 = "CREATE INDEX IF NOT EXISTS idx_mtc_ri ON mtc(ri);";
+        rc = sqlite3_exec(db, sql2, callback, 0, &zErrMsg);
+
+        if(rc != SQLITE_OK) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        } else {
+            fprintf(stdout, "Index idx_mtc_ri created successfully\n");
+        }
+
+        const char *sql3 = "CREATE INDEX IF NOT EXISTS idx_multivalue_mtc_ri ON multivalue(mtc_ri);";
+        rc = sqlite3_exec(db, sql3, callback, 0, &zErrMsg);
+
+        if(rc != SQLITE_OK) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        } else {
+            fprintf(stdout, "Index idx_multivalue_mtc_ri created successfully\n");
+        }
+
+        const char *sql4 = "CREATE INDEX IF NOT EXISTS idx_multivalue_parent_id ON multivalue(parent_id);";
+        rc = sqlite3_exec(db, sql4, callback, 0, &zErrMsg);
+
+        if(rc != SQLITE_OK) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        } else {
+            fprintf(stdout, "Index idx_multivalue_parent_id created successfully\n");
+        }
+
+        const char *sql5 = "CREATE INDEX IF NOT EXISTS idx_multivalue_atr_value ON multivalue(atr, value);";
+        rc = sqlite3_exec(db, sql5, callback, 0, &zErrMsg);
+
+        if(rc != SQLITE_OK) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        } else {
+            fprintf(stdout, "Index idx_multivalue_atr_value created successfully\n");
+        }
     }
 
     // Prepare the insert statement
