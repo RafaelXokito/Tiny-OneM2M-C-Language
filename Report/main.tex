@@ -117,8 +117,7 @@ Existing MTC gateway implementations predominantly rely on high-level programmin
 
 In this paper, we present a novel MTC gateway implementation using a low-level programming language to address the limitations of high-level language-based implementations. Our approach is designed to deliver superior performance, reduced memory overhead, and increased control over hardware resources, while maintaining compatibility with a wide range of MTC protocols. By focusing on key challenges associated with MTC gateways, such as protocol interoperability, scalability, and latency, our implementation aims to provide a robust and efficient solution for the evolving IoT landscape.
 
-\textcolor{red}{Paper structure}
-The remainder of this paper is organized as follows: Section 2 provides a comprehensive review of the related work in MTC gateway implementations, discussing various programming languages and architectural choices, as well as the importance of interoperability in IoT systems. Section 3 delves into the specific challenges associated with MTC protocol integration and outlines the design principles of our novel low-level language-based gateway. Section 4 presents the experimental setup and performance evaluation of our proposed solution. Finally, Section 5 concludes the paper and highlights potential future research directions.
+\textcolor{red}{Paper structure} The remainder of this paper is organized as follows: Section 2 provides a comprehensive review of the related work in MTC gateway implementations, discussing various programming languages and architectural choices, as well as the importance of interoperability in IoT systems. Section 3 delves into the specific challenges associated with MTC protocol integration and outlines the design principles of our novel low-level language-based gateway. Section 4 presents the experimental setup and performance evaluation of our proposed solution. Finally, Section 5 concludes the paper and highlights potential future research directions.
 
 \section{Related work}
 
@@ -136,9 +135,112 @@ This paper \cite{Liang2018} presents a cluster-based congestion-mitigating acces
 
 % https://www.scopus.com/results/results.uri?sort=plf-f&src=s&st1=%28onem2m+OR+mtc%29+and+%22API%22&sid=2e6f61fce202fa9e6635e553544fee3c&sot=b&sdt=b&sl=40&s=TITLE-ABS-KEY%28%28onem2m+OR+mtc%29+and+%22API%22%29&origin=searchbasic&editSaveS=&yearFrom=Before+1960&yearTo=Present
 
+\section{Arquitecture}
+
 \section{Proposed Solution}
 
+\section{Tests}
 
+In the following section we present a series of test cases to evaluate the proposed solution's performance, compatibility, and efficiency. These tests cover various aspects, including the impact of different handling methods for the "expiration time" field in database queries, a comparison of our solution with OpenMTC, cross-platform evaluations on Ubuntu and macOS systems, and compatibility with minimal hardware configurations like the ESP32. By conducting these tests, we aim to provide a comprehensive assessment of the proposed solution's strengths and limitations, allowing for further optimization and refinement to better address the needs of a wide range of applications and use cases.
+
+The Table \ref{tab:machinesSpecs} presents the detailed hardware, operating system, compiler, and library configurations for the machines used for tests. This information is essential for understanding and recreating the testing environment, as well as providing context to the results obtained from the diverse test cases conducted.
+
+\begin{table}[h]
+	\scriptsize
+	%\makebox[\textwidth]{
+	\caption{Hardware, Operating System, Compiler, and Library Specifications for Test Bed Machines.}
+	\label{tab:machinesSpecs}
+	\begin{tabular}{>{\bfseries}p{3cm} p{4cm}}
+	\toprule
+	\multicolumn{2}{c}{\textbf{Machine1}} \\
+	\toprule
+	\toprule
+	\multicolumn{2}{c}{\textbf{Hardware}} \\
+	\midrule
+	Model Name          & MacBook Pro \\
+	Model Identifier    & MacBookPro18,1 \\
+	Chip                & Apple M1 Pro \\
+	Total Number of Cores & 10 (8 performance and 2 efficiency) \\
+	RAM Memory          & 16 GB \\
+	\midrule
+	\multicolumn{2}{c}{\textbf{Operating System}} \\
+	\midrule
+	Product Name         & macOS \\
+	Product Version      & 12.6 \\
+	Build Version        & 21G115 \\
+	\midrule
+	\multicolumn{2}{c}{\textbf{Compiler}} \\
+	\midrule
+	GCC Version         & Apple clang version 14.0.0 (clang-1400.0.29.102) \\
+	\midrule
+	\multicolumn{2}{c}{\textbf{Libraries}} \\
+	\midrule
+	SQLite3 Version     & 3.41.1 \\
+	cJSON Version       & 1.7.15 \\
+	\bottomrule
+	\bottomrule
+	\end{tabular}
+\end{table}
+
+In order to thoroughly evaluate the effectiveness and applicability of our proposed solution, it is crucial to conduct a comprehensive set of test cases. First, we aim to evaluate the impact of implementing expiration time field conditions in database queries, focusing on the objective of deleting resources or rendering them unused after the expiration. By comparing the performance of three different scenarios in terms of query time—using the original codebase, the codebase with "expiration time" field as a condition in database queries, and the codebase with "expiration time" field as a condition in database queries when it is indexed—we can assess the time cost of each approach and determine which is most effective. Second, a comparative analysis of latency for 500 AE resource CRUD operations using the proposed solution and OpenMTC will enable us to gauge the relative efficiency of our approach, highlighting its strengths and areas for improvement. Third, performing a cross-platform evaluation through installation and compilation on Ubuntu and macOS systems ensures that our solution is versatile and can be seamlessly integrated into different operating environments. Finally, testing the compatibility of our solution with minimal hardware, such as the ESP32 case study, will help verify its suitability for resource-constrained scenarios, broadening its potential applications and enabling its adoption in a wider range of use cases.
+
+\subsection{Assessing the Efficiency of Meeting Expiration Time Field Objectives in Database Queries on Performance}
+
+In this section, we focus on a specific test case that aims to assess the efficiency of meeting expiration time field objectives in database queries on performance, using codebase version 1.0. The "expiration time" field's purpose is to ensure that resources are deleted or become unused after their expiration. Three distinct approaches were considered, with the first one being the primary focus of this study:
+
+\begin{itemize}
+	\item Selective Query Filtering - This approach filters out expired records by adding a condition to consultation, update, and removal queries to apply only to records with a valid "expiration time" field. A REST route is created to delete invalid records. This method is advantageous because it minimizes the overhead associated with constantly checking and deleting expired records while still maintaining data integrity. The performance of this approach will be compared with two other scenarios in terms of query time.
+	\item On-demand Record Deletion - In this approach, all requests use the current context to search for records whose "expiration time" field has already passed and, if so, deletes them. This method adds complexity to each request, potentially impacting performance and increasing the likelihood of implementation errors.
+	\item Periodic Expiration Check - A thread is created that remains active indefinitely, checking every X time if there are fields with an exceeded "expiration time". However, there is a chance that expired records would still be present when queries are made on the main threads. This approach can lead to additional resource consumption and potential race conditions, making it less ideal than the first approach.
+\end{itemize}
+
+The test case under examination focuses on the first approach, "Selective Query Filtering," and examines its performance in three different scenarios using codebase version 1.0: the codebase with the "expiration time" field as a condition in database queries, the codebase with the "expiration time" field as a condition in database queries when it is indexed in the database, and the original codebase without the "expiration time" field as a condition. By evaluating the efficiency of these scenarios in meeting the objectives of the "expiration time" field, we can identify the most effective method for ensuring proper resource management.
+
+The first approach, "Selective Query Filtering," has been chosen as the primary focus of this study due to its potential for minimizing overhead while maintaining data integrity. The comparative analysis of the three scenarios will provide valuable insights into the impact of different handling techniques for the "expiration time" field on system performance using codebase version 1.0. This assessment will help identify potential optimizations and guide the selection of the most suitable approach for managing resources with an expiration time, ultimately enhancing the overall efficiency of the system.
+
+\subsection{Comparative Analysis of Latency for CRUD Operations Using the Proposed Solution and OpenMTC}
+
+In this section, we delve into a detailed test case that focuses on the comparative analysis of latency for CRUD (Create, Read, Update, and Delete) operations using the proposed solution and OpenMTC. The objective of this test case is to evaluate the performance of our solution in managing resources against the established OpenMTC standard, providing a benchmark for assessing the efficiency and effectiveness of our approach.
+
+The CRUD operations will be performed through REST requests over the network, rather than on a local machine, as the primary goal of the oneM2M gateway is to facilitate the exchange of information across a distributed network infrastructure. This setup simulates real-world conditions where gateway systems must efficiently handle remote requests, thereby providing a more accurate representation of the solution's performance in practical applications.
+
+By comparing the latency for 500 Application Entity (AE) resource CRUD operations on both platforms, we can highlight the strengths and areas for improvement of our proposed solution. This analysis will not only help us to understand the impact of our solution on system performance but also to identify any potential bottlenecks and areas that could benefit from optimization, particularly in the context of network latency and resource management.
+
+The insights gained from this test case will be crucial in the ongoing development and refinement of our solution, ultimately contributing to a more robust and efficient system for managing resources in the context of the oneM2M standard while accounting for the network-related challenges inherent in distributed systems.
+
+\subsection{Cross-Platform Evaluation: Installation and Compilation on Ubuntu and macOS Systems}
+
+In this section, we introduce a test case aimed at evaluating the cross-platform compatibility of our proposed solution through installation and compilation on two widely-used operating systems, Ubuntu and macOS. The objective of this test case is to ensure that our solution can be seamlessly integrated into a variety of operating environments, thereby demonstrating its versatility and adaptability to different system configurations.
+
+A cross-platform evaluation is crucial in the realm of computer science, as it verifies the portability and interoperability of software across different platforms. By validating our solution's compatibility with both Ubuntu and macOS, we demonstrate its ability to function effectively in diverse contexts, catering to a broader range of users and potential applications.
+
+This test case will involve the installation of necessary dependencies, compilation of the source code, and execution of the proposed solution on both operating systems. The evaluation will not only focus on the successful completion of these tasks but also on identifying any platform-specific issues, discrepancies, or bottlenecks that may arise during the process.
+
+The insights gained from this cross-platform evaluation will contribute to the ongoing refinement of our solution, ensuring that it remains robust and effective across various operating environments. This, in turn, enhances its potential for widespread adoption and application in the context of the oneM2M standard.
+
+\subsection{Minimal Hardware Compatibility Testing: ESP32 Case Study}
+
+In this section, we present a test case focused on assessing the compatibility of our proposed solution with minimal hardware, specifically using the ESP32 microcontroller as a case study. The objective of this test case is to verify the suitability of our solution for resource-constrained environments, thereby broadening its potential applications and enabling its adoption in a wider range of use cases.
+
+Minimal hardware compatibility is an essential aspect of computer science, as many real-world applications require efficient and lightweight solutions that can run on devices with limited processing power, memory, and energy resources. By evaluating the performance of our proposed solution on the ESP32, a popular and cost-effective microcontroller with integrated Wi-Fi and Bluetooth capabilities, we can demonstrate its ability to function effectively under such constraints.
+
+This test case will involve the adaptation, deployment, and execution of our solution on the ESP32 platform. The evaluation will not only focus on the successful completion of these tasks but also on identifying any hardware-specific issues, discrepancies, or bottlenecks that may arise during the process. Additionally, we will assess the resource usage, including memory and processing overhead, to ensure that the solution remains viable and efficient in resource-constrained scenarios.
+
+The insights gained from this minimal hardware compatibility testing will contribute to the ongoing refinement of our solution, ensuring that it remains both robust and versatile, capable of meeting the demands of a diverse range of applications in the context of the oneM2M standard.
+
+
+
+
+
+
+
+Avaliação do impacto resultante do cumprimento do objetivo do campo expiration time
+
+Quanto tempo demora a GET/POST/PUT/DELETE 500 AEs usando a nossa solução e a solução disponível do OpenMTC na mesma máquina (na maquina do MEI-CM) na rede - Saber o tempo de cada um dos 500 e calcular, minimo, maximo, média, desvio padrão
+
+Instalação e Compilação em máquinas Ubuntu e MacOS (verificar se corre em outros SOs)
+
+? Fazer testes com Hardware minimo - por exemplo ESP32 ?
 
 \printcredits
 

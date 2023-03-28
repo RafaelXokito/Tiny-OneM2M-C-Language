@@ -8,8 +8,6 @@
  * Copyright (c) 2023 IPLeiria
  */
 
-
-
 #include "Common.h"
 
 char init_protocol(struct Route** head) {
@@ -155,7 +153,6 @@ char init_protocol(struct Route** head) {
 
 char retrieve_csebase(struct Route * destination, char *response) {
     char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, csi, cst, ct, lt FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
-    printf("%s\n",sql);
     sqlite3_stmt *stmt;
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
