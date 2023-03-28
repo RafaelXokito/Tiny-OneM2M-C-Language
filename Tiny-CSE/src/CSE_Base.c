@@ -138,8 +138,18 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
             fprintf(stdout, "Index idx_mtc_ri created successfully\n");
         }
 
-        const char *sql3 = "CREATE INDEX IF NOT EXISTS idx_multivalue_parent_id ON multivalue(parent_id);";
+        const char *sql3 = "CREATE INDEX IF NOT EXISTS idx_mtc_et ON mtc(et);";
         rc = sqlite3_exec(db, sql3, callback, 0, &zErrMsg);
+
+        if(rc != SQLITE_OK) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        } else {
+            fprintf(stdout, "Index idx_mtc_ri created successfully\n");
+        }
+
+        const char *sql4 = "CREATE INDEX IF NOT EXISTS idx_multivalue_parent_id ON multivalue(parent_id);";
+        rc = sqlite3_exec(db, sql4, callback, 0, &zErrMsg);
 
         if(rc != SQLITE_OK) {
             fprintf(stderr, "SQL error: %s\n", zErrMsg);
@@ -148,8 +158,8 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
             fprintf(stdout, "Index idx_multivalue_parent_id created successfully\n");
         }
 
-        const char *sql4 = "CREATE INDEX IF NOT EXISTS idx_multivalue_atr_value ON multivalue(atr, value);";
-        rc = sqlite3_exec(db, sql4, callback, 0, &zErrMsg);
+        const char *sql5 = "CREATE INDEX IF NOT EXISTS idx_multivalue_atr_value ON multivalue(atr, value);";
+        rc = sqlite3_exec(db, sql5, callback, 0, &zErrMsg);
 
         if(rc != SQLITE_OK) {
             fprintf(stderr, "SQL error: %s\n", zErrMsg);

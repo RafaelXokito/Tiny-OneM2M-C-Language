@@ -410,7 +410,7 @@ char discovery(struct Route * head, struct Route *destination, const char *query
                               "INNER JOIN ( "
                               "SELECT DISTINCT mtc_ri as ri FROM multivalue AS m WHERE 1 = 1 %s LIMIT %d"
                               ") AS res ON res.ri = mtc.ri "
-                              "WHERE mtc.pi = \"%s\" AND 1=1%s LIMIT %d",
+                              "WHERE mtc.pi = \"%s\" AND mtc.et > datetime('now') AND 1=1%s LIMIT %d",
                               destination->ri,
                               MTCconditions ? MTCconditions : "",
                               limit,
