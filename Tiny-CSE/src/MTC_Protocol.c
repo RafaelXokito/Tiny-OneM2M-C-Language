@@ -2,9 +2,8 @@
  * Filename: MTC_Protocol.c
  * Created Date: Monday, March 27th 2023, 5:24:39 pm
  * Author: Rafael Pereira (rafael_pereira_2000@hotmail.com), 
- *         Carla Mendes (carlasofiamendes@outlook.com) 
- *         Ana Cassia (AnaCassiaEmail)
- * 
+ *         Carla Mendes (carlasofiamendes@outlook.com),
+ *         Ana Cruz (anacassia.10@hotmail.com) 
  * Copyright (c) 2023 IPLeiria
  */
 
@@ -586,6 +585,7 @@ char retrieve_ae(struct Route * destination, char *response) {
         pthread_mutex_destroy(&db_mutex);
         return FALSE;
     }
+    return TRUE;
 }
 
 char validate_keys(cJSON *object, char *keys[], int num_keys, char *response) {
