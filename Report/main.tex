@@ -189,9 +189,7 @@ The Table \ref{tab:machinesSpecs} presents the detailed hardware, operating syst
 	\toprule
 	\multicolumn{2}{c}{\textbf{Hardware}} \\
 	\midrule
-	Model Name          & MacBook Pro \\
-	Model Identifier    & MacBookPro18,1 \\
-	Chip                & Apple M1 Pro \\
+	Chip                & Apple M1 Pro @ 3.2 GHz \\
 	Total Number of Cores & 10 (8 performance and 2 efficiency) \\
 	RAM Memory          & 16 GB \\
 	\midrule
@@ -199,16 +197,64 @@ The Table \ref{tab:machinesSpecs} presents the detailed hardware, operating syst
 	\midrule
 	Product Name         & macOS \\
 	Product Version      & 12.6 \\
-	Build Version        & 21G115 \\
+	Kernel Version        & Darwin 21.6.0 \\
 	\midrule
 	\multicolumn{2}{c}{\textbf{Compiler}} \\
 	\midrule
 	GCC Version         & Apple clang version 14.0.0 (clang-1400.0.29.102) \\
 	\midrule
-	\multicolumn{2}{c}{\textbf{Libraries}} \\
+	\multicolumn{2}{c}{\textbf{Packages}} \\
 	\midrule
-	SQLite3 Version     & 3.41.1 \\
-	cJSON Version       & 1.7.15 \\
+	SQLite3 Version     & 3.39.3 \\
+	\bottomrule
+	\bottomrule
+	
+	\toprule
+	\multicolumn{2}{c}{\textbf{Machine2}} \\
+	\toprule
+	\toprule
+	\multicolumn{2}{c}{\textbf{Hardware}} \\
+	\midrule
+	Chip                & Intel(R) Core(TM)2 CPU 6600 @ 2.40GHz \\
+	Total Number of Cores & 2 \\
+	RAM Memory          & 8 GB \\
+	\midrule
+	\multicolumn{2}{c}{\textbf{Operating System}} \\
+	\midrule
+	Product Name         & Ubuntu \\
+	Product Version      & 20.04.5 \\
+	Kernel Version        & 5.15.0-67-generic \\
+	\midrule
+	\multicolumn{2}{c}{\textbf{Compiler}} \\
+	\midrule
+	GCC Version         & Ubuntu 9.4.0-1ubuntu1~20.04.1 \\
+	\midrule
+	\bottomrule
+	\bottomrule
+	
+	\toprule
+	\multicolumn{2}{c}{\textbf{Machine3}} \\
+	\toprule
+	\toprule
+	\multicolumn{2}{c}{\textbf{Hardware}} \\
+	\midrule
+	Chip                & Quad-Core Intel Core i7 @ 2,2 GHz \\
+	Total Number of Cores & 4 \\
+	RAM Memory          & 16 GB \\
+	\midrule
+	\multicolumn{2}{c}{\textbf{Operating System}} \\
+	\midrule
+	Product Name         & macOS \\
+	Product Version      & 12.6.3 \\
+	Kernel Version       & Darwin 21.6.0 \\
+	\midrule
+	\multicolumn{2}{c}{\textbf{Compiler}} \\
+	\midrule
+	GCC Version         & Apple clang version 14.0.0 (clang-1400.0.29.202) \\
+	\midrule
+	\multicolumn{2}{c}{\textbf{Packages}} \\
+	\midrule
+	SQLite3 Version     & 3.37.0 \\
 	\bottomrule
 	\bottomrule
 	\end{tabular}
@@ -226,7 +272,7 @@ In this section, we focus on a specific test case that aims to assess the effici
 	\item Periodic Expiration Check - A thread is created that remains active indefinitely, checking every X time if there are fields with an exceeded "expiration time". However, there is a chance that expired records would still be present when queries are made on the main threads. This approach can lead to additional resource consumption and potential race conditions, making it less ideal than the first approach.
 \end{itemize}
 
-The test case under examination focuses on the first approach, "Selective Query Filtering," and examines its performance in three different scenarios using codebase version 1.1: the codebase with the "expiration time" field as a condition in database queries, the codebase with the "expiration time" field as a condition in database queries when it is indexed in the database, and the original codebase without the "expiration time" field as a condition. The test will be performed by executing 500 "discovery" requests with five parameters in each of the three scenarios on "Machine 1," as shown in Table \ref{tab:machinesSpecs}. By evaluating the efficiency of these scenarios in meeting the objectives of the "expiration time" field, we can identify the most effective method for ensuring proper resource management.
+The test case under examination focuses on the first approach, "Selective Query Filtering," and examines its performance in three different scenarios using codebase version 1.1: the codebase with the "expiration time" field as a condition in database queries, the codebase with the "expiration time" field as a condition in database queries when it is indexed in the database, and the original codebase without the "expiration time" field as a condition. The test will be performed by executing 500 "discovery" requests with five parameters in each of the three scenarios on "Machine 1", as shown in Table \ref{tab:machinesSpecs}. By evaluating the efficiency of these scenarios in meeting the objectives of the "expiration time" field, we can identify the most effective method for ensuring proper resource management.
 
 The first approach, "Selective Query Filtering," has been chosen as the primary focus of this study due to its potential for minimizing overhead while maintaining data integrity. The comparative analysis of the three scenarios will provide valuable insights into the impact of different handling techniques for the "expiration time" field on system performance using codebase version 1.1. This assessment will help identify potential optimizations and guide the selection of the most suitable approach for managing resources with an expiration time, ultimately enhancing the overall efficiency of the system.
 
@@ -291,9 +337,15 @@ In this section, we delve into a detailed test case that focuses on the comparat
 
 The CRUD operations will be performed through REST requests over the network, rather than on a local machine, as the primary goal of the oneM2M gateway is to facilitate the exchange of information across a distributed network infrastructure. This setup simulates real-world conditions where gateway systems must efficiently handle remote requests, thereby providing a more accurate representation of the solution's performance in practical applications.
 
+To carry out this test case, we will use "Machine 2", as shown in Table \ref{tab:machinesSpecs} as described in the previous test case, with the following specifications: Apple M1 Pro chip, 10 cores, 16 GB RAM, and macOS version 12.6. The codebase version for the proposed solution is 1.2. The test will be conducted using a shell script that sends 500 Application Entity (AE) resource CRUD operations for both the proposed solution and the OpenMTC platform.
+
+The shell script operates as follows: It begins by initializing variables and CSV files for each CRUD operation (POST, PUT, GET, and DELETE). Then, it iterates 500 times, performing the following steps in each iteration: sending a POST, PUT, GET, and DELETE request to the respective servers, measuring the time taken for each request, and appending the time to the corresponding CSV file. After completing the 500 iterations, the script calculates the minimum, maximum, average, and standard deviation of the times for each CRUD operation from their respective CSV files. The results of these calculations provide insights into the latency of the proposed solution and OpenMTC for each CRUD operation.
+
 By comparing the latency for 500 Application Entity (AE) resource CRUD operations on both platforms, we can highlight the strengths and areas for improvement of our proposed solution. This analysis will not only help us to understand the impact of our solution on system performance but also to identify any potential bottlenecks and areas that could benefit from optimization, particularly in the context of network latency and resource management.
 
 The insights gained from this test case will be crucial in the ongoing development and refinement of our solution, ultimately contributing to a more robust and efficient system for managing resources in the context of the oneM2M standard while accounting for the network-related challenges inherent in distributed systems.
+
+
 
 \subsection{Cross-Platform Evaluation: Installation and Compilation on Ubuntu and macOS Systems}
 
@@ -304,6 +356,33 @@ A cross-platform evaluation is crucial in the realm of computer science, as it v
 This test case will involve the installation of necessary dependencies, compilation of the source code, and execution of the proposed solution on both operating systems. The evaluation will not only focus on the successful completion of these tasks but also on identifying any platform-specific issues, discrepancies, or bottlenecks that may arise during the process.
 
 The insights gained from this cross-platform evaluation will contribute to the ongoing refinement of our solution, ensuring that it remains robust and effective across various operating environments. This, in turn, enhances its potential for widespread adoption and application in the context of the oneM2M standard.
+
+In this test case, we successfully installed and compiled the proposed solution on Ubuntu, one of the two operating systems being evaluated for cross-platform compatibility. The process began by importing the source code to "Machine 3", as shown in Table \ref{tab:machinesSpecs}, using SFTP, followed by the installation of the necessary dependency, SQLite3, via the Advanced Package Tool (APT).
+
+The proposed solution was successfully compiled using the provided Makefile, which facilitated the creation of the executable without any issues. A closer examination of the dependencies of the compiled executable was carried out using the 'ldd' command. The command revealed that the proposed solution relies exclusively on system libraries such as libdl.so.2, libpthread.so.0, and libc.so.6, which provide essential functionality for dynamic loading, multi-threading, and standard C functions, respectively.
+
+By relying solely on system libraries, the proposed solution demonstrates a significant advantage in terms of portability and maintainability. This approach eliminates the need for third-party dependencies, reducing potential compatibility issues and simplifying the installation process across various platforms. Furthermore, it ensures that the solution benefits from the stability and performance optimizations provided by the operating system's native libraries, which are generally well-maintained and frequently updated.
+
+In summary, the use of system libraries for the proposed solution highlights its robustness and adaptability to different system configurations, ultimately enhancing its potential for widespread adoption and application in the context of the oneM2M standard.
+
+The successful installation, compilation, and identification of dependencies on Ubuntu demonstrate that the proposed solution is adaptable to various operating environments. This adaptability is essential in the realm of computer science as it ensures the portability and interoperability of the software across different platforms. By validating our solution's compatibility with Ubuntu, we have shown its ability to cater to a broader range of users and potential applications.
+
+As the next step in the cross-platform evaluation, the proposed solution will be installed and compiled on macOS. This process will involve identifying and installing any necessary dependencies, compiling the source code, and executing the solution on this operating system. Similar to the evaluation on Ubuntu, the focus will be on the successful completion of these tasks and identifying any platform-specific issues, discrepancies, or bottlenecks that may arise.
+
+
+
+
+
+By conducting this evaluation on both Ubuntu and macOS, we will have a comprehensive understanding of the cross-platform compatibility of our proposed solution. This understanding will inform any necessary adjustments or refinements to ensure seamless integration into various operating environments, thereby demonstrating its versatility and adaptability to different system configurations.
+
+In conclusion, the insights gained from this cross-platform evaluation will play a crucial role in the ongoing development of our proposed solution. The ability to function effectively across diverse operating systems not only demonstrates the robustness of our solution but also significantly broadens its potential applications and user base in the context of the oneM2M standard.
+%
+%Na máquina 3, tivemos de importar o source code para a máquina
+%Instalar o sqlite3 já vinha por default instalado
+%Fazer a compilação dos ficheiros e a solução proposta estava pronta a usar
+%Dependências no executável
+% /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1319.0.0)
+
 
 \subsection{Minimal Hardware Compatibility Testing: ESP32 Case Study}
 
@@ -318,13 +397,25 @@ The insights gained from this minimal hardware compatibility testing will contri
 
 
 
-Avaliação do impacto resultante do cumprimento do objetivo do campo expiration time
 
-Quanto tempo demora a GET/POST/PUT/DELETE 500 AEs usando a nossa solução e a solução disponível do OpenMTC na mesma máquina (na maquina do MEI-CM) na rede - Saber o tempo de cada um dos 500 e calcular, minimo, maximo, média, desvio padrão
 
-Instalação e Compilação em máquinas Ubuntu e MacOS (verificar se corre em outros SOs)
-
-? Fazer testes com Hardware minimo - por exemplo ESP32 ?
+%Avaliação do impacto resultante do cumprimento do objetivo do campo expiration time
+%
+%Especificações da máquina da escola
+%Especificações da rede
+%Meter o executável a funcionar na máquina com o ficheiro de configuração
+%
+%Shell script para executar 500 POST, guardar minimo, maximo, média, desvio padrão
+%Shell script para executar 500 PUT, guardar minimo, maximo, média, desvio padrão
+%Shell script para executar 500 GET, guardar minimo, maximo, média, desvio padrão
+%Shell script para executar 500 DELETE, guardar minimo, maximo, média, desvio padrão
+%
+%
+%Quanto tempo demora a POST/PUT/GET/DELETE 500 AEs usando a nossa solução e a solução disponível do OpenMTC na mesma máquina (na maquina do MEI-CM) na rede - Saber o tempo de cada um dos 500 e calcular, minimo, maximo, média, desvio padrão
+%
+%Instalação e Compilação em máquinas Ubuntu e MacOS (verificar se corre em outros SOs)
+%
+%? Fazer testes com Hardware minimo - por exemplo ESP32 ?
 
 \section{Conclusion}
 \label{conclusion}
