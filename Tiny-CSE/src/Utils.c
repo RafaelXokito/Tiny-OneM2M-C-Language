@@ -135,3 +135,29 @@ char is_number(const char *str) {
 
     return 1;
 }
+
+char* increment_ri(const char* id) {
+    int len = strlen(id);
+    char* new_id = (char*)malloc((len + 2) * sizeof(char));
+    strcpy(new_id, id);
+
+    int i;
+    for (i = len - 1; i >= 0; i--) {
+        if (isdigit(new_id[i])) {
+            if (new_id[i] != '9') {
+                new_id[i]++;
+                break;
+            } else {
+                new_id[i] = '0';
+            }
+        } else {
+            if (i == len - 1) {
+                new_id[len] = '1';
+                new_id[len + 1] = '\0';
+            }
+            break;
+        }
+    }
+
+    return new_id;
+}

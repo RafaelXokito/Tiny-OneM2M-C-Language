@@ -538,11 +538,7 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
 
     printf("Creating AE\n");
     AEStruct *ae = init_ae();
-    // Should be garantee that the content (json object) dont have this keys
-    char ri[50] = "";
-    int countAE = count_same_types(*head, AE);
-    snprintf(ri, sizeof(ri), "CAE%d", countAE);
-    cJSON_AddStringToObject(content, "ri", ri);
+    
     cJSON_AddStringToObject(content, "pi", destination->ri);
 
     // perform database operations
@@ -649,23 +645,9 @@ char delete_resource(struct Route * destination, char *response) {
     }
 
     // Delete record from SQLite3 table
-    char* sql_mtc = sqlite3_mprintf("DELETE FROM mtc WHERE ri='%q'", destination->ri);
+    char* sql_mtc = sqlite3_mprintf("DELETE FROM mtc WHERE ri='%q';DELETE FROM multivalue WHERE mtc_ri='%q'", destination->ri, destination->ri);
     int rs = sqlite3_exec(db, sql_mtc, NULL, NULL, &errMsg);
     sqlite3_free(sql_mtc);
-
-    if (rs != SQLITE_OK) {
-        responseMessage(response,400,"Bad Request","Error deleting record");
-        fprintf(stderr, "Error deleting record: %s\n", errMsg);
-        rollback_transaction(db); // Rollback transaction
-        sqlite3_free(errMsg);
-        closeDatabase(db);
-        return FALSE;
-    }
-
-    // Delete record from SQLite3 table
-    char* sql_multi = sqlite3_mprintf("DELETE FROM multivalue WHERE mtc_ri='%q'", destination->ri);
-    rs = sqlite3_exec(db, sql_multi, NULL, NULL, &errMsg);
-    sqlite3_free(sql_multi);
 
     if (rs != SQLITE_OK) {
         responseMessage(response,400,"Bad Request","Error deleting record");

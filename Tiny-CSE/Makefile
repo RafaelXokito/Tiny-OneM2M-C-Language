@@ -4,11 +4,11 @@ ifeq ($(UNAME_S),Linux)
 else
     CFLAGS = -Iinclude -fPIC
 endif
-DEPS = HTTP_Server.h Sqlite.h
+DEPS = HTTP_Server.h
 exec = server.o
 sources = $(wildcard src/*.c)
 objects = $(sources:.c=.o)
-flags = -g -Wall -lm -ldl -fPIC -rdynamic -I./include
+flags = -g -Wall -lm -ldl -fPIC -rdynamic -lpthread -I./include
 # flags = -I./include
 
 $(exec): $(objects)

@@ -128,7 +128,7 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
             fprintf(stdout, "Index idx_mtc_pi created successfully\n");
         }
 
-        const char *sql2 = "CREATE INDEX IF NOT EXISTS idx_mtc_ri ON mtc(ri);";
+        const char *sql2 = "CREATE UNIQUE INDEX IF NOT EXISTS idx_mtc_ri ON mtc(ri);";
         rc = sqlite3_exec(db, sql2, callback, 0, &zErrMsg);
 
         if(rc != SQLITE_OK) {

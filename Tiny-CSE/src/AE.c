@@ -47,6 +47,28 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
 		return FALSE;
 	}
 
+    sqlite3_stmt *stmt_init;
+    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 4) AS INTEGER)), 0) + 1 FROM mtc WHERE ty = 2;";
+    short rc = sqlite3_prepare_v2(db, query, -1, &stmt_init, 0);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr,"Failed to execute statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 500, "Internal Server Error", "Failed to execute statement");
+        closeDatabase(db);
+        return FALSE;
+    }
+
+    int value = 0;
+    if (sqlite3_step(stmt_init) == SQLITE_ROW) {
+        value = sqlite3_column_int(stmt_init, 0);
+    }
+
+    sqlite3_finalize(stmt_init);
+
+    char ri[50] = "";
+    snprintf(ri, sizeof(ri), "CAE%d", value);
+    printf("ri = %s\n", ri);
+    cJSON_AddStringToObject(content, "ri", ri);
+
     // Convert the JSON object to a C structure
     ae->ty = AE;
     strcpy(ae->ri, cJSON_GetObjectItemCaseSensitive(content, "ri")->valuestring);
@@ -105,7 +127,7 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
         }
     }
 
-    short rc = begin_transaction(db);
+    rc = begin_transaction(db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Can't begin transaction\n");
         closeDatabase(db);

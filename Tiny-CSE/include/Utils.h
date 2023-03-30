@@ -17,3 +17,4 @@ void parse_config_line(char* line);
 void load_config_file(const char* filename);
 void generate_unique_id(char *id_str);
 char is_number(const char *str);
+char* increment_ri(const char* id);

@@ -26,7 +26,7 @@ struct Route *addRoute(struct Route **head, char *key, char *ri, short ty, char 
 struct Route* search(struct Route *root, const char *key);
 struct Route* search_byri(struct Route* head, const char* ri);
 struct Route * search_byrn_ty(struct Route * root, char* rn, short ty);
-int count_same_types(struct Route* head, int type);
+char* get_last_ri_of_type(struct Route* head, short target_type);
 
 void inorder(struct Route * root );
 
