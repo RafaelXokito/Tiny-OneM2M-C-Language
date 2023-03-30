@@ -52,3 +52,14 @@ Mkfile.old
 dkms.conf
 
 *.db
+
+# Report
+*.abs
+*.acn
+*.aux
+*.bbl
+*.blg
+*.glo
+*.ist
+*.log
+*.synctex.gz
