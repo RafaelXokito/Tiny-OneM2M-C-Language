@@ -168,6 +168,21 @@ The paper \cite{Kim2018} discusses the design, implementation and evaluation of 
 \section{Arquitecture}
 \label{architecture}
 
+Our system architecture consists of a client-server model, where clients interact with our server over the internet. The server acts as an intermediary between the clients and the database, providing resource availability and implementing CRUD operations for the Application Entity (AE) resource and Read operations for Common Service Entities (CSE). Figure \cite{fig:architecture} provides a visual representation of our architecture.
+
+\begin{figure}[t]
+	\centering
+	\includegraphics[width=7cm]{Architecture.jpg}
+	\caption{Architecture of the Proposed Solution: A Client-Server Model for Resource Management in the oneM2M Standard}
+	\label{fig:architecture}
+\end{figure}
+
+At the core of our system, the server acts as the central point of communication, facilitating the exchange of data and requests between the clients and the database. This approach enables us to provide a reliable and secure service, ensuring that client requests are handled efficiently and that their data is safeguarded against unauthorized access or manipulation.
+
+By focusing on the AE and CSE resources, we can provide a targeted and streamlined solution that caters specifically to the needs of our clients. This approach allows us to deliver a service that is efficient, scalable, and cost-effective, enabling us to effectively meet the demands of our users and provide value to our clients.
+
+In summary, our architecture provides a robust and secure system that effectively facilitates communication between clients and the database, enabling us to provide a targeted and streamlined service that caters to the needs of our users.
+
 \section{Proposed Solution}
 
 \section{Tests}
@@ -260,7 +275,7 @@ The Table \ref{tab:machinesSpecs} presents the detailed hardware, operating syst
 	\end{tabular}
 \end{table}
 
-In order to thoroughly evaluate the effectiveness and applicability of our proposed solution, it is crucial to conduct a comprehensive set of test cases. First, we aim to evaluate the impact of implementing expiration time field conditions in database queries, focusing on the objective of deleting resources or rendering them unused after the expiration. By comparing the performance of three different scenarios in terms of query time—using the original codebase, the codebase with "expiration time" field as a condition in database queries, and the codebase with "expiration time" field as a condition in database queries when it is indexed—we can assess the time cost of each approach and determine which is most effective. Second, a comparative analysis of latency for 500 AE resource CRUD operations using the proposed solution and OpenMTC will enable us to gauge the relative efficiency of our approach, highlighting its strengths and areas for improvement. Third, performing a cross-platform evaluation through installation and compilation on Ubuntu and macOS systems ensures that our solution is versatile and can be seamlessly integrated into different operating environments. Finally, testing the compatibility of our solution with minimal hardware, such as the ESP32 case study, will help verify its suitability for resource-constrained scenarios, broadening its potential applications and enabling its adoption in a wider range of use cases.
+To thoroughly evaluate the effectiveness and applicability of our proposed solution, we have designed a comprehensive set of test cases. The first test case aims to evaluate the impact of implementing expiration time field conditions in database queries. By comparing the performance of three different scenarios, we can assess the time cost of each approach and determine which is most effective. The second test case focuses on a comparative analysis of latency for 500 AE resource CRUD operations using the proposed solution and OpenMTC. This will enable us to gauge the relative efficiency of our approach, highlighting its strengths and areas for improvement. The third test case involves performing a cross-platform evaluation through installation and compilation on Ubuntu and macOS systems, ensuring that our solution is versatile and can be seamlessly integrated into different operating environments. In the fourth test case, we will further compare our solution with OpenMTC by measuring the time efficiency of 500 resource discovery requests when the database has 500, 1000, and 2000 records. This test will provide insight into the performance and scalability of our solution in comparison to OpenMTC. Finally, testing the compatibility of our solution with minimal hardware, such as the ESP32 case study, will help verify its suitability for resource-constrained scenarios, broadening its potential applications and enabling its adoption in a wider range of use cases. By conducting these test cases, we will gain a comprehensive understanding of the effectiveness and applicability of our proposed solution, enabling us to refine and optimize it to meet the evolving needs and challenges of the oneM2M standard.
 
 \subsection{Assessing the Efficiency of Meeting Expiration Time Field Objectives in Database Queries on Performance}
 
@@ -345,8 +360,6 @@ By comparing the latency for 500 Application Entity (AE) resource CRUD operation
 
 The insights gained from this test case will be crucial in the ongoing development and refinement of our solution, ultimately contributing to a more robust and efficient system for managing resources in the context of the oneM2M standard while accounting for the network-related challenges inherent in distributed systems.
 
-
-
 \subsection{Cross-Platform Evaluation: Installation and Compilation on Ubuntu and macOS Systems}
 
 In this section, we introduce a test case aimed at evaluating the cross-platform compatibility of our proposed solution through installation and compilation on two widely-used operating systems, Ubuntu and macOS. The objective of this test case is to ensure that our solution can be seamlessly integrated into a variety of operating environments, thereby demonstrating its versatility and adaptability to different system configurations.
@@ -357,7 +370,7 @@ This test case will involve the installation of necessary dependencies, compilat
 
 The insights gained from this cross-platform evaluation will contribute to the ongoing refinement of our solution, ensuring that it remains robust and effective across various operating environments. This, in turn, enhances its potential for widespread adoption and application in the context of the oneM2M standard.
 
-In this test case, we successfully installed and compiled the proposed solution on Ubuntu, one of the two operating systems being evaluated for cross-platform compatibility. The process began by importing the source code to "Machine 3", as shown in Table \ref{tab:machinesSpecs}, using SFTP, followed by the installation of the necessary dependency, SQLite3, via the Advanced Package Tool (APT).
+In this test case, we successfully installed and compiled the proposed solution on Ubuntu, one of the two operating systems being evaluated for cross-platform compatibility. The process began by importing the source code to "Machine 2", as shown in Table \ref{tab:machinesSpecs}, using SFTP, followed by the installation of the necessary dependency, SQLite3, via the Advanced Package Tool (APT).
 
 The proposed solution was successfully compiled using the provided Makefile, which facilitated the creation of the executable without any issues. A closer examination of the dependencies of the compiled executable was carried out using the 'ldd' command. The command revealed that the proposed solution relies exclusively on system libraries such as libdl.so.2, libpthread.so.0, and libc.so.6, which provide essential functionality for dynamic loading, multi-threading, and standard C functions, respectively.
 
@@ -369,19 +382,25 @@ The successful installation, compilation, and identification of dependencies on 
 
 As the next step in the cross-platform evaluation, the proposed solution will be installed and compiled on macOS. This process will involve identifying and installing any necessary dependencies, compiling the source code, and executing the solution on this operating system. Similar to the evaluation on Ubuntu, the focus will be on the successful completion of these tasks and identifying any platform-specific issues, discrepancies, or bottlenecks that may arise.
 
+In this test case, the proposed solution was successfully installed and compiled on the macOS operating system. The source code was imported to "Machine 3", and the necessary dependency, SQLite3, was found to be already installed on the system. The provided Makefile facilitated the compilation of the files, resulting in the generation of the executable without any issues.
 
+The examination of the dependencies of the compiled executable revealed that the proposed solution relies exclusively on system libraries. The 'ldd' command showed that the solution depends on /usr/lib/libSystem.B.dylib, which provides essential functionality for dynamic loading, memory allocation, and system calls. By relying solely on system libraries, the proposed solution demonstrates a significant advantage in terms of portability and maintainability, as it eliminates the need for third-party dependencies.
 
+The use of system libraries highlights the proposed solution's adaptability to different system configurations, ultimately enhancing its potential for widespread adoption and application in the context of the oneM2M standard. This approach ensures that the solution benefits from the stability and performance optimizations provided by the operating system's native libraries, which are generally well-maintained and frequently updated.
 
+By successfully installing and compiling the proposed solution on both Ubuntu and macOS, we have demonstrated its ability to function effectively in diverse contexts, catering to a broader range of users and potential applications. The insights gained from this cross-platform evaluation will inform any necessary adjustments or refinements to ensure seamless integration into various operating environments.
 
-By conducting this evaluation on both Ubuntu and macOS, we will have a comprehensive understanding of the cross-platform compatibility of our proposed solution. This understanding will inform any necessary adjustments or refinements to ensure seamless integration into various operating environments, thereby demonstrating its versatility and adaptability to different system configurations.
+In conclusion, the cross-platform evaluation provides a comprehensive understanding of the proposed solution's compatibility with different operating systems, demonstrating its adaptability and versatility to various system configurations. The use of system libraries ensures the solution's portability and maintainability, while also enhancing its potential for widespread adoption and application in the context of the oneM2M standard.
 
-In conclusion, the insights gained from this cross-platform evaluation will play a crucial role in the ongoing development of our proposed solution. The ability to function effectively across diverse operating systems not only demonstrates the robustness of our solution but also significantly broadens its potential applications and user base in the context of the oneM2M standard.
-%
-%Na máquina 3, tivemos de importar o source code para a máquina
-%Instalar o sqlite3 já vinha por default instalado
-%Fazer a compilação dos ficheiros e a solução proposta estava pronta a usar
-%Dependências no executável
-% /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1319.0.0)
+\subsection{Comparative Analysis of Latency for Resource Discovery Requests Using the Proposed Solution and OpenMTC}
+
+In this section, we present a fourth test case aimed at evaluating the relative efficiency of our proposed solution compared to OpenMTC in the context of resource discovery requests. This test case is essential as it enables us to gauge the effectiveness of our approach in terms of discovering resources in a large-scale environment, thereby providing insights into the scalability and performance of our solution.
+
+To conduct this test case, we will be using "Machine 2", as it is the most suitable machine for testing. We will divide the test into three different scenarios, each with varying numbers of resources in the database (500, 1000, and 2000). By comparing the latency of resource discovery requests for each scenario using the proposed solution and OpenMTC, we can determine which solution performs better in a large-scale environment.
+
+Resource discovery is a crucial aspect of the oneM2M standard, enabling clients to search for and access resources within the system. As such, the latency of resource discovery requests is a significant factor in determining the overall performance and effectiveness of an oneM2M-compliant system. By conducting this test case, we can identify potential bottlenecks or areas for improvement in our proposed solution, enhancing its scalability and performance in the context of large-scale resource discovery requests.
+
+The insights gained from this test case will contribute to the ongoing refinement and optimization of our solution, ensuring that it remains effective and competitive in the realm of oneM2M-compliant systems.
 
 
 \subsection{Minimal Hardware Compatibility Testing: ESP32 Case Study}
