@@ -136,28 +136,11 @@ char is_number(const char *str) {
     return 1;
 }
 
-char* increment_ri(const char* id) {
-    int len = strlen(id);
-    char* new_id = (char*)malloc((len + 2) * sizeof(char));
-    strcpy(new_id, id);
-
-    int i;
-    for (i = len - 1; i >= 0; i--) {
-        if (isdigit(new_id[i])) {
-            if (new_id[i] != '9') {
-                new_id[i]++;
-                break;
-            } else {
-                new_id[i] = '0';
-            }
-        } else {
-            if (i == len - 1) {
-                new_id[len] = '1';
-                new_id[len + 1] = '\0';
-            }
-            break;
+int key_in_array(const char *key, const char **key_array, size_t key_array_len) {
+    for (size_t i = 0; i < key_array_len; i++) {
+        if (strcmp(key, key_array[i]) == 0) {
+            return 1;
         }
     }
-
-    return new_id;
+    return 0;
 }

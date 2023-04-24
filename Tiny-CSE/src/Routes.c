@@ -142,18 +142,16 @@ void inorder(struct Route* head)
     }
 }
 
-char* get_last_ri_of_type(struct Route* head, short target_type) {
+int count_same_types(struct Route* head, int type) {
+    int count = 0;
     struct Route* current = head;
-    char* last_ri = NULL;
-
     while (current != NULL) {
-        if (current->ty == target_type) {
-            last_ri = current->ri;
+        if (current->ty == type) {
+            count++;
         }
         current = current->right;
     }
-
-    return last_ri;
+    return count;
 }
 
 struct Route * addRoute(struct Route **head, char* key, char* ri, short ty, char* value) {

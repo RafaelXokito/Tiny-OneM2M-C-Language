@@ -14,6 +14,7 @@ extern int DAYS_PLUS_ET;
 AEStruct *init_ae() {
     AEStruct *ae = (AEStruct *) malloc(sizeof(AEStruct));
     if (ae) {
+        ae->url = NULL;
         ae->apn[0] = '\0';
         ae->ct[0] = '\0';
         ae->ty = 0;
@@ -39,7 +40,7 @@ AEStruct *init_ae() {
     return ae;
 }
 
-char create_ae(AEStruct * ae, cJSON *content, char* response) {
+char create_ae(AEStruct * ae, cJSON *content, char** response) {
     // Sqlite3 initialization opening/creating database
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
@@ -47,29 +48,38 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
 		return FALSE;
 	}
 
-    sqlite3_stmt *stmt_init;
-    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 4) AS INTEGER)), 0) + 1 FROM mtc WHERE ty = 2;";
-    short rc = sqlite3_prepare_v2(db, query, -1, &stmt_init, 0);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr,"Failed to execute statement: %s\n", sqlite3_errmsg(db));
-        responseMessage(response, 500, "Internal Server Error", "Failed to execute statement");
+    // Convert the JSON object to a C structure
+    // the URL attribute was already populated in the caller of this function
+    sqlite3_stmt *stmt;
+    int result;
+    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 4) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 2";
+    // Prepare the SQL statement
+    if (sqlite3_prepare_v2(db, query, -1, &stmt, 0) != SQLITE_OK) {
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
         closeDatabase(db);
         return FALSE;
     }
 
-    int value = 0;
-    if (sqlite3_step(stmt_init) == SQLITE_ROW) {
-        value = sqlite3_column_int(stmt_init, 0);
+    char *ri = NULL;
+    // Execute the query and fetch the result
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        result = sqlite3_column_int(stmt, 0);
+        size_t ri_size = snprintf(NULL, 0, "CAE%d", result) + 1; // Get the required size for the ri string
+
+        ri = malloc(ri_size * sizeof(char)); // Allocate dynamic memory for the ri string
+        if (ri == NULL) {
+            fprintf(stderr, "Failed to allocate memory for ri\n");
+            closeDatabase(db);
+            return FALSE;
+        }
+        snprintf(ri, ri_size, "CAE%d", result); // Write the formatted string to ri
+        cJSON_AddStringToObject(content, "ri", ri);
+    } else {
+        fprintf(stderr, "Failed to fetch the result\n");
+        closeDatabase(db);
+        return FALSE;
     }
 
-    sqlite3_finalize(stmt_init);
-
-    char ri[50] = "";
-    snprintf(ri, sizeof(ri), "CAE%d", value);
-    printf("ri = %s\n", ri);
-    cJSON_AddStringToObject(content, "ri", ri);
-
-    // Convert the JSON object to a C structure
     ae->ty = AE;
     strcpy(ae->ri, cJSON_GetObjectItemCaseSensitive(content, "ri")->valuestring);
     strcpy(ae->rn, cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
@@ -127,7 +137,7 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
         }
     }
 
-    rc = begin_transaction(db);
+    short rc = begin_transaction(db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Can't begin transaction\n");
         closeDatabase(db);
@@ -135,8 +145,7 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
     }
 
     // Prepare the insert statement
-    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, aei, api, rr, et, ct, lt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    sqlite3_stmt *stmt;
+    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, aei, api, rr, et, ct, lt, url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr,"Failed to prepare statement: %s\n", sqlite3_errmsg(db));
@@ -164,6 +173,7 @@ char create_ae(AEStruct * ae, cJSON *content, char* response) {
     sqlite3_bind_text(stmt, 8, et_iso, strlen(et_iso), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 9, ct_iso, strlen(ct_iso), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 10, lt_iso, strlen(lt_iso), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 11, ae->url, strlen(ae->url), SQLITE_STATIC);
 
     // Execute the statement
     rc = sqlite3_step(stmt);
@@ -276,7 +286,7 @@ cJSON *ae_to_json(const AEStruct *ae) {
     return root;
 }
 
-char update_ae(struct Route* destination, cJSON *content, char* response){
+char update_ae(struct Route* destination, cJSON *content, char** response){
     const char *allowed_keysMULTIVALUE[] = {"apn", "acpi", "lbl", "daci", "poa", "ch", "aa", "csz", "nl", "at", "or"};
     size_t num_allowed_keysMULTIVALUE = sizeof(allowed_keysMULTIVALUE) / sizeof(allowed_keysMULTIVALUE[0]);
 
@@ -284,18 +294,21 @@ char update_ae(struct Route* destination, cJSON *content, char* response){
     char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, aei, api, rr, et, lt, ct FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
     if (sql == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
+        responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
         return FALSE;
     }
     sqlite3_stmt *stmt;
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
         fprintf(stderr, "Failed to initialize the database.\n");
+        responseMessage(response, 500, "Internal Server Error", "Failed to initialize the database.");
         sqlite3_free(sql);
         return FALSE;
     }
     short rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Failed to prepare statement.");
         sqlite3_finalize(stmt);
         closeDatabase(db);
         return FALSE;
@@ -347,6 +360,7 @@ char update_ae(struct Route* destination, cJSON *content, char* response){
     rc = begin_transaction(db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Can't begin transaction\n");
+        responseMessage(response, 500, "Internal Server Error", "Can't begin transaction.");
         closeDatabase(db);
         return FALSE;
     }
@@ -554,9 +568,24 @@ char update_ae(struct Route* destination, cJSON *content, char* response){
     }
     char * response_data = json_str;
     
-    strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
+    // Calculate the required buffer size
+    size_t response_size = strlen("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n") + strlen(response_data) + 1;
+    
+    // Allocate memory for the response buffer
+    *response = (char *)malloc(response_size * sizeof(char));
 
-    strcat(response, response_data);
+    // Check if memory allocation was successful
+    if (*response == NULL) {
+        fprintf(stderr, "Failed to allocate memory for the response buffer\n");
+        // Cleanup
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        cJSON_Delete(root);
+        free(json_str);
+        return FALSE;
+    }
+    sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", response_data);
+
     free(json_str);
 
     cJSON_Delete(root);
@@ -565,8 +594,9 @@ char update_ae(struct Route* destination, cJSON *content, char* response){
     return TRUE;
 }
 
-char get_ae(struct Route* destination, char* response){
-    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, aei, api, rr, et, lt, ct FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
+char get_ae(struct Route* destination, char** response){
+    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, aei, api, rr, et, lt, ct FROM mtc WHERE LOWER(url) = LOWER('%s');", destination->key);
+
     if (sql == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
         return FALSE;
@@ -637,10 +667,26 @@ char get_ae(struct Route* destination, char* response){
     }
 
     char * response_data = json_str;
-    
-    strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
 
-    strcat(response, response_data);
+    // Calculate the required buffer size
+    size_t response_size = strlen("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n") + strlen(response_data) + 1;
+    
+    // Allocate memory for the response buffer
+    *response = (char *)malloc(response_size * sizeof(char));
+
+    // Check if memory allocation was successful
+    if (*response == NULL) {
+        fprintf(stderr, "Failed to allocate memory for the response buffer\n");
+        // Cleanup
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        cJSON_Delete(root);
+        free(json_str);
+        return FALSE;
+    }
+    sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", response_data);
+
+    printf("ola%s\n", *response);
 
     cJSON_Delete(root);
     sqlite3_finalize(stmt);

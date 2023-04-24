@@ -8,6 +8,7 @@
  */
 
 typedef struct {
+    char *url; // url resource
     char apn[50]; // App Name
     char ct[20]; // creationTime
     short ty; // resourceType
@@ -33,10 +34,10 @@ typedef struct {
 
 
 AEStruct *init_ae();
-char create_ae(AEStruct * ae, cJSON *content, char* response);
+char create_ae(AEStruct * ae, cJSON *content, char** response);
 
 cJSON *ae_to_json(const AEStruct *ae);
 
-char update_ae(struct Route* destination, cJSON *content, char* response);
+char update_ae(struct Route* destination, cJSON *content, char** response);
 
-char get_ae(struct Route* destination, char* response);
+char get_ae(struct Route* destination, char** response);

@@ -43,10 +43,22 @@ char * render_static_file(char * fileName) {
 	return temp;
 }
 
-void responseMessage(char* response, int status_code, char* status_message, char* message) {
-        printf("Creating the json response\n");
+void responseMessage(char** response, int status_code, char* status_message, char* message) {
+    printf("Creating the json response\n");
 
-        sprintf(response, "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\n\r\n{\"status_code\": %d, \"message\":\"%s\"}", status_code, status_message, status_code, message);
+    // Calculate the required response size
+    size_t response_size = snprintf(NULL, 0, "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\n\r\n{\"status_code\": %d, \"message\":\"%s\"}", status_code, status_message, status_code, message) + 1;
+
+    // Allocate memory for the response
+    *response = (char *)malloc(response_size * sizeof(char));
+    if (*response == NULL) {
+        // Handle memory allocation error
+        fprintf(stderr, "Memory allocation error\n");
+        return;
+    }
+
+    // Fill in the response buffer
+    sprintf(*response, "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\n\r\n{\"status_code\": %d, \"message\":\"%s\"}", status_code, status_message, status_code, message);
 }
 
 void close_socket_and_exit(ConnectionInfo *info) {
@@ -55,7 +67,7 @@ void close_socket_and_exit(ConnectionInfo *info) {
     pthread_exit(NULL);
 }
 
-void handle_get(ConnectionInfo *info, const char *queryString, struct Route *destination, char *response) {
+void handle_get(ConnectionInfo *info, const char *queryString, struct Route *destination, char **response) {
 	
 	if (queryString != NULL && strlen(queryString) > 0 && strstr(queryString, "fu=1") != NULL) {
 		char rs = discovery(info->route, destination, queryString, response);
@@ -87,7 +99,7 @@ void handle_get(ConnectionInfo *info, const char *queryString, struct Route *des
 	}
 }
 
-void handle_post(ConnectionInfo *info, const char *request, struct Route *destination, char *response) {
+void handle_post(ConnectionInfo *info, const char *request, struct Route *destination, char **response) {
 	cJSON *json_object = get_json_from_request(request);
 
 	if (json_object == NULL) {
@@ -128,7 +140,6 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 					// If everything was ok, we proced to the creation of resource
 					switch (ty) {
 					case AE: {
-						strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
 						char rs = post_ae(&info->route, destination, content, response);
 						if (rs == FALSE) {
 							// The method it self already change the response properly
@@ -158,12 +169,12 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 	}
 }
 
-void handle_delete(ConnectionInfo *info, struct Route *destination, char *response) {
+void handle_delete(ConnectionInfo *info, struct Route *destination, char **response) {
 	fprintf(stderr, "%s\n", destination->key);
 	delete_resource(destination, response);
 }
 
-void handle_put(ConnectionInfo *info, const char *request, struct Route *destination, char *response) {
+void handle_put(ConnectionInfo *info, const char *request, struct Route *destination, char **response) {
     char* json_start = strstr(request, "{"); // find the start of the JSON data
 	if (json_start != NULL) {
 		size_t json_length = strlen(json_start); // calculate the length of the JSON data
@@ -211,7 +222,6 @@ void handle_put(ConnectionInfo *info, const char *request, struct Route *destina
 					// If everything was ok, we proced to the creation of resource
 					switch (ty) {
 					case AE: {
-						strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
 						char rs = put_ae(destination, content, response);
 						if (rs == FALSE) {
 							// The method it self already change the response properly
@@ -306,9 +316,9 @@ void *handle_connection(void *connectioninfo) {
 
     printf("Check if route was founded\n");
     if (destination == NULL) {
-        char response[4096] = "";
+        char *response = NULL;
 
-        responseMessage(response, 404, "Not found", "Resource not found");
+        responseMessage(&response, 404, "Not found", "Resource not found");
 
         printf("http_header: %s\n", response);
 
@@ -323,40 +333,35 @@ void *handle_connection(void *connectioninfo) {
 
         strncat(template, destination->value, sizeof(template) - strlen(template) - 1);
         char * response_data = render_static_file(template);
-
+		
         char response[4096] = "HTTP/1.1 200 OK\r\n\r\n";
         strncat(response, response_data, sizeof(response) - strlen(response) - 1);
         strncat(response, "\r\n\r\n", sizeof(response) - strlen(response) - 1);
 
-        printf("http_header: %s\n", response);
-
         send(info->socket_desc, response, strlen(response), 0);
-
         close_socket_and_exit(info);
     }
 
     // Creating the response
-    char response[4096] = "";
+    char *response = NULL;
 
 	printf("Check the HTTP method\n");
     if (strcmp(method, "GET") == 0) {
-        handle_get(info, queryString, destination, response);
+        handle_get(info, queryString, destination, &response);
 	} else if (strcmp(method, "POST") == 0) {
-        handle_post(info, request, destination, response);
+        handle_post(info, request, destination, &response);
     } else if (strcmp(method, "PUT") == 0) {
-        handle_put(info, request, destination, response);
+        handle_put(info, request, destination, &response);
     } else if (strcmp(method, "DELETE") == 0) {
-        handle_delete(info, destination, response);
+        handle_delete(info, destination, &response);
     } else {
-        responseMessage(response, 405, "Method Not Allowed", "HTTP method not supported");
+        responseMessage(&response, 405, "Method Not Allowed", "HTTP method not supported");
     }
-
-    // printf("http_header: %s\n", response);
 
     send(info->socket_desc, response, strlen(response), 0);
 
     close_socket_and_exit(info);
-
+	free(response);
     return NULL;
 }
 
