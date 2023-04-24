@@ -36,13 +36,13 @@
 #define ACTR    63
 
 char init_protocol(struct Route** head);
-char retrieve_csebase(struct Route * destination, char *response);
-char discovery(struct Route * root, struct Route *destination, const char *queryString, char *response);
-char post_ae(struct Route** route, struct Route* destination, cJSON *content, char* response);
-char retrieve_ae(struct Route * destination, char *response);
-char validate_keys(cJSON *object, char *keys[], int num_keys, char *response);
-char delete_resource(struct Route * destination, char *response);
-char put_ae(struct Route* destination, cJSON *content, char* response);
+char retrieve_csebase(struct Route * destination, char **response);
+char discovery(struct Route *head, struct Route *destination, const char *queryString, char **response);
+char post_ae(struct Route** route, struct Route* destination, cJSON *content, char** response);
+char retrieve_ae(struct Route * destination, char **response);
+char validate_keys(cJSON *object, char *keys[], int num_keys, char **response);
+char delete_resource(struct Route * destination, char **response);
+char put_ae(struct Route* destination, cJSON *content, char** response);
 char insert_multivalue_element(cJSON *element, const char *mtc_ri, int parent_id, const char *atr, const char *key, sqlite3 *db);
 static int insert_element_into_multivalue_table(sqlite3 *db, const char *mtc_ri, int parent_id, const char* atr, const char *key, const char *value, const char *type);
 char insert_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *atr, const char *key, cJSON *atr_array);

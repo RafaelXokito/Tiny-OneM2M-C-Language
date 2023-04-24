@@ -22,12 +22,12 @@ delete_times="delete_times_openmtc.csv"
 # Remove old CSV files if they exist
 rm -f "$post_times" "$put_times" "$get_times" "$delete_times"
 
-count=1
+count=0
 
 # Perform CRUD operations and store timings in CSV files
-while [ $count -lt 500 ]; do
+while [ $count -lt 2000 ]; do
     # POST
-    time=$(curl -X POST "http://127.0.0.1:6000/onem2m" -H "Content-Type: application/vnd.onem2m-res+json" -d "{\"m2m:ae\": {\"api\": \"placeholder2\",\"rr\": \"true\",\"rn\": \"AE-A${count}\",\"et\": \"20230430T234737\",\"lbl\": [\"interropetores\",\"xpto2\"],\"poa\": [\"http://127.0.0.1:1234\"],\"acpi\": [\"/id-in/acpCreateACPs\"]}}" -w "%{time_total}" -o /dev/null)
+    time=$(curl -X POST "http://10.20.246.135:6000/onem2m" -H "Content-Type: application/vnd.onem2m-res+json" -d "{\"m2m:ae\": {\"api\": \"placeholder2\",\"rr\": \"true\",\"rn\": \"AE-A${count}\",\"et\": \"20230630T234737\",\"lbl\": [\"interropetores\",\"xpto2\"],\"poa\": [\"http://127.0.0.1:1234\"],\"acpi\": [\"/id-in/acpCreateACPs\"]}}" -w "%{time_total}" -o /dev/null)
     echo "$time" >> "$post_times"
 
     count=$((count+1))
@@ -37,7 +37,7 @@ done
 
 # while [ $count -lt 2001 ]; do
 #     # PUT
-#     time=$(curl -X PUT "http://10.20.246.135:6000/onem2m/AE-${count}" -H "Content-Type: application/vnd.onem2m-res+json" -d '{"m2m:ae": {"et": "20230331T234737","rr": "true","poa": ["http://127.0.0.1:4314"]}}' -w "%{time_total}" -o /dev/null)
+#     time=$(curl -X PUT "http://127.0.0.1:6000/onem2m/AE-${count}" -H "Content-Type: application/vnd.onem2m-res+json" -d '{"m2m:ae": {"et": "20230331T234737","rr": "true","poa": ["http://127.0.0.1:4314"]}}' -w "%{time_total}" -o /dev/null)
 #     echo "$time" >> "$put_times"
 
 #     count=$((count+1))
@@ -45,13 +45,23 @@ done
 
 # count=0
 
-# while [ $count -lt 2001 ]; do
+# while [ $count -lt 200 ]; do
 #     # GET
-#     time=$(curl -X GET "http://127.0.0.1:6000/onem2m/AE-${count}" -w "%{time_total}" -o /dev/null)
+#     time=$(curl -X GET "http://10.20.246.135:6000/onem2m?fu=1&ty=2&lbl=xpto2&limit=500" -w "%{time_total}" -o /dev/null)
 #     echo "$time" >> "$get_times"
 
 #     count=$((count+1))
 # done
+
+count=0
+
+while [ $count -lt 200 ]; do
+    # GET
+    time=$(curl -X GET "http://10.20.246.135:6000/onem2m?fu=1&ty=2&lbl=xpto2&limit=500" -w "%{time_total}" -o /dev/null)
+    echo "$time" >> "$get_times"
+
+    count=$((count+1))
+done
 
 # count=0
 
@@ -66,5 +76,5 @@ done
 # Calculate and display stats for each operation
 calculate_stats "POST" "$post_times"
 # calculate_stats "PUT" "$put_times"
-# calculate_stats "GET" "$get_times"
+calculate_stats "GET" "$get_times"
 # calculate_stats "DELETE" "$delete_times"

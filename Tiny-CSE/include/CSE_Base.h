@@ -8,6 +8,7 @@
  */
 
 typedef struct {
+    char *url; // url resource
     short ty; // resourceType
     char ri[50]; // resourceID
     char rn[50]; // resourceName

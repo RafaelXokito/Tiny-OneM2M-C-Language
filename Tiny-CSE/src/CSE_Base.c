@@ -16,23 +16,24 @@ extern char BASE_CSI[MAX_CONFIG_LINE_LENGTH];
 extern char BASE_POA[MAX_CONFIG_LINE_LENGTH];
 
 CSEBaseStruct *init_cse_base() {
-    CSEBaseStruct *ae = (CSEBaseStruct *) malloc(sizeof(CSEBaseStruct));
-    if (ae) {
-        ae->ty = 0;
-        ae->ri[0] = '\0';
-        ae->rn[0] = '\0';
-        ae->pi[0] = '\0';
-        ae->cst = 0;
-        ae->json_srt = NULL;
-        ae->json_lbl = NULL;
-        ae->csi[0] = '\0';
-        ae->nl[0] = '\0';
-        ae->json_poa = NULL;
-        ae->json_acpi = NULL;
-        ae->ct[0] = '\0';
-        ae->lt[0] = '\0';
+    CSEBaseStruct *cse = (CSEBaseStruct *) malloc(sizeof(CSEBaseStruct));
+    if (cse) {
+        cse->url = NULL;
+        cse->ty = 0;
+        cse->ri[0] = '\0';
+        cse->rn[0] = '\0';
+        cse->pi[0] = '\0';
+        cse->cst = 0;
+        cse->json_srt = NULL;
+        cse->json_lbl = NULL;
+        cse->csi[0] = '\0';
+        cse->nl[0] = '\0';
+        cse->json_poa = NULL;
+        cse->json_acpi = NULL;
+        cse->ct[0] = '\0';
+        cse->lt[0] = '\0';
     }
-    return ae;
+    return cse;
 }
 
 char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
@@ -64,6 +65,20 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     // Convert the JSON object to a C structure
     csebase->ty = cJSON_GetObjectItemCaseSensitive(json, "ty")->valueint;
     strcpy(csebase->ri, cJSON_GetObjectItemCaseSensitive(json, "ri")->valuestring);
+
+    size_t rnLength = strlen(cJSON_GetObjectItemCaseSensitive(json, "rn")->valuestring);
+    // Allocate memory for ae->url, considering the extra characters for "/", and the null terminator.
+    csebase->url = (char *)malloc(rnLength + 2);
+
+    // Check if memory allocation is successful
+    if (csebase->url == NULL) {
+        // Handle memory allocation error
+        fprintf(stderr, "Memory allocation error\n");
+        return FALSE;
+    }
+
+    // Append "/<rn value>" to ae->url
+    sprintf(csebase->url, "/%s", cJSON_GetObjectItemCaseSensitive(json, "rn")->valuestring);
     strcpy(csebase->rn, cJSON_GetObjectItemCaseSensitive(json, "rn")->valuestring);
     strcpy(csebase->pi, cJSON_GetObjectItemCaseSensitive(json, "pi")->valuestring);
     strcpy(csebase->csi, cJSON_GetObjectItemCaseSensitive(json, "csi")->valuestring);
@@ -100,7 +115,7 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
 
     if (isTableCreated == FALSE) {
         // Create the table if it doesn't exist
-        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT PRIMARY KEY, rn TEXT, pi TEXT, aei TEXT, csi TEXT, cst INTEGER, api TEXT, rr TEXT, et DATETIME, ct DATETIME, lt DATETIME)";
+        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT PRIMARY KEY, rn TEXT, pi TEXT, aei TEXT, csi TEXT, cst INTEGER, api TEXT, rr TEXT, et DATETIME, ct DATETIME, lt DATETIME, url TEXT)";
         short rc = sqlite3_exec(db, createTableSQL, NULL, NULL, NULL);
         if (rc != SQLITE_OK) {
             printf("Failed to create table: %s\n", sqlite3_errmsg(db));
@@ -148,8 +163,18 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
             fprintf(stdout, "Index idx_mtc_ri created successfully\n");
         }
 
-        const char *sql4 = "CREATE INDEX IF NOT EXISTS idx_multivalue_parent_id ON multivalue(parent_id);";
+        const char *sql4 = "CREATE INDEX IF NOT EXISTS idx_mtc_url ON mtc(url);";
         rc = sqlite3_exec(db, sql4, callback, 0, &zErrMsg);
+
+        if(rc != SQLITE_OK) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        } else {
+            fprintf(stdout, "Index idx_mtc_url created successfully\n");
+        }
+
+        const char *sql5 = "CREATE INDEX IF NOT EXISTS idx_multivalue_parent_id ON multivalue(parent_id);";
+        rc = sqlite3_exec(db, sql5, callback, 0, &zErrMsg);
 
         if(rc != SQLITE_OK) {
             fprintf(stderr, "SQL error: %s\n", zErrMsg);
@@ -158,8 +183,8 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
             fprintf(stdout, "Index idx_multivalue_parent_id created successfully\n");
         }
 
-        const char *sql5 = "CREATE INDEX IF NOT EXISTS idx_multivalue_atr_value ON multivalue(atr, value);";
-        rc = sqlite3_exec(db, sql5, callback, 0, &zErrMsg);
+        const char *sql6 = "CREATE INDEX IF NOT EXISTS idx_multivalue_atr_value ON multivalue(atr, value);";
+        rc = sqlite3_exec(db, sql6, callback, 0, &zErrMsg);
 
         if(rc != SQLITE_OK) {
             fprintf(stderr, "SQL error: %s\n", zErrMsg);
@@ -170,7 +195,7 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     }
 
     // Prepare the insert statement
-    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, cst, csi, ct, lt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, cst, csi, ct, lt, url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     sqlite3_stmt *stmt;
     rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
@@ -195,6 +220,7 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     strftime(lt_iso, sizeof(lt_iso), "%Y-%m-%d %H:%M:%S", &lt_tm);
     sqlite3_bind_text(stmt, 7, ct_iso, strlen(ct_iso), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 8, lt_iso, strlen(lt_iso), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 9, csebase->url, strlen(csebase->url), SQLITE_STATIC);
 
     // Execute the statement
     rc = sqlite3_step(stmt);

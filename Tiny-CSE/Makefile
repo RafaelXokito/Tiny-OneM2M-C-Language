@@ -8,7 +8,7 @@ DEPS = HTTP_Server.h Sqlite.h
 exec = server.o
 sources = $(wildcard src/*.c)
 objects = $(sources:.c=.o)
-flags = -g -Wall -lm -ldl -fPIC -rdynamic -I./include
+flags = -Wall -lm -ldl -fPIC -rdynamic -lpthread -I./include -O3 #-g 
 # flags = -I./include
 
 $(exec): $(objects)

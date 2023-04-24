@@ -135,3 +135,12 @@ char is_number(const char *str) {
 
     return 1;
 }
+
+int key_in_array(const char *key, const char **key_array, size_t key_array_len) {
+    for (size_t i = 0; i < key_array_len; i++) {
+        if (strcmp(key, key_array[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}

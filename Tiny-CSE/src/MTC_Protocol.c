@@ -150,7 +150,7 @@ char init_protocol(struct Route** head) {
     return TRUE;
 }
 
-char retrieve_csebase(struct Route * destination, char *response) {
+char retrieve_csebase(struct Route * destination, char **response) {
     char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, csi, cst, ct, lt FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
     sqlite3_stmt *stmt;
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
@@ -211,7 +211,23 @@ char retrieve_csebase(struct Route * destination, char *response) {
         return FALSE;
     }
     
-    snprintf(response, 1024, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", json_str);
+    // Calculate the required buffer size
+    size_t response_size = strlen("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n") + strlen(json_str) + 1;
+    
+    // Allocate memory for the response buffer
+    *response = (char *)malloc(response_size * sizeof(char));
+
+    // Check if memory allocation was successful
+    if (*response == NULL) {
+        fprintf(stderr, "Failed to allocate memory for the response buffer\n");
+        // Cleanup
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        cJSON_Delete(root);
+        free(json_str);
+        return FALSE;
+    }
+    sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", json_str);
 
     cJSON_Delete(root);
     sqlite3_finalize(stmt);
@@ -221,7 +237,7 @@ char retrieve_csebase(struct Route * destination, char *response) {
     return TRUE;
 }
 
-char discovery(struct Route * head, struct Route *destination, const char *queryString, char *response) {
+char discovery(struct Route *head, struct Route *destination, const char *queryString, char **response) {
     // Initialize the database
     struct sqlite3 *db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
@@ -229,18 +245,42 @@ char discovery(struct Route * head, struct Route *destination, const char *query
         return FALSE;
     }
 
-    // Duplicate queryString to avoid modifying the original string
-    char *query_copy = strdup(queryString);
-    char *query_copy2 = strdup(queryString);
+    char *query_copy = NULL;
+    char *query_copy2 = NULL;
+
+    if (queryString != NULL) {
+        query_copy = strdup(queryString);
+        if (query_copy == NULL) {
+            responseMessage(response, 500, "Internal Server Error", "Memory allocation error");
+            closeDatabase(db);
+            return FALSE;
+        }
+
+        query_copy2 = strdup(queryString);
+        if (query_copy2 == NULL) {
+            responseMessage(response, 500, "Internal Server Error", "Memory allocation error");
+            sqlite3_free(query_copy);
+            closeDatabase(db);
+            return FALSE;
+        }
+    } else {
+        responseMessage(response, 400, "Bad Request", "No query string provided");
+        closeDatabase(db);
+        return FALSE;
+    }
 
     // Define condition strings for different types of conditions
     char *MVconditions = NULL;
-    char *MTCconditions = NULL;
+        char *MTCconditions = NULL;
 
     // Define arrays of allowed non-array keys, array keys, and time keys
     const char *keysNA[] = {"ty"};
     const char *keysA[] = {"lbl"};
     const char *keysT[] = {"createdbefore", "createdafter", "modifiedsince", "unmodifiedsince", "expirebefore", "expireafter"};
+
+    size_t keysNA_len = sizeof(keysNA) / sizeof(keysNA[0]);
+    size_t keysA_len = sizeof(keysA) / sizeof(keysA[0]);
+    size_t keysT_len = sizeof(keysT) / sizeof(keysT[0]);
 
     short limit = 50;
 
@@ -263,7 +303,7 @@ char discovery(struct Route * head, struct Route *destination, const char *query
     }
 
     // Set default filter operation if not specified
-    if (strcmp(filter_operation, "") == 0) {
+        if (strcmp(filter_operation, "") == 0) {
         strncpy(filter_operation, "AND", sizeof(filter_operation) - 1);
     }
 
@@ -287,7 +327,7 @@ char discovery(struct Route * head, struct Route *destination, const char *query
             continue;
         }
 
-        if (strcmp(key, "limit") == 0 && is_number(value)) {
+                if (strcmp(key, "limit") == 0 && is_number(value)) {
             limit = atoi(value);
 
             token2 = strtok_r(NULL, "&", &saveptr);
@@ -298,84 +338,71 @@ char discovery(struct Route * head, struct Route *destination, const char *query
         int found = 0;
 
         // Check non-array keys
-        for (int i = 0; i < sizeof(keysNA) / sizeof(keysNA[0]); i++) {
-            if (strcmp(key, keysNA[i]) == 0) {
-                found = 1;
-                // Add the condition to the query string
-                char *condition;
-                if (strcmp(key, "ty") == 0) {  // Integer key
-                    condition = sqlite3_mprintf("%s %s = %Q", filter_operation, key, value);
-                } else {  // String key
-                    condition = sqlite3_mprintf("%s %s LIKE \"%%%s%%\"", filter_operation, key, value);
-                }
-                
-                char *newMTCconditions = sqlite3_mprintf("%s%s ", MTCconditions ? MTCconditions : "", condition);
-                if (MTCconditions) sqlite3_free(MTCconditions);
-                
-                MTCconditions = newMTCconditions;
-                sqlite3_free(condition);
-                break;
+        if (key_in_array(key, keysNA, keysNA_len)) {
+            found = 1;
+            // Add the condition to the query string
+            char *condition;
+            if (strcmp(key, "ty") == 0) {  // Integer key
+                condition = sqlite3_mprintf("%s %s = %Q", filter_operation, key, value);
+            } else {  // String key
+                condition = sqlite3_mprintf("%s %s LIKE \"%%%s%%\"", filter_operation, key, value);
             }
+            
+            char *newMTCconditions = sqlite3_mprintf("%s%s ", MTCconditions ? MTCconditions : "", condition);
+            if (MTCconditions) sqlite3_free(MTCconditions);
+            
+            MTCconditions = newMTCconditions;
+            sqlite3_free(condition);
         }
 
         // Check array keys
-        if (!found) {
-            for (int i = 0; i < sizeof(keysA) / sizeof(keysA[0]); i++) {
-                if (strcmp(key, keysA[i]) == 0) {
-                    found = 1;
-                    // Add the condition to the query string
-                    char *newMVconditions = sqlite3_mprintf("%s %s EXISTS (SELECT 1 FROM multivalue WHERE mtc_ri = m.mtc_ri AND atr = %Q AND value = %Q)", MVconditions ? MVconditions : "", filter_operation, key, value);
-                    if (MVconditions) sqlite3_free(MVconditions);
-                    MVconditions = newMVconditions;
-                    break;
-                }
-            }
+        if (!found && key_in_array(key, keysA, keysA_len)) {
+            found = 1;
+            // Add the condition to the query string
+            char *newMVconditions = sqlite3_mprintf("%s %s EXISTS (SELECT 1 FROM multivalue WHERE mtc_ri = m.mtc_ri AND atr = %Q AND value = %Q)", MVconditions ? MVconditions : "", filter_operation, key, value);
+            if (MVconditions) sqlite3_free(MVconditions);
+            MVconditions = newMVconditions;
         }
 
         // Check time keys
-        if (!found) {
-            for (int i = 0; i < sizeof(keysT) / sizeof(keysT[0]); i++) {
-                if (strcmp(key, keysT[i]) == 0) {
-                    found = 1;
-                    // Extract the date/time information from the value
-                    struct tm tm;
-                    strptime(value, "%Y%m%dt%H%M%S", &tm); // Correct format to parse the input datetime string
+        if (!found && key_in_array(key, keysT, keysT_len)) {
+            found = 1;
+            // Extract the date/time information from the value
+            struct tm tm;
+            strptime(value, "%Y%m%dt%H%M%S", &tm); // Correct format to parse the input datetime string
 
-                    // Convert the struct tm to the desired format
-                    char *formatted_datetime = (char *)calloc(20, sizeof(char)); // Allocate enough space for the resulting string
-                    strftime(formatted_datetime, 20, "%Y-%m-%d %H:%M:%S", &tm);
+            // Convert the struct tm to the desired format
+            char *formatted_datetime = (char *)calloc(20, sizeof(char)); // Allocate enough space for the resulting string
+            strftime(formatted_datetime, 20, "%Y-%m-%d %H:%M:%S", &tm);
 
-                    // Add a condition to the SQL query
-                    char *condition;
-                    if (strstr(key, "before") != NULL) {
-                        if (strstr(key, "created") != NULL) {
-                            condition = sqlite3_mprintf("%s ct < %Q", filter_operation, formatted_datetime);
-                        } else if (strstr(key, "expire") != NULL) {
-                            condition = sqlite3_mprintf("%s et < %Q", filter_operation, formatted_datetime);
-                        }
-                    } else if (strstr(key, "after") != NULL) {
-                        if (strstr(key, "created") != NULL) {
-                            condition = sqlite3_mprintf("%s ct > %Q", filter_operation, formatted_datetime);
-                        } else if (strstr(key, "expire") != NULL) {
-                            condition = sqlite3_mprintf("%s et > %Q", filter_operation, formatted_datetime);
-                        }
-                    } else if (strstr(key, "since") != NULL) {
-                        if (strstr(key, "modified") != NULL) {
-                            condition = sqlite3_mprintf("%s lt >= %Q", filter_operation, formatted_datetime);
-                        } else if (strstr(key, "unmodified") != NULL) {
-                            condition = sqlite3_mprintf("%s lt <= %Q", filter_operation, formatted_datetime);
-                        }
-                    }
-
-                    char *newMTCconditions = sqlite3_mprintf("%s%s ", MTCconditions ? MTCconditions : "", condition);
-                    if (MTCconditions) sqlite3_free(MTCconditions);
-                    
-                    MTCconditions = newMTCconditions;
-                    sqlite3_free(condition);
-                    free(formatted_datetime);
-                    break;
+            // Add a condition to the SQL query
+            char *condition;
+            if (strstr(key, "before") != NULL) {
+                if (strstr(key, "created") != NULL) {
+                    condition = sqlite3_mprintf("%s ct < %Q", filter_operation, formatted_datetime);
+                } else if (strstr(key, "expire") != NULL) {
+                    condition = sqlite3_mprintf("%s et < %Q", filter_operation, formatted_datetime);
+                }
+            } else if (strstr(key, "after") != NULL) {
+                if (strstr(key, "created") != NULL) {
+                    condition = sqlite3_mprintf("%s ct > %Q", filter_operation, formatted_datetime);
+                } else if (strstr(key, "expire") != NULL) {
+                    condition = sqlite3_mprintf("%s et > %Q", filter_operation, formatted_datetime);
+                }
+            } else if (strstr(key, "since") != NULL) {
+                if (strstr(key, "modified") != NULL) {
+                    condition = sqlite3_mprintf("%s lt >= %Q", filter_operation, formatted_datetime);
+                } else if (strstr(key, "unmodified") != NULL) {
+                    condition = sqlite3_mprintf("%s lt <= %Q", filter_operation, formatted_datetime);
                 }
             }
+
+            char *newMTCconditions = sqlite3_mprintf("%s%s ", MTCconditions ? MTCconditions : "", condition);
+            if (MTCconditions) sqlite3_free(MTCconditions);
+
+            MTCconditions = newMTCconditions;
+            sqlite3_free(condition);
+            free(formatted_datetime);
         }
 
         // If key not found in any of the arrays, return an error
@@ -404,9 +431,9 @@ char discovery(struct Route * head, struct Route *destination, const char *query
     }
 
     // Execute the dynamic SELECT statement
-    char *query = sqlite3_mprintf("SELECT * FROM (SELECT ri FROM mtc WHERE ri = \"%s\" AND 1 = 1%s LIMIT %d) "
+    char *query = sqlite3_mprintf("SELECT * FROM (SELECT url FROM mtc WHERE ri = \"%s\" AND 1 = 1%s LIMIT %d) "
                               "UNION "
-                              "SELECT mtc.ri FROM mtc "
+                              "SELECT mtc.url FROM mtc "
                               "INNER JOIN ( "
                               "SELECT DISTINCT mtc_ri as ri FROM multivalue AS m WHERE 1 = 1 %s LIMIT %d"
                               ") AS res ON res.ri = mtc.ri "
@@ -421,6 +448,10 @@ char discovery(struct Route * head, struct Route *destination, const char *query
                               limit);
 
     printf("%s\n",query);
+
+    // Free the temporary strings
+    if (MVconditions) sqlite3_free(MVconditions);
+    if (MTCconditions) sqlite3_free(MTCconditions);
 
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {
@@ -438,43 +469,75 @@ char discovery(struct Route * head, struct Route *destination, const char *query
 
     // Iterate over the result set and add the MTC_RI values to the cJSON array
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        const char *mtc_ri = (const char *)sqlite3_column_text(stmt, 0);
+        const char *mtc_url = (const char *)sqlite3_column_text(stmt, 0);
 
-        struct Route * auxRoute = search_byri(head, mtc_ri);
-
-        cJSON *mtc_ri_value = cJSON_CreateString((const char *)auxRoute->key);
+        cJSON *mtc_ri_value = cJSON_CreateString(mtc_url);
         cJSON_AddItemToArray(uril_array, mtc_ri_value);
     }
 
-    printf("Convert to json string\n");
-    char *json_str = cJSON_PrintUnformatted(root);
-    char *response_data = json_str;
-    strcpy(response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n");
-    strcat(response, response_data);
-
-    // Cleanup
     sqlite3_finalize(stmt);
     closeDatabase(db);
-    sqlite3_free(query_copy);
-    sqlite3_free(query_copy2);
-    sqlite3_free(MVconditions);
-    sqlite3_free(MTCconditions);
-    sqlite3_free(query);
+    if (query_copy) free(query_copy);
+    if (query_copy2) free(query_copy2);
+    if (query) sqlite3_free(query);
+
+    printf("Convert to json string\n");
+    char *json_str = cJSON_PrintUnformatted(root);
+    if (json_str == NULL) {
+        fprintf(stderr, "Failed to convert cJSON object to a JSON string\n");
+        responseMessage(response, 500, "Internal Server Error", "Failed to convert cJSON object to a JSON string");
+        // Cleanup
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        if (query_copy) free(query_copy);
+        if (query_copy2) free(query_copy2);
+        if (MVconditions) sqlite3_free(MVconditions);
+        if (MTCconditions) sqlite3_free(MTCconditions);
+        if (query) sqlite3_free(query);
+        cJSON_Delete(root);
+        return FALSE;
+    }
+    char *response_data = json_str;
+    
+    // Calculate the required buffer size
+    size_t response_size = strlen("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n") + strlen(response_data) + 1;
+    
+    // Allocate memory for the response buffer
+    *response = (char *)malloc(response_size * sizeof(char));
+
+    // Check if memory allocation was successful
+    if (*response == NULL) {
+        fprintf(stderr, "Failed to allocate memory for the response buffer\n");
+        // Cleanup
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        if (query_copy) free(query_copy);
+        if (query_copy2) free(query_copy2);
+        if (MVconditions) sqlite3_free(MVconditions);
+        if (MTCconditions) sqlite3_free(MTCconditions);
+        if (query) sqlite3_free(query);
+        cJSON_Delete(root);
+        free(json_str);
+        return FALSE;
+    }
+    sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", response_data);
+
+    // Cleanup
     cJSON_Delete(root);
     free(json_str);
 
     return TRUE;
 }
 
-char post_ae(struct Route** head, struct Route* destination, cJSON *content, char* response) {
-
+char post_ae(struct Route** head, struct Route* destination, cJSON *content, char** response) {
+    
     // JSON Validation
     
     // "rn" is an optional, but if dont come with it we need to generate a resource name
     char *keys_rn[] = {"rn"};  // Resource Name
     int num_keys = 1;  // number of keys in the array
-    char aux_response[300] = "";
-    char rs = validate_keys(content, keys_rn, num_keys, aux_response);
+    char *aux_response = NULL;
+    char rs = validate_keys(content, keys_rn, num_keys, &aux_response);
     if (rs == FALSE) {
         // Se não tiver "rn" geramos um com "AE-<UniqueID>"
         char unique_id[MAX_CONFIG_LINE_LENGTH];
@@ -488,8 +551,8 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     // Mandatory Atributes
     char *keys_m[] = {"api", "rr"};  // App-ID, requestReachability
     num_keys = 2;  // number of keys in the array
-    strcpy(aux_response, "");
-    rs = validate_keys(content, keys_m, num_keys, aux_response);
+    aux_response = NULL;
+    rs = validate_keys(content, keys_m, num_keys, &aux_response);
     if (rs == FALSE) {
         responseMessage(response, 400, "Bad Request", aux_response);
         return FALSE;
@@ -539,18 +602,49 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     printf("Creating AE\n");
     AEStruct *ae = init_ae();
     // Should be garantee that the content (json object) dont have this keys
-    char ri[50] = "";
-    int countAE = count_same_types(*head, AE);
-    snprintf(ri, sizeof(ri), "CAE%d", countAE);
-    cJSON_AddStringToObject(content, "ri", ri);
     cJSON_AddStringToObject(content, "pi", destination->ri);
 
     // perform database operations
     pthread_mutex_lock(&db_mutex);
     
+    size_t destinationKeyLength = strlen(destination->key);
+    size_t rnLength = strlen(cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
+
+    // Allocate memory for ae->url, considering the extra characters for "/", and the null terminator.
+    ae->url = (char *)malloc(destinationKeyLength + rnLength + 2);
+
+    // Check if memory allocation is successful
+    if (ae->url == NULL) {
+        // Handle memory allocation error
+        fprintf(stderr, "Memory allocation error\n");
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+
+    // Copy the destination key into ae->url
+    strncpy(ae->url, destination->key, destinationKeyLength);
+    ae->url[destinationKeyLength] = '\0'; // Add null terminator
+
+    // Append "/<rn value>" to ae->url
+    sprintf(ae->url + destinationKeyLength, "/%s", cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
+    
+    clock_t start_time, end_time;
+    double elapsed_time;
+    // Record the start time
+    start_time = clock();
+
     rs = create_ae(ae, content, response);
+
+    // Record the end time
+    end_time = clock();
+
+    // Calculate the elapsed time in seconds
+    elapsed_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+
+    printf("Time taken by create_ae: %f seconds\n", elapsed_time);
     if (rs == FALSE) {
-        //responseMessage(response, 400, "Bad Request", "Verify the request body");
+        // É feito dentro da função create_ae
         pthread_mutex_unlock(&db_mutex);
         pthread_mutex_destroy(&db_mutex);
         return FALSE;
@@ -563,13 +657,28 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     
     // Convert the AE struct to json and the Json Object to Json String
     cJSON *root = ae_to_json(ae);
-    char *str = cJSON_Print(root);
+    char *str = cJSON_PrintUnformatted(root);
     if (str == NULL) {
         responseMessage(response, 500, "Internal Server Error", "Could not print cJSON object");
         cJSON_Delete(root);
         return FALSE;
     }
-    strcat(response, str);
+    
+    // Calculate the required buffer size
+    size_t response_size = strlen("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n") + strlen(str) + 1;
+    
+    // Allocate memory for the response buffer
+    *response = (char *)malloc(response_size * sizeof(char));
+
+    // Check if memory allocation was successful
+    if (*response == NULL) {
+        fprintf(stderr, "Failed to allocate memory for the response buffer\n");
+        // Cleanup
+        cJSON_free(str);
+        cJSON_Delete(root);
+        return FALSE;
+    }
+    sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", str);
 
     // Free allocated resources
     cJSON_Delete(root);
@@ -584,7 +693,7 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     return TRUE;
 }
 
-char retrieve_ae(struct Route * destination, char *response) {
+char retrieve_ae(struct Route * destination, char **response) {
     pthread_mutex_t db_mutex;
     if (pthread_mutex_init(&db_mutex, NULL) != 0) {
          responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
@@ -599,18 +708,33 @@ char retrieve_ae(struct Route * destination, char *response) {
     return TRUE;
 }
 
-char validate_keys(cJSON *object, char *keys[], int num_keys, char *response) {
+char validate_keys(cJSON *object, char *keys[], int num_keys, char **response) {
     cJSON *value = NULL;
+    size_t response_size = 0;
+    size_t new_size = 0;
 
     for (int i = 0; i < num_keys; i++) {
         value = cJSON_GetObjectItem(object, keys[i]);  // retrieve the value associated with the key
         if (value == NULL) {
-            // concat each error key not found in object
-            sprintf(response, "%s%s key not found; ", response, keys[i]);
+            // Calculate the new size required
+            new_size = response_size + strlen(keys[i]) + strlen(" key not found; ") + 1;
+
+            // Reallocate memory for the response buffer
+            *response = (char *)realloc(*response, new_size * sizeof(char));
+            if (*response == NULL) {
+                fprintf(stderr, "Failed to reallocate memory for the response buffer\n");
+                return FALSE;
+            }
+
+            // Concat each error key not found in object
+            sprintf(*response + response_size, "%s key not found; ", keys[i]);
+
+            // Update the response_size
+            response_size = new_size;
         }
     }
 
-    return strcmp(response, "") == 0 ? TRUE : FALSE;  // all keys were found in object
+    return response_size == 0 ? TRUE : FALSE;  // all keys were found in object
 }
 
 char has_disallowed_keys(cJSON *json_object, const char **allowed_keys, size_t num_allowed_keys) {
@@ -629,7 +753,7 @@ char has_disallowed_keys(cJSON *json_object, const char **allowed_keys, size_t n
     return FALSE;
 }
 
-char delete_resource(struct Route * destination, char *response) {
+char delete_resource(struct Route * destination, char **response) {
 
     char* errMsg = NULL;
 
@@ -718,7 +842,7 @@ char delete_resource(struct Route * destination, char *response) {
     return TRUE;
 }
 
-char put_ae(struct Route* destination, cJSON *content, char* response) {
+char put_ae(struct Route* destination, cJSON *content, char** response) {
 
     const char *allowed_keys[] = {"rr", "et", "apn","nl", "or", "acpi", "lbl", "daci", "poa", "ch", "aa", "csz", "at"};
 	size_t num_allowed_keys = sizeof(allowed_keys) / sizeof(allowed_keys[0]);
