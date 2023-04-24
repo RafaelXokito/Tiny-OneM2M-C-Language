@@ -138,6 +138,26 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 					responseMessage(response,500,"Internal Server Error","Error while getting the content from request");
 				} else {
 					// If everything was ok, we proced to the creation of resource
+
+					// Verify if is it possible to create the child inside the destination
+					if (destination->ty == CSEBASE && !(ty == ACP || ty == AE || ty == CNT || ty == GRP || ty == NOD || ty == FCNT || ty == SUB) ) {
+						responseMessage(response,400,"Bad Request","Invalid children type.");
+						fprintf(stderr, "Could not create AE resource. Invalid children type.\n");
+						return;
+					}
+					
+					if (destination->ty == AE && !(ty == CNT || ty == FCNT || ty == GRP || ty == SUB) ) {
+						responseMessage(response,400,"Bad Request","Invalid children type.");
+						fprintf(stderr, "Could not create AE resource. Invalid children type.\n");
+						return;
+					}
+					
+					if (destination->ty == CNT && !(ty == CNT || ty == CIN || ty == SUB) ) {
+						responseMessage(response,400,"Bad Request","Invalid children type.");
+						fprintf(stderr, "Could not create AE resource. Invalid children type.\n");
+						return;
+					}
+
 					switch (ty) {
 					case AE: {
 						char rs = post_ae(&info->route, destination, content, response);
