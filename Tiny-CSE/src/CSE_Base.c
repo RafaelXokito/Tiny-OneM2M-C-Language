@@ -115,7 +115,7 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
 
     if (isTableCreated == FALSE) {
         // Create the table if it doesn't exist
-        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT PRIMARY KEY, rn TEXT, pi TEXT, aei TEXT, csi TEXT, cst INTEGER, api TEXT, rr TEXT, et DATETIME, ct DATETIME, lt DATETIME, url TEXT)";
+        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT PRIMARY KEY, rn TEXT, pi TEXT, aei TEXT, csi TEXT, cst INTEGER, api TEXT, rr TEXT, et DATETIME, ct DATETIME, lt DATETIME, url TEXT, lbl TEXT, acpi TEXT, daci TEXT, poa TEXT, blob TEXT)";
         short rc = sqlite3_exec(db, createTableSQL, NULL, NULL, NULL);
         if (rc != SQLITE_OK) {
             printf("Failed to create table: %s\n", sqlite3_errmsg(db));
