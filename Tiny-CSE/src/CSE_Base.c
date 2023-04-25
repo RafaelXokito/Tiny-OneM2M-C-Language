@@ -85,27 +85,29 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     csebase->cst = cJSON_GetObjectItemCaseSensitive(json, "cst")->valueint;
     strcpy(csebase->ct, getCurrentTime());
     strcpy(csebase->lt, getCurrentTime());
-
-    const char *keys[] = {"acpi", "lbl", "srt", "poa"};
-    short num_keys = sizeof(keys) / sizeof(keys[0]);
-    char **json_strings[] = {&csebase->json_acpi, &csebase->json_lbl, &csebase->json_srt, &csebase->json_poa};
-
-    for (int i = 0; i < num_keys; i++) {
-        cJSON *json_array = cJSON_GetObjectItemCaseSensitive(json, keys[i]);
-        if (json_array) {
-            char *json_str = cJSON_Print(json_array);
-            if (json_str) {
-                *json_strings[i] = strdup(json_str);
-                if (*json_strings[i] == NULL) {
-                    fprintf(stderr, "Failed to allocate memory for the JSON %s string\n", keys[i]);
-                    closeDatabase(db);
-                    return FALSE;
-                }
-                free(json_str);
-            }
+    
+    cJSON *json_array = cJSON_GetObjectItemCaseSensitive(json,  "poa");
+    if (json_array) {
+        char *json_str = cJSON_Print(json_array);
+        size_t rnLengthPoa = strlen(json_str);
+        csebase->json_poa = (char *)malloc(rnLengthPoa);
+        if (csebase->json_poa == NULL) {
+            // Handle memory allocation error
+            fprintf(stderr, "Memory allocation error\n");
+            return FALSE;
         }
+        strcpy(csebase->json_poa, json_str);
     }
-
+    
+    size_t rnLengthBlob = strlen(cJSON_Print(csebase_to_json(csebase)));
+    csebase->blob = (char *)malloc(rnLengthBlob);
+    if (csebase->blob == NULL) {
+        // Handle memory allocation error
+        fprintf(stderr, "Memory allocation error\n");
+        return FALSE;
+    }
+    strcpy(csebase->blob, cJSON_Print(csebase_to_json(csebase)));
+    
     short rc = begin_transaction(db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Can't begin transaction\n");
@@ -119,15 +121,6 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
         short rc = sqlite3_exec(db, createTableSQL, NULL, NULL, NULL);
         if (rc != SQLITE_OK) {
             printf("Failed to create table: %s\n", sqlite3_errmsg(db));
-            closeDatabase(db);
-            return FALSE;
-        }
-
-        // Create the multivalue table
-        rc = create_multivalue_table(db);
-        if (rc != SQLITE_OK) {
-            fprintf(stderr, "Can't create multivalue table\n");
-            rollback_transaction(db); // Rollback transaction
             closeDatabase(db);
             return FALSE;
         }
@@ -172,30 +165,10 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
         } else {
             fprintf(stdout, "Index idx_mtc_url created successfully\n");
         }
-
-        const char *sql5 = "CREATE INDEX IF NOT EXISTS idx_multivalue_parent_id ON multivalue(parent_id);";
-        rc = sqlite3_exec(db, sql5, callback, 0, &zErrMsg);
-
-        if(rc != SQLITE_OK) {
-            fprintf(stderr, "SQL error: %s\n", zErrMsg);
-            sqlite3_free(zErrMsg);
-        } else {
-            fprintf(stdout, "Index idx_multivalue_parent_id created successfully\n");
-        }
-
-        const char *sql6 = "CREATE INDEX IF NOT EXISTS idx_multivalue_atr_value ON multivalue(atr, value);";
-        rc = sqlite3_exec(db, sql6, callback, 0, &zErrMsg);
-
-        if(rc != SQLITE_OK) {
-            fprintf(stderr, "SQL error: %s\n", zErrMsg);
-            sqlite3_free(zErrMsg);
-        } else {
-            fprintf(stdout, "Index idx_multivalue_atr_value created successfully\n");
-        }
     }
-
+   
     // Prepare the insert statement
-    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, cst, csi, ct, lt, url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, cst, csi, ct, lt, url, poa, blob) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     sqlite3_stmt *stmt;
     rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
@@ -204,7 +177,7 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
         closeDatabase(db);
         return FALSE;
     }
-
+    
     // Bind the values to the statement
     sqlite3_bind_int(stmt, 1, csebase->ty);
     sqlite3_bind_text(stmt, 2, csebase->ri, strlen(csebase->ri), SQLITE_STATIC);
@@ -221,6 +194,8 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     sqlite3_bind_text(stmt, 7, ct_iso, strlen(ct_iso), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 8, lt_iso, strlen(lt_iso), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 9, csebase->url, strlen(csebase->url), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 10, csebase->json_poa, strlen(csebase->json_poa), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 11, csebase->blob, strlen(csebase->blob), SQLITE_STATIC);
 
     // Execute the statement
     rc = sqlite3_step(stmt);
@@ -231,36 +206,7 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
         closeDatabase(db);
         return FALSE;
     }
-
-    // Keys to check in the JSON object
-    const char *keys_to_check[] = {"acpi", "lbl", "srt", "poa"};
-    num_keys = sizeof(keys_to_check) / sizeof(keys_to_check[0]);
-
-    // Initialize an array of strings to store the keys that are arrays
-    const char *array_keys[num_keys];
-    int count = 0;
-
-    for (int i = 0; i < num_keys; i++) {
-        cJSON *item = cJSON_GetObjectItemCaseSensitive(json, keys_to_check[i]);
-        if (cJSON_IsArray(item)) {
-            array_keys[count++] = keys_to_check[i];
-        }
-    }
-
-    for (int i = 0; i < count; i++) {
-        cJSON *atr_array = cJSON_GetObjectItemCaseSensitive(json, array_keys[i]);
-        char *str = cJSON_Print(atr_array);
-        if (cJSON_IsArray(atr_array)) {
-            if (insert_multivalue_elements(db, csebase->ri, array_keys[i], array_keys[i], atr_array) == FALSE) {
-                rollback_transaction(db); // Rollback transaction
-                closeDatabase(db);
-                cJSON_Delete(json);
-                return FALSE;
-            }
-        }
-    }
-
-
+    
     // Free the cJSON object
     cJSON_Delete(json);
 
@@ -325,8 +271,8 @@ cJSON *csebase_to_json(const CSEBaseStruct *csebase) {
     cJSON_AddStringToObject(innerObject, "lt", csebase->lt);
 
     // Add JSON string attributes back into cJSON object
-    const char *keys[] = {"srt", "lbl", "poa", "acpi"};
-    short num_keys = sizeof(keys) / sizeof(keys[0]);
+    const char *keys[] = {"acpi", "lbl", "srt", "poa"};
+    short num_keys = sizeof(keys) / sizeof(keys[0]);    
     const char *json_strings[] = {csebase->json_acpi, csebase->json_lbl, csebase->json_srt, csebase->json_poa};
 
     for (int i = 0; i < num_keys; i++) {
