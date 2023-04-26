@@ -32,6 +32,8 @@ CSEBaseStruct *init_cse_base() {
         cse->json_acpi = NULL;
         cse->ct[0] = '\0';
         cse->lt[0] = '\0';
+        cse->blob = NULL;
+        cse->json_daci = NULL;
     }
     return cse;
 }

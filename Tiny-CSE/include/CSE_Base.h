@@ -22,7 +22,7 @@ typedef struct {
     char *json_acpi;
     char ct[25]; // creationTime
     char lt[25]; // lastModifiedTime
-    //char *json_daci;
+    char *json_daci;
     char *blob;
 
 } CSEBaseStruct;

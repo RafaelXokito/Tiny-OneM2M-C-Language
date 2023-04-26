@@ -36,18 +36,19 @@ AEStruct *init_ae() {
         ae->json_at = NULL;
         ae->or[0] = '\0';
         ae->lt[0] = '\0';
+        ae->blob = NULL;
     }
     return ae;
 }
 
 char create_ae(AEStruct * ae, cJSON *content, char** response) {
+    
     // Sqlite3 initialization opening/creating database
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
         responseMessage(response,500,"Internal Server Error","Could not open the database");
 		return FALSE;
 	}
-
     // Convert the JSON object to a C structure
     // the URL attribute was already populated in the caller of this function
     sqlite3_stmt *stmt;
@@ -79,7 +80,6 @@ char create_ae(AEStruct * ae, cJSON *content, char** response) {
         closeDatabase(db);
         return FALSE;
     }
-
     ae->ty = AE;
     strcpy(ae->ri, cJSON_GetObjectItemCaseSensitive(content, "ri")->valuestring);
     strcpy(ae->rn, cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
@@ -116,36 +116,71 @@ char create_ae(AEStruct * ae, cJSON *content, char** response) {
     strcpy(ae->ct, getCurrentTime());
     strcpy(ae->lt, getCurrentTime());
 
-    const char *keys[] = {"acpi", "lbl", "daci", "poa", "ch", "at"};
+    const char *keys[] = {"acpi", "lbl", "daci", "poa"};
     short num_keys = sizeof(keys) / sizeof(keys[0]);
-    char **json_strings[] = {&ae->json_acpi, &ae->json_lbl, &ae->json_daci, &ae->json_poa, &ae->json_ch, &ae->json_at};
-
     for (int i = 0; i < num_keys; i++) {
         cJSON *json_array = cJSON_GetObjectItemCaseSensitive(content, keys[i]);
         if (json_array) {
             char *json_str = cJSON_Print(json_array);
             if (json_str) {
-                *json_strings[i] = strdup(json_str);
-                if (*json_strings[i] == NULL) {
-                    fprintf(stderr, "Failed to allocate memory for the JSON %s string\n", keys[i]);
-                    responseMessage(response, 400, "Bad Request", "Verify the request body");
-                    closeDatabase(db);
-                    return FALSE;
+                size_t len = strlen(json_str);
+                if(keys[i]=="acpi"){
+                    ae->json_acpi = (char *)malloc(len+1);
+                    strcpy(ae->json_acpi, json_str);
                 }
-                free(json_str);
+                if(keys[i]=="lbl"){
+                    ae->json_lbl = (char *)malloc(len+1);
+                    strcpy(ae->json_lbl, json_str);
+                }
+                if(keys[i]=="daci"){
+                    ae->json_daci = (char *)malloc(len+1);
+                    strcpy(ae->json_daci, json_str);
+                }
+                if(keys[i]=="poa"){
+                    ae->json_poa = (char *)malloc(len+1);
+                    strcpy(ae->json_poa, json_str);
+                } 
+            }           
+        }else if (json_array == NULL){
+            cJSON *empty_array = cJSON_CreateArray();
+            size_t len = strlen(cJSON_Print(empty_array));
+            if(keys[i]=="acpi"){
+                ae->json_acpi = (char *)malloc(len+1);
+                strcpy(ae->json_acpi, cJSON_Print(empty_array));
             }
-        }
+            if(keys[i]=="lbl"){
+                ae->json_lbl = (char *)malloc(len+1);
+                strcpy(ae->json_lbl, cJSON_Print(empty_array));
+            }
+            if(keys[i]=="daci"){
+                ae->json_daci = (char *)malloc(len+1);
+                strcpy(ae->json_daci, cJSON_Print(empty_array));
+            }
+            if(keys[i]=="poa"){
+                ae->json_poa = (char *)malloc(len+1);
+                strcpy(ae->json_poa, cJSON_Print(empty_array));
+            }  
+        }       
     }
-
+    
+    //blob
+    size_t rnLengthBlob = strlen(cJSON_Print(ae_to_json(ae)));
+    ae->blob = (char *)malloc(rnLengthBlob);
+    if (ae->blob == NULL) {
+        // Handle memory allocation error
+        fprintf(stderr, "Memory allocation error\n");
+        return FALSE;
+    }
+    strcpy(ae->blob, cJSON_Print(ae_to_json(ae)));  
     short rc = begin_transaction(db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Can't begin transaction\n");
         closeDatabase(db);
         return FALSE;
     }
-
     // Prepare the insert statement
-    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, aei, api, rr, et, ct, lt, url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, aei, api, rr, et, ct, lt, url, blob, acpi, lbl, daci, poa) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
     rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr,"Failed to prepare statement: %s\n", sqlite3_errmsg(db));
@@ -174,7 +209,12 @@ char create_ae(AEStruct * ae, cJSON *content, char** response) {
     sqlite3_bind_text(stmt, 9, ct_iso, strlen(ct_iso), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 10, lt_iso, strlen(lt_iso), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 11, ae->url, strlen(ae->url), SQLITE_STATIC);
-
+    sqlite3_bind_text(stmt, 12, ae->blob, strlen(ae->blob), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 13, ae->json_acpi, strlen(ae->json_acpi), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 14, ae->json_lbl, strlen(ae->json_lbl), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 15, ae->json_daci, strlen(ae->json_daci), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 16, ae->json_poa, strlen(ae->json_poa), SQLITE_STATIC);
+   
     // Execute the statement
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
@@ -185,38 +225,8 @@ char create_ae(AEStruct * ae, cJSON *content, char** response) {
         closeDatabase(db);
         return FALSE;
     }
-
-    // Keys to check in the JSON object
-    const char *keys_to_check[] = {"acpi", "lbl", "daci", "poa"};
-    num_keys = sizeof(keys_to_check) / sizeof(keys_to_check[0]);
-
-    // Initialize an array of strings to store the keys that are arrays
-    const char *array_keys[num_keys];
-    int count = 0;
-
-    for (int i = 0; i < num_keys; i++) {
-        cJSON *item = cJSON_GetObjectItemCaseSensitive(content, keys_to_check[i]);
-        if (cJSON_IsArray(item)) {
-            array_keys[count++] = keys_to_check[i];
-        }
-    }
-
-    for (int i = 0; i < count; i++) {
-        cJSON *atr_array = cJSON_GetObjectItemCaseSensitive(content, array_keys[i]);
-        char *str = cJSON_Print(atr_array);
-        if (cJSON_IsArray(atr_array)) {
-            if (insert_multivalue_elements(db, ae->ri, array_keys[i], array_keys[i], atr_array) == FALSE) {
-                rollback_transaction(db); // Rollback transaction
-                closeDatabase(db);
-                cJSON_Delete(content);
-                return FALSE;
-            }
-        }
-    }
-
     // Free the cJSON object
     cJSON_Delete(content);
-
     // Commit transaction
     rc = commit_transaction(db);
     if (rc != SQLITE_OK) {
@@ -229,9 +239,7 @@ char create_ae(AEStruct * ae, cJSON *content, char** response) {
     // Finalize the statement and close the database
     sqlite3_finalize(stmt);
     closeDatabase(db);
-
     printf("AE data inserted successfully.\n");
-
     return TRUE;
 }
 
@@ -270,7 +278,8 @@ cJSON *ae_to_json(const AEStruct *ae) {
             cJSON *json_object = cJSON_Parse(json_strings[i]);
             if (json_object) {
                 cJSON_AddItemToObject(innerObject, keys[i], json_object);
-            } else {
+            }
+            else{
                 fprintf(stderr, "Failed to parse JSON string for key '%s' back into cJSON object\n", keys[i]);
             }
         } else {
@@ -282,7 +291,6 @@ cJSON *ae_to_json(const AEStruct *ae) {
     // Create the outer JSON object with the key "m2m:ae" and the value set to the inner object
     cJSON* root = cJSON_CreateObject();
     cJSON_AddItemToObject(root, "m2m:ae", innerObject);
-
     return root;
 }
 
@@ -685,8 +693,6 @@ char get_ae(struct Route* destination, char** response){
         return FALSE;
     }
     sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", response_data);
-
-    printf("ola%s\n", *response);
 
     cJSON_Delete(root);
     sqlite3_finalize(stmt);
