@@ -10,6 +10,7 @@
 
 #include "CSE_Base.h"
 #include "AE.h"
+#include "CNT.h"
 
 #include "Types.h"
 
