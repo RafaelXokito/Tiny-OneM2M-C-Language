@@ -295,9 +295,6 @@ cJSON *ae_to_json(const AEStruct *ae) {
 }
 
 char update_ae(struct Route* destination, cJSON *content, char** response){
-    const char *allowed_keysMULTIVALUE[] = {"apn", "acpi", "lbl", "daci", "poa", "ch", "aa", "csz", "nl", "at", "or"};
-    size_t num_allowed_keysMULTIVALUE = sizeof(allowed_keysMULTIVALUE) / sizeof(allowed_keysMULTIVALUE[0]);
-
     // retrieve the AE from tge database
     char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, aei, api, rr, et, lt, ct FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
     if (sql == NULL) {
@@ -357,7 +354,6 @@ char update_ae(struct Route* destination, cJSON *content, char** response){
     const char *valueAE; //to confirm the value already store in my AE
     char my_string[100]; //to convert destination->ty
     cJSON *item; //to get the values of my content MTC
-    cJSON *itemMULTI; //to get the values of my content MULTIVALUE
 
     struct tm parsed_time;
     time_t datetime_timestamp, current_time;
@@ -372,51 +368,40 @@ char update_ae(struct Route* destination, cJSON *content, char** response){
         closeDatabase(db);
         return FALSE;
     }
-    
     for (int i = 0; i < num_keys; i++) {
         key = cJSON_GetArrayItem(content, i)->string;
-
-        printf("key: %s\n", key);
-        char isMTCAtr = FALSE;
-
+        // Get the JSON string associated to the "key" from the content of JSON Body
+        item = cJSON_GetObjectItemCaseSensitive(content, key);
+        char *json_strITEM = cJSON_Print(item);
+        // remove a few 
         if (strcmp(key, "rr") == 0) {
             valueAE = ae->rr;
-            isMTCAtr = TRUE;
         } else if (strcmp(key, "et") == 0){
             valueAE = ae->et;
-            isMTCAtr = TRUE;
+            strcpy(ae->et, json_strITEM);
         } else if (strcmp(key, "apn") == 0){
             valueAE = ae->apn;
+            strcpy(ae->apn, json_strITEM);
         } else if (strcmp(key, "nl") == 0){
             valueAE = ae->nl;
+            strcpy(ae->nl, json_strITEM);
         } else if (strcmp(key, "or") == 0){
             valueAE = ae->or;
+            strcpy(ae->or, json_strITEM);
         } else if (strcmp(key, "aa") == 0){
             valueAE = ae->aa;
+            strcpy(ae->aa, json_strITEM);
         } else if (strcmp(key, "csz") == 0){ 
             valueAE = ae->csz;
-        } else if (strcmp(key, "acpi") == 0) { 
-            valueAE = ae->json_acpi;
-        } else if (strcmp(key, "lbl") == 0){
-            valueAE = ae->json_lbl;
-        }else if (strcmp(key, "daci") == 0){
-            valueAE = ae->json_daci;
-        }else if (strcmp(key, "poa") == 0){
-            valueAE = ae->json_poa;
-        }else if (strcmp(key, "ch") == 0){
-            valueAE = ae->json_ch;
-        } else if (strcmp(key, "at") == 0){
-            valueAE = ae->json_at;
-        } else {
+            strcpy(ae->csz, json_strITEM);
+        }else if (strcmp(key, "acpi") != 0 && strcmp(key, "lbl") != 0 && strcmp(key, "daci") != 0 && strcmp(key, "poa") != 0 && strcmp(key, "ch") != 0 && strcmp(key, "at") != 0){
             responseMessage(response, 400, "Bad Request", "Invalid key");
             sqlite3_finalize(stmt);
             closeDatabase(db);
             return FALSE;
         }
 
-        // Get the JSON string associated to the "key" from the content of JSON Body
-        item = cJSON_GetObjectItemCaseSensitive(content, key);
-        char *json_strITEM = cJSON_Print(item);
+        
 
         // validate if the value from the JSON Body is the same as the DB Table
         if (!cJSON_IsArray(item)) {
@@ -424,12 +409,28 @@ char update_ae(struct Route* destination, cJSON *content, char** response){
                 printf("Continue \n");
                 continue;
             }
+        }else{
+            if (json_strITEM) {
+                size_t len = strlen(json_strITEM);
+                if(strcmp(key, "acpi") == 0){
+                    ae->json_acpi = (char *)malloc(len+1);
+                    strcpy(ae->json_acpi, json_strITEM);
+                }
+                if(strcmp(key, "lbl") == 0){
+                    ae->json_lbl = (char *)malloc(len+1);
+                    strcpy(ae->json_lbl, json_strITEM);
+                }
+                if(strcmp(key, "daci") == 0){
+                    ae->json_daci = (char *)malloc(len+1);
+                    strcpy(ae->json_daci, json_strITEM);
+                }
+                if(strcmp(key, "poa") == 0){
+                    ae->json_poa = (char *)malloc(len+1);
+                    strcpy(ae->json_poa, json_strITEM);
+                }            
+            }
         }
 
-        if (isMTCAtr == TRUE && strcmp(key, "et") != 0) {
-            updateQueryMTC = sqlite3_mprintf("%s%s = %Q, ",updateQueryMTC, key, cJSON_GetArrayItem(content, i)->valuestring);
-        }
-        
         // Add the expiration time into the update statement
         if(strcmp(key, "et") == 0) {
             struct tm et_tm;
@@ -465,43 +466,31 @@ char update_ae(struct Route* destination, cJSON *content, char** response){
             char et_iso[20];
             strftime(et_iso, sizeof(et_iso), "%Y-%m-%d %H:%M:%S", &et_tm);
             updateQueryMTC = sqlite3_mprintf("%s%s = %Q, ",updateQueryMTC, key, et_iso);
+            strcpy(ae->et, et_iso);
         }
-
-        for(int k = 0; k < num_allowed_keysMULTIVALUE; k++){
-            if(strcmp(key, allowed_keysMULTIVALUE[k]) == 0) { // as keys sao da tabela multivalue
-                itemMULTI = cJSON_GetObjectItemCaseSensitive(content, key);
-                char *json_strITEMULti = cJSON_Print(itemMULTI);
-                
-                char* sql_multi = sqlite3_mprintf("DELETE FROM multivalue WHERE mtc_ri='%q' AND atr='%s'", destination->ri, key);
-                rc = sqlite3_exec(db, sql_multi, NULL, NULL, &errMsg);
-                sqlite3_free(sql_multi);
-
-                if (rc != SQLITE_OK) {
-                    responseMessage(response,400,"Bad Request","Error deleting record");
-                    fprintf(stderr, "Error deleting record: %s\n", errMsg);
-                    rollback_transaction(db); // Rollback transaction
-                    sqlite3_free(errMsg);
-                    closeDatabase(db);
-                    return FALSE;
-                }
-                // insert here
-                if (!insert_multivalue_element(item, destination->ri, 0, key, key, db)) {
-                    responseMessage(response,500,"Internal Server Error","Error inserting record");
-                    fprintf(stderr, "Error inserting record");
-                    rollback_transaction(db); // Rollback transaction
-                    sqlite3_free(errMsg);
-                    closeDatabase(db);
-                    return FALSE;
-                }
+        else{
+            if(cJSON_IsArray(item)){
+                updateQueryMTC = sqlite3_mprintf("%s%s = %Q, ",updateQueryMTC, key, json_strITEM);
+            }else{
+                updateQueryMTC = sqlite3_mprintf("%s%s = %Q, ",updateQueryMTC, key, cJSON_GetArrayItem(content, i)->valuestring);
             }
         }
-
     }
+    strcpy(ae->lt,getCurrentTime());
 
+    //blob
+    size_t rnLengthBlob = strlen(cJSON_Print(ae_to_json(ae)));
+    ae->blob = (char *)malloc(rnLengthBlob);
+    if (ae->blob == NULL) {
+        // Handle memory allocation error
+        fprintf(stderr, "Memory allocation error\n");
+        return FALSE;
+    }
+    strcpy(ae->blob, cJSON_Print(ae_to_json(ae)));  
     // Se tiver o valor inical não é feito o update
     if(strcmp(updateQueryMTC, "UPDATE mtc SET ") != 0){
 
-        updateQueryMTC = sqlite3_mprintf("%slt = %Q WHERE ri = %Q AND ty = %d", updateQueryMTC, getCurrentTimeLong(),destination->ri, destination->ty);
+        updateQueryMTC = sqlite3_mprintf("%slt = %Q, blob = \'%s\' WHERE ri = %Q AND ty = %d", updateQueryMTC, getCurrentTimeLong(), ae->blob,destination->ri, destination->ty);
     
         printf("UPDATE: %s\n", updateQueryMTC);
 
@@ -554,22 +543,10 @@ char update_ae(struct Route* destination, cJSON *content, char** response){
         }
     }
     
-    cJSON* root = ae_to_json(ae);
-    if (root == NULL) {
-        fprintf(stderr, "Failed to convert AEStruct to JSON.\n");
-        sqlite3_finalize(stmt);
-        closeDatabase(db);
-        return FALSE;
-    }
-
-    char *keys[] = {"acpi", "lbl", "daci", "poa", "ch", "at"};
-    num_keys = sizeof(keys) / sizeof(keys[0]);
-    add_arrays_to_json(db, ae->ri, cJSON_GetObjectItem(root, "m2m:ae"), keys, num_keys);
-
-    char *json_str = cJSON_PrintUnformatted(root);
+    
+    char *json_str = cJSON_Print(ae_to_json(ae));
     if (json_str == NULL) {
         fprintf(stderr, "Failed to print JSON as a string.\n");
-        cJSON_Delete(root);
         sqlite3_finalize(stmt);
         closeDatabase(db);
         return FALSE;
@@ -588,15 +565,12 @@ char update_ae(struct Route* destination, cJSON *content, char** response){
         // Cleanup
         sqlite3_finalize(stmt);
         closeDatabase(db);
-        cJSON_Delete(root);
         free(json_str);
         return FALSE;
     }
     sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", response_data);
 
     free(json_str);
-
-    cJSON_Delete(root);
     sqlite3_finalize(stmt);
     closeDatabase(db);
     return TRUE;
