@@ -151,7 +151,7 @@ char init_protocol(struct Route** head) {
 }
 
 char retrieve_csebase(struct Route * destination, char **response) {
-    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, csi, cst, ct, lt FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
+    char *sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
     sqlite3_stmt *stmt;
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
@@ -170,42 +170,16 @@ char retrieve_csebase(struct Route * destination, char **response) {
     printf("Creating the json object\n");
     CSEBaseStruct *csebase = init_cse_base();
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        csebase->ty = sqlite3_column_int(stmt, 0);
-        strncpy(csebase->ri, (char *)sqlite3_column_text(stmt, 1), 50);
-        strncpy(csebase->rn, (char *)sqlite3_column_text(stmt, 2), 50);
-        strncpy(csebase->pi, (char *)sqlite3_column_text(stmt, 3), 50);
-        csebase->cst = sqlite3_column_int(stmt, 4);
-        strncpy(csebase->csi, (char *)sqlite3_column_text(stmt, 5), 50);
-        const char *ct_iso = (const char *)sqlite3_column_text(stmt, 6);
-        const char *lt_iso = (const char *)sqlite3_column_text(stmt, 7);
-        struct tm ct_tm, lt_tm;
-        strptime(ct_iso, "%Y-%m-%d %H:%M:%S", &ct_tm);
-        strptime(lt_iso, "%Y-%m-%d %H:%M:%S", &lt_tm);
-        char ct_str[20], lt_str[20];
-        strftime(ct_str, sizeof(ct_str), "%Y%m%dT%H%M%S", &ct_tm);
-        strftime(lt_str, sizeof(lt_str), "%Y%m%dT%H%M%S", &lt_tm);
-        strncpy(csebase->ct, ct_str, 25);
-        strncpy(csebase->lt, lt_str, 25);
+        
+        char *blob = (char *)sqlite3_column_text(stmt, 0);
+        csebase->blob = (char *)malloc(strlen(blob)+1);
+        strcpy(csebase->blob, blob);
         break;
     }
-
-    cJSON *root = csebase_to_json(csebase);
-    if (root == NULL) {
-        fprintf(stderr, "Failed to convert CSEBaseStruct to JSON.\n");
-        responseMessage(response, 500, "Internal Server Error", "Failed to prepare statement");
-        sqlite3_finalize(stmt);
-        closeDatabase(db);
-        return FALSE;
-    }
-
-    char *keys[] = {"srt", "lbl", "poa", "acpi"};
-    int num_keys = sizeof(keys) / sizeof(keys[0]);
-    add_arrays_to_json(db, csebase->ri, cJSON_GetObjectItem(root, "m2m:cb"), keys, num_keys);
-
-    char *json_str = cJSON_PrintUnformatted(root);
+    
+    char *json_str = csebase->blob;
     if (json_str == NULL) {
         fprintf(stderr, "Failed to print JSON as a string.\n");
-        cJSON_Delete(root);
         sqlite3_finalize(stmt);
         closeDatabase(db);
         return FALSE;
@@ -223,13 +197,11 @@ char retrieve_csebase(struct Route * destination, char **response) {
         // Cleanup
         sqlite3_finalize(stmt);
         closeDatabase(db);
-        cJSON_Delete(root);
         free(json_str);
         return FALSE;
     }
     sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", json_str);
 
-    cJSON_Delete(root);
     sqlite3_finalize(stmt);
     closeDatabase(db);
     free(json_str);
@@ -359,7 +331,7 @@ char discovery(struct Route *head, struct Route *destination, const char *queryS
         if (!found && key_in_array(key, keysA, keysA_len)) {
             found = 1;
             // Add the condition to the query string
-            char *newMVconditions = sqlite3_mprintf("%s %s EXISTS (SELECT 1 FROM multivalue WHERE mtc_ri = m.mtc_ri AND atr = %Q AND value = %Q)", MVconditions ? MVconditions : "", filter_operation, key, value);
+            char *newMVconditions = sqlite3_mprintf("%s %s EXISTS (SELECT 1 FROM mtc WHERE %Q = %Q)", MVconditions ? MVconditions : "", filter_operation, key, value);
             if (MVconditions) sqlite3_free(MVconditions);
             MVconditions = newMVconditions;
         }
@@ -433,15 +405,9 @@ char discovery(struct Route *head, struct Route *destination, const char *queryS
     // Execute the dynamic SELECT statement
     char *query = sqlite3_mprintf("SELECT * FROM (SELECT url FROM mtc WHERE ri = \"%s\" AND 1 = 1%s LIMIT %d) "
                               "UNION "
-                              "SELECT mtc.url FROM mtc "
-                              "INNER JOIN ( "
-                              "SELECT DISTINCT mtc_ri as ri FROM multivalue AS m WHERE 1 = 1 %s LIMIT %d"
-                              ") AS res ON res.ri = mtc.ri "
-                              "WHERE mtc.pi = \"%s\" AND mtc.et > datetime('now') AND 1=1%s LIMIT %d",
+                              "SELECT mtc.url FROM mtc WHERE mtc.pi = \"%s\" AND mtc.et > datetime('now') AND 1=1%s LIMIT %d",
                               destination->ri,
                               MTCconditions ? MTCconditions : "",
-                              limit,
-                              MVconditions ? MVconditions : "",
                               limit,
                               destination->ri,
                               MTCconditions ? MTCconditions : "",
@@ -855,108 +821,6 @@ char put_ae(struct Route* destination, cJSON *content, char** response) {
 	return TRUE;
 }
 
-static int insert_element_into_multivalue_table(sqlite3 *db, const char *mtc_ri, int parent_id, const char* atr, const char *key, const char *value, const char *type) {
-
-    sqlite3_stmt *stmt;
-    const char *sql = "INSERT INTO multivalue (mtc_ri, parent_id, atr, key, value, type) VALUES (?, ?, ?, ?, ?, ?);";
-
-    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
-        return rc;
-    }
-
-    sqlite3_bind_text(stmt, 1, mtc_ri, strlen(mtc_ri), SQLITE_STATIC);
-    sqlite3_bind_int(stmt, 2, parent_id);
-    sqlite3_bind_text(stmt, 3, atr, strlen(atr), SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 4, key, strlen(key), SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 5, value, strlen(value), SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 6, type, strlen(type), SQLITE_STATIC);
-
-    rc = sqlite3_step(stmt);
-    if (rc != SQLITE_DONE) {
-        fprintf(stderr, "Execution failed: %s\n", sqlite3_errmsg(db));
-        sqlite3_finalize(stmt);
-        return rc;
-    }
-
-    sqlite3_finalize(stmt);
-    return SQLITE_OK;
-}
-
-char insert_multivalue_element(cJSON *element, const char *mtc_ri, int parent_id, const char *atr, const char *key, sqlite3 *db) {
-    if (cJSON_IsObject(element)) {
-        // Insert root entry for the object
-        if (insert_element_into_multivalue_table(db, mtc_ri, parent_id, atr, key, "root", "object") != SQLITE_OK) {
-            fprintf(stderr, "Failed to insert root entry for the object\n");
-            return FALSE;
-        }
-        // Retrieve the ID of the root entry
-        int root_id = (int)sqlite3_last_insert_rowid(db);
-
-        cJSON *item;
-        cJSON_ArrayForEach(item, element) {
-            insert_multivalue_element(item, mtc_ri, root_id, atr, item->string, db);
-        }
-    } else if (cJSON_IsArray(element)) {
-
-        // Insert root entry for the object
-        if (insert_element_into_multivalue_table(db, mtc_ri, parent_id, atr, key, "root", "array") != SQLITE_OK) {
-            fprintf(stderr, "Failed to insert root entry for the object\n");
-            return FALSE;
-        }
-
-        // Retrieve the ID of the root entry
-        int root_id = (int)sqlite3_last_insert_rowid(db);
-
-        cJSON *item;
-        cJSON_ArrayForEach(item, element) {
-            insert_multivalue_element(item, mtc_ri, root_id, atr, "", db);
-        }
-    } else {
-        const char *type;
-        char value_str[64];
-
-        if (cJSON_IsString(element)) {
-            type = "string";
-            strncpy(value_str, element->valuestring, sizeof(value_str) - 1);
-            value_str[sizeof(value_str) - 1] = '\0';
-        } else if (cJSON_IsNumber(element)) {
-            type = "number";
-            snprintf(value_str, sizeof(value_str), "%lf", element->valuedouble);
-        } else {
-            fprintf(stderr, "Unsupported cJSON type\n");
-            return FALSE;
-        }
-
-        if (insert_element_into_multivalue_table(db, mtc_ri, parent_id, atr, key, value_str, type) != SQLITE_OK) {
-            fprintf(stderr, "Failed to insert multivalue element\n");
-            return FALSE;
-        }
-    }
-    return TRUE;
-}
-
-char insert_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *atr, const char *key, cJSON *atr_array) {
-    // Insert root entry for the array attribute
-    if (insert_element_into_multivalue_table(db, parent_ri, 0, atr, key, "root", "root") != SQLITE_OK) {
-        fprintf(stderr, "Failed to insert root entry for the multivalue element\n");
-        return FALSE;
-    }
-    // Retrieve the ID of the root entry
-    int root_id = (int)sqlite3_last_insert_rowid(db);
-
-    for (int i = 0; i < cJSON_GetArraySize(atr_array); i++) {
-        cJSON *element = cJSON_GetArrayItem(atr_array, i);
-        if (element) {
-            if (!insert_multivalue_element(element, parent_ri, root_id, atr, "", db)) {
-                return FALSE;
-            }
-        }
-    }
-    return TRUE;
-}
-
 char *get_element_value_as_string(cJSON *element) {
     if (element == NULL) {
         return NULL;
@@ -979,102 +843,4 @@ char *get_element_value_as_string(cJSON *element) {
     }
 
     return value_str;
-}
-
-cJSON *build_json_recursively(sqlite3 *db, int parent_rowid, char is_root_array) {
-    sqlite3_stmt *stmt;
-    cJSON *result = NULL;
-
-    const char *sql = "SELECT rowid, parent_id, type, key, value FROM multivalue WHERE parent_id = ? ORDER BY rowid";
-
-    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
-        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
-        return NULL;
-    }
-
-    sqlite3_bind_int(stmt, 1, parent_rowid);
-
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int rowid = sqlite3_column_int(stmt, 0);
-        const char *value_type = (const char *)sqlite3_column_text(stmt, 2);
-        const char *key = (const char *)sqlite3_column_text(stmt, 3);
-        const char *value = (const char *)sqlite3_column_text(stmt, 4);
-
-        cJSON *item = NULL;
-
-        if (strcmp(value_type, "object") == 0) {
-            item = build_json_recursively(db, rowid, FALSE);
-            if (strcmp(key, "root") == 0) {
-                cJSON *temp = item;
-                item = cJSON_Duplicate(cJSON_GetObjectItem(temp, "root"), 1);
-                cJSON_Delete(temp);
-            }
-        } else if (strcmp(value_type, "array") == 0) {
-            item = build_json_recursively(db, rowid, TRUE);
-        } else if (strcmp(value_type, "number") == 0) {
-            double num_value = atof(value);
-            item = cJSON_CreateNumber(num_value);
-        } else {
-            item = cJSON_CreateString(value);
-        }
-
-        if (!result) {
-            if (is_root_array == TRUE) {
-                result = cJSON_CreateArray();
-            } else {
-                result = cJSON_CreateObject();
-            }
-        }
-
-        if (is_root_array) {
-            cJSON_AddItemToArray(result, item);
-        } else {
-            cJSON_AddItemToObject(result, key, item);
-        }
-    }
-
-    sqlite3_finalize(stmt);
-    return result;
-}
-
-cJSON *retrieve_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *key) {
-    sqlite3_stmt *stmt;
-
-    const char *sql = "SELECT rowid FROM multivalue WHERE mtc_ri = ? AND key = ?";
-
-    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
-        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
-        return NULL;
-    }
-
-    sqlite3_bind_text(stmt, 1, parent_ri, -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, key, -1, SQLITE_TRANSIENT);
-
-    int rowid = 0;
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        rowid = sqlite3_column_int(stmt, 0);
-    }
-
-    sqlite3_finalize(stmt);
-
-    if (rowid == 0) {
-        return NULL;
-    }
-
-    cJSON *result = build_json_recursively(db, rowid, TRUE);
-    return result;
-}
-
-void add_arrays_to_json(sqlite3 *db, const char *ri, cJSON *parent_json, char **keys, int num_keys) {
-    // Loop through the keys array
-    for (int i = 0; i < num_keys; i++) {
-        char *current_key = keys[i];
-
-        cJSON *arrays = retrieve_multivalue_elements(db, ri, current_key);
-
-        if (arrays != NULL) {
-            // Add the arrays cJSON object to the parent_json object
-            cJSON_ReplaceItemInObject(parent_json, current_key, arrays);
-        }
-    }
 }

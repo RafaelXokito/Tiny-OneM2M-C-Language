@@ -577,7 +577,7 @@ char update_ae(struct Route* destination, cJSON *content, char** response){
 }
 
 char get_ae(struct Route* destination, char** response){
-    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, aei, api, rr, et, lt, ct, acpi, lbl, daci, poa FROM mtc WHERE LOWER(url) = LOWER('%s');", destination->key);
+    char *sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(url) = LOWER('%s');", destination->key);
 
     if (sql == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
@@ -601,67 +601,20 @@ char get_ae(struct Route* destination, char** response){
     printf("Creating the json object\n");
     AEStruct *ae = init_ae();
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        ae->ty = sqlite3_column_int(stmt, 0);
-        strncpy(ae->ri, (char *)sqlite3_column_text(stmt, 1), 10);
-        strncpy(ae->rn, (char *)sqlite3_column_text(stmt, 2), 50);
-        strncpy(ae->pi, (char *)sqlite3_column_text(stmt, 3), 10);
-        strncpy(ae->aei, (char *)sqlite3_column_text(stmt, 4), 10);
-        strncpy(ae->api, (char *)sqlite3_column_text(stmt, 5), 20);
-        strncpy(ae->rr, (char *)sqlite3_column_text(stmt, 6), 5);
-        const char *et_iso = (const char *)sqlite3_column_text(stmt, 7);
-        const char *ct_iso = (const char *)sqlite3_column_text(stmt, 8);
-        const char *lt_iso = (const char *)sqlite3_column_text(stmt, 9);
-        struct tm ct_tm, lt_tm, et_tm;
-        strptime(ct_iso, "%Y-%m-%d %H:%M:%S", &ct_tm);
-        strptime(lt_iso, "%Y-%m-%d %H:%M:%S", &lt_tm);
-        strptime(et_iso, "%Y-%m-%d %H:%M:%S", &et_tm);
-        char ct_str[20], lt_str[20], et_str[20];
-        strftime(ct_str, sizeof(ct_str), "%Y%m%dT%H%M%S", &ct_tm);
-        strftime(lt_str, sizeof(lt_str), "%Y%m%dT%H%M%S", &lt_tm);
-        strftime(et_str, sizeof(et_str), "%Y%m%dT%H%M%S", &et_tm);
-        strncpy(ae->ct, ct_str, 20);
-        strncpy(ae->lt, lt_str, 20);
-        strncpy(ae->et, et_str, 20);
-
-        char *json_acpi = (char *)sqlite3_column_text(stmt, 10);
-        ae->json_acpi = (char *)malloc(strlen(json_acpi)+1);
-        strcpy(ae->json_acpi, json_acpi);
-
-        char *json_lbl = (char *)sqlite3_column_text(stmt, 11);
-        ae->json_lbl = (char *)malloc(strlen(json_lbl)+1);
-        strcpy(ae->json_lbl, json_lbl);
-
-        char *json_daci = (char *)sqlite3_column_text(stmt, 12);
-        ae->json_daci = (char *)malloc(strlen(json_daci)+1);
-        strcpy(ae->json_daci, json_daci);
-
-        char *json_poa = (char *)sqlite3_column_text(stmt, 13);
-        ae->json_poa = (char *)malloc(strlen(json_poa)+1);
-        strcpy(ae->json_poa, json_poa);
+        char *blob = (char *)sqlite3_column_text(stmt, 0);
+        ae->blob = (char *)malloc(strlen(blob)+1);
+        strcpy(ae->blob, blob);
         break;
     }
-
-
-    cJSON* root = ae_to_json(ae);
-    if (root == NULL) {
-        fprintf(stderr, "Failed to convert AEStruct to JSON.\n");
-        responseMessage(response, 400, "Bad Request", "Failed to convert AEStruct to JSON.\n");
-        sqlite3_finalize(stmt);
-        closeDatabase(db);
-        return FALSE;
-    }
-
-    char *json_str = cJSON_PrintUnformatted(root);
-    if (json_str == NULL) {
+    
+    char *response_data = ae->blob;
+    if (response_data == NULL) {
         fprintf(stderr, "Failed to print JSON as a string.\n");
         responseMessage(response, 400, "Bad Request", "Failed to print JSON as a string.\n");
-        cJSON_Delete(root);
         sqlite3_finalize(stmt);
         closeDatabase(db);
         return FALSE;
     }
-
-    char * response_data = json_str;
 
     // Calculate the required buffer size
     size_t response_size = strlen("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n") + strlen(response_data) + 1;
@@ -675,15 +628,12 @@ char get_ae(struct Route* destination, char** response){
         // Cleanup
         sqlite3_finalize(stmt);
         closeDatabase(db);
-        cJSON_Delete(root);
-        free(json_str);
+        free(response_data);
         return FALSE;
     }
     sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", response_data);
-
-    cJSON_Delete(root);
     sqlite3_finalize(stmt);
     closeDatabase(db);
-    free(json_str);
+    free(response_data);
     return TRUE;
 }
