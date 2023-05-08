@@ -577,7 +577,7 @@ char update_ae(struct Route* destination, cJSON *content, char** response){
 }
 
 char get_ae(struct Route* destination, char** response){
-    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, aei, api, rr, et, lt, ct FROM mtc WHERE LOWER(url) = LOWER('%s');", destination->key);
+    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, aei, api, rr, et, lt, ct, acpi, lbl, daci, poa FROM mtc WHERE LOWER(url) = LOWER('%s');", destination->key);
 
     if (sql == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
@@ -622,8 +622,25 @@ char get_ae(struct Route* destination, char** response){
         strncpy(ae->ct, ct_str, 20);
         strncpy(ae->lt, lt_str, 20);
         strncpy(ae->et, et_str, 20);
+
+        char *json_acpi = (char *)sqlite3_column_text(stmt, 10);
+        ae->json_acpi = (char *)malloc(strlen(json_acpi)+1);
+        strcpy(ae->json_acpi, json_acpi);
+
+        char *json_lbl = (char *)sqlite3_column_text(stmt, 11);
+        ae->json_lbl = (char *)malloc(strlen(json_lbl)+1);
+        strcpy(ae->json_lbl, json_lbl);
+
+        char *json_daci = (char *)sqlite3_column_text(stmt, 12);
+        ae->json_daci = (char *)malloc(strlen(json_daci)+1);
+        strcpy(ae->json_daci, json_daci);
+
+        char *json_poa = (char *)sqlite3_column_text(stmt, 13);
+        ae->json_poa = (char *)malloc(strlen(json_poa)+1);
+        strcpy(ae->json_poa, json_poa);
         break;
     }
+
 
     cJSON* root = ae_to_json(ae);
     if (root == NULL) {
@@ -633,10 +650,6 @@ char get_ae(struct Route* destination, char** response){
         closeDatabase(db);
         return FALSE;
     }
-
-    char *keys[] = {"acpi", "lbl", "daci", "poa", "ch", "at"};
-    int num_keys = sizeof(keys) / sizeof(keys[0]);
-    add_arrays_to_json(db, ae->ri, cJSON_GetObjectItem(root, "m2m:ae"), keys, num_keys);
 
     char *json_str = cJSON_PrintUnformatted(root);
     if (json_str == NULL) {

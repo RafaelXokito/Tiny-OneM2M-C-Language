@@ -786,20 +786,6 @@ char delete_resource(struct Route * destination, char **response) {
         return FALSE;
     }
 
-    // Delete record from SQLite3 table
-    char* sql_multi = sqlite3_mprintf("DELETE FROM multivalue WHERE mtc_ri='%q'", destination->ri);
-    rs = sqlite3_exec(db, sql_multi, NULL, NULL, &errMsg);
-    sqlite3_free(sql_multi);
-
-    if (rs != SQLITE_OK) {
-        responseMessage(response,400,"Bad Request","Error deleting record");
-        fprintf(stderr, "Error deleting record: %s\n", errMsg);
-        rollback_transaction(db); // Rollback transaction
-        sqlite3_free(errMsg);
-        closeDatabase(db);
-        return FALSE;
-    }
-
     // Commit transaction
     rc = commit_transaction(db);
     if (rc != SQLITE_OK) {
