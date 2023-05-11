@@ -18,3 +18,4 @@ void load_config_file(const char* filename);
 void generate_unique_id(char *id_str);
 char is_number(const char *str);
 int key_in_array(const char *key, const char **key_array, size_t key_array_len);
+void remove_unauthorized_chars(char *str);

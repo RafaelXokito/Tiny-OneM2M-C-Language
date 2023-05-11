@@ -79,6 +79,7 @@ void parse_config_line(char* line) {
         } else if (strcmp(key, "BASE_RI") == 0) {
             strcpy(BASE_RI, value);
         } else if (strcmp(key, "BASE_RN") == 0) {
+            remove_unauthorized_chars(value);
             strcpy(BASE_RN, value);
         } else if (strcmp(key, "BASE_CSI") == 0) {
             strcpy(BASE_CSI, value);
@@ -143,4 +144,16 @@ int key_in_array(const char *key, const char **key_array, size_t key_array_len) 
         }
     }
     return 0;
+}
+
+void remove_unauthorized_chars(char *str) {
+    char *src, *dst;
+    for (src = dst = str; *src != '\0'; src++) {
+        // Only allow alphanumeric, '-', '_', '~', and '.' characters
+        if (isalnum((unsigned char)*src) || *src == '-' || *src == '_' || *src == '~' || *src == '.') {
+            *dst = *src;
+            dst++;
+        }
+    }
+    *dst = '\0';
 }

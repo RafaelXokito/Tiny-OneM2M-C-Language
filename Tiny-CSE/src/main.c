@@ -22,7 +22,7 @@
 int client_socket;
 
 int DAYS_PLUS_ET = 0;
-int PORT = 6000;
+int PORT = 8000;
 char BASE_RI[MAX_CONFIG_LINE_LENGTH] = "";
 char BASE_RN[MAX_CONFIG_LINE_LENGTH] = "";
 char BASE_CSI[MAX_CONFIG_LINE_LENGTH] = "";

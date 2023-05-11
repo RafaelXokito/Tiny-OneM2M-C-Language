@@ -92,8 +92,24 @@ void handle_get(ConnectionInfo *info, const char *queryString, struct Route *des
 				responseMessage(response,500,"Internal Server Error","Error retrieving the data");
 				fprintf(stderr,"Could not retrieve AE resource\n");
 			}
+			break;
+			}
+		case CNT: {
+			char rs = retrieve_cnt(destination,response);
+			if (rs == FALSE) {
+				responseMessage(response,500,"Internal Server Error","Error retrieving the data");
+				fprintf(stderr,"Could not retrieve CNT resource\n");
 			}
 			break;
+			}
+		case CIN: {
+			char rs = retrieve_cin(destination,response);
+			if (rs == FALSE) {
+				responseMessage(response,500,"Internal Server Error","Error retrieving the data");
+				fprintf(stderr,"Could not retrieve CIN resource\n");
+			}
+			break;
+			}
 		default:
 			break;
 	}
@@ -164,6 +180,22 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 						if (rs == FALSE) {
 							// The method it self already change the response properly
 							fprintf(stderr, "Could not create AE resource\n");
+						}
+						break;
+					}
+					case CNT: {
+						char rs = post_cnt(&info->route, destination, content, response);
+						if (rs == FALSE) {
+							// The method it self already change the response properly
+							fprintf(stderr, "Could not create CNT resource\n");
+						}
+						break;
+					}
+					case CIN: {
+						char rs = post_cin(&info->route, destination, content, response);
+						if (rs == FALSE) {
+							// The method it self already change the response properly
+							fprintf(stderr, "Could not create CIN resource\n");
 						}
 						break;
 					}
@@ -246,6 +278,14 @@ void handle_put(ConnectionInfo *info, const char *request, struct Route *destina
 						if (rs == FALSE) {
 							// The method it self already change the response properly
 							fprintf(stderr, "Could not update AE resource\n");
+						}
+						break;
+					}
+					case CNT: {
+						char rs = put_cnt(destination, content, response);
+						if (rs == FALSE) {
+							// The method it self already change the response properly
+							fprintf(stderr, "Could not update CNT resource\n");
 						}
 						break;
 					}
