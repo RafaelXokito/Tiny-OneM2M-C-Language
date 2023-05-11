@@ -17,7 +17,7 @@ AEStruct *init_ae() {
         ae->url = NULL;
         ae->apn[0] = '\0';
         ae->ct[0] = '\0';
-        ae->ty = 0;
+        ae->ty = AE;
         ae->json_acpi = NULL;
         ae->et[0] = '\0';
         ae->json_lbl = NULL;
@@ -172,6 +172,7 @@ char create_ae(AEStruct * ae, cJSON *content, char** response) {
         return FALSE;
     }
     strcpy(ae->blob, cJSON_Print(ae_to_json(ae)));  
+
     short rc = begin_transaction(db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Can't begin transaction\n");
@@ -296,7 +297,7 @@ cJSON *ae_to_json(const AEStruct *ae) {
 
 char update_ae(struct Route* destination, cJSON *content, char** response){
     // retrieve the AE from tge database
-    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, aei, api, rr, et, lt, ct FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
+    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, aei, api, rr, et, ct, lt, acpi, lbl, daci, poa FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
     if (sql == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
         responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
@@ -343,6 +344,21 @@ char update_ae(struct Route* destination, cJSON *content, char** response){
         strncpy(ae->ct, ct_str, 20);
         strncpy(ae->lt, lt_str, 20);
         strncpy(ae->et, et_str, 20);
+        size_t len = strlen((char *)sqlite3_column_text(stmt, 10));
+        ae->json_acpi = (char *)malloc(len+1);
+        strcpy(ae->json_acpi, (char *)sqlite3_column_text(stmt, 10));
+        
+        len = strlen((char *)sqlite3_column_text(stmt, 11));
+        ae->json_lbl = (char *)malloc(len+1);
+        strcpy(ae->json_lbl, (char *)sqlite3_column_text(stmt, 11));
+
+        len = strlen((char *)sqlite3_column_text(stmt, 12));
+        ae->json_daci = (char *)malloc(len+1);
+        strcpy(ae->json_daci, (char *)sqlite3_column_text(stmt, 12));
+
+        len = strlen((char *)sqlite3_column_text(stmt, 13));
+        ae->json_poa = (char *)malloc(len+1);
+        strcpy(ae->json_poa, (char *)sqlite3_column_text(stmt, 13));
         break;
     }
 
@@ -597,17 +613,8 @@ char get_ae(struct Route* destination, char** response){
         closeDatabase(db);
         return FALSE;
     }
-
-    printf("Creating the json object\n");
-    AEStruct *ae = init_ae();
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
-        char *blob = (char *)sqlite3_column_text(stmt, 0);
-        ae->blob = (char *)malloc(strlen(blob)+1);
-        strcpy(ae->blob, blob);
-        break;
-    }
     
-    char *response_data = ae->blob;
+    char *response_data = (char *)sqlite3_column_text(stmt, 0);
     if (response_data == NULL) {
         fprintf(stderr, "Failed to print JSON as a string.\n");
         responseMessage(response, 400, "Bad Request", "Failed to print JSON as a string.\n");

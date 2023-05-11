@@ -19,7 +19,7 @@ CSEBaseStruct *init_cse_base() {
     CSEBaseStruct *cse = (CSEBaseStruct *) malloc(sizeof(CSEBaseStruct));
     if (cse) {
         cse->url = NULL;
-        cse->ty = 0;
+        cse->ty = CSEBASE;
         cse->ri[0] = '\0';
         cse->rn[0] = '\0';
         cse->pi[0] = '\0';
@@ -109,7 +109,8 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
         return FALSE;
     }
     strcpy(csebase->blob, cJSON_Print(csebase_to_json(csebase)));
-    
+    char *err_msg = 0;
+
     short rc = begin_transaction(db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Can't begin transaction\n");
@@ -118,13 +119,15 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     }
 
     if (isTableCreated == FALSE) {
+
         // Create the table if it doesn't exist
-        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (ty INTEGER, ri TEXT PRIMARY KEY, rn TEXT, pi TEXT, aei TEXT, csi TEXT, cst INTEGER, api TEXT, rr TEXT, et DATETIME, ct DATETIME, lt DATETIME, url TEXT, lbl TEXT, acpi TEXT, daci TEXT, poa TEXT, srt TEXT, blob TEXT)";
-        short rc = sqlite3_exec(db, createTableSQL, NULL, NULL, NULL);
+        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (  ty INTEGER,  ri TEXT PRIMARY KEY,  rn TEXT,  pi TEXT,  aei TEXT,  csi TEXT,  cst INTEGER,  api TEXT,  rr TEXT,  et DATETIME,  ct DATETIME,  lt DATETIME,  url TEXT,  lbl TEXT,  acpi TEXT,  daci TEXT,  poa TEXT,  srt TEXT,  blob TEXT,  cbs INTEGER,  cni INTEGER,  mbs INTEGER,  mni INTEGER,  st INTEGER,  cnf TEXT,  cs INTEGER, FOREIGN KEY(pi) REFERENCES mtc(ri) ON DELETE CASCADE);";
+        rc = sqlite3_exec(db, createTableSQL, NULL, NULL, &err_msg);
         if (rc != SQLITE_OK) {
-            printf("Failed to create table: %s\n", sqlite3_errmsg(db));
-            closeDatabase(db);
-            return FALSE;
+            fprintf(stderr, "Failed to create table: %s\n", err_msg);
+            sqlite3_free(err_msg);
+        } else {
+            fprintf(stdout, "Table created successfully\n");
         }
 
         char *zErrMsg = 0;
@@ -155,10 +158,10 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
             fprintf(stderr, "SQL error: %s\n", zErrMsg);
             sqlite3_free(zErrMsg);
         } else {
-            fprintf(stdout, "Index idx_mtc_ri created successfully\n");
+            fprintf(stdout, "Index idx_mtc_et created successfully\n");
         }
 
-        const char *sql4 = "CREATE INDEX IF NOT EXISTS idx_mtc_url ON mtc(url);";
+        const char *sql4 = "CREATE UNIQUE INDEX IF NOT EXISTS idx_mtc_url ON mtc(url);";
         rc = sqlite3_exec(db, sql4, callback, 0, &zErrMsg);
 
         if(rc != SQLITE_OK) {

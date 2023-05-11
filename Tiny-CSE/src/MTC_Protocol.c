@@ -552,8 +552,8 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     uri[sizeof(uri) - 1] = '\0'; // Ensure null termination
 
     to_lowercase(uri);
-    if (search_byrn_ty(*head, value_rn->valuestring, AE) != NULL) {
-        responseMessage(response, 400, "Bad Request", "rn (resource name) key already exist in this ty (resource type)");
+    if (search(*head, uri) != NULL) {
+        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
         return FALSE;
     }
 
@@ -582,6 +582,7 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     // Check if memory allocation is successful
     if (ae->url == NULL) {
         // Handle memory allocation error
+        responseMessage(response, 500, "Internal Server Error", "Memory allocation error");
         fprintf(stderr, "Memory allocation error\n");
         pthread_mutex_unlock(&db_mutex);
         pthread_mutex_destroy(&db_mutex);
@@ -731,7 +732,20 @@ char delete_resource(struct Route * destination, char **response) {
         return FALSE;
     }
 
-    short rc = begin_transaction(db);
+    // Enable foreign keys
+    char *sql = "PRAGMA foreign_keys=ON;";
+    char *err_msg = 0;
+
+    short rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Failed to enable foreign keys: %s\n", err_msg);
+        sqlite3_free(err_msg);
+    } else {
+        fprintf(stdout, "Foreign keys enabled successfully\n");
+    }
+
+    rc = begin_transaction(db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Can't begin transaction\n");
         closeDatabase(db);
