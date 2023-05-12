@@ -886,7 +886,7 @@ char post_cin(struct Route** head, struct Route* destination, cJSON *content, ch
         cJSON_AddStringToObject(content, "con", "");
     }
 
-    const char *allowed_keys[] = {"rn", "et", "at", "aa", "ct", "cnf", "cr", "or", "con", "dc", "dgt"};
+    const char *allowed_keys[] = {"rn", "et", "at", "aa", "ct", "lbl", "cnf", "cr", "or", "con", "dc", "dgt"};
     size_t num_allowed_keys = sizeof(allowed_keys) / sizeof(allowed_keys[0]);
     char disallowed = has_disallowed_keys(content, allowed_keys, num_allowed_keys);
     if (disallowed == TRUE) {
