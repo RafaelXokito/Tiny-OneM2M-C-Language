@@ -33,7 +33,7 @@ struct Route * initRoute(char* key, char* ri, short ty, char* value) {
 }
 
 // function to recursively construct the string for a resource
-__deprecated
+//__deprecated
 char * constructPath(char * result, char * resourceName, char * parentName, struct sqlite3 *db) {
 	/*
 	#pseudo-code from the whole algorithm#
