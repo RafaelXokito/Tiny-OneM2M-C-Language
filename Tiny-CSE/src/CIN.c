@@ -32,24 +32,18 @@ CINStruct *init_cin() {
         cin->cs = 0;
         cin->cr[0] = '\0';
         cin->con = NULL;
-        cin->dc = NULL;
+        cin->dc = -1;
         cin->dr[0] = '\0';
     }
     return cin;
 }
 
-char create_cin(CINStruct * cin, cJSON *content, char** response) {
-    // Sqlite3 initialization opening/creating database
-    struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
-    if (db == NULL) {
-        responseMessage(response,500,"Internal Server Error","Could not open the database");
-		return FALSE;
-	}
+char create_cin(sqlite3 *db, CINStruct * cin, cJSON *content, char** response) {
     // Convert the JSON object to a C structure
     // the URL attribute was already populated in the caller of this function
     sqlite3_stmt *stmt;
     int result;
-    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 4) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 3";
+    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 5) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 4";
     // Prepare the SQL statement
     if (sqlite3_prepare_v2(db, query, -1, &stmt, 0) != SQLITE_OK) {
         fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
@@ -82,7 +76,15 @@ char create_cin(CINStruct * cin, cJSON *content, char** response) {
     strcpy(cin->rn, cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
     strcpy(cin->pi, cJSON_GetObjectItemCaseSensitive(content, "pi")->valuestring);
     cin->st = cJSON_GetObjectItemCaseSensitive(content, "st")->valueint;
+    size_t rnLengthCon = strlen(cJSON_GetObjectItemCaseSensitive(content, "con")->valuestring);
+    cin->con = (char *)malloc(rnLengthCon);
+    if (cin->con == NULL) {
+        // Handle memory allocation error
+        fprintf(stderr, "Memory allocation error\n");
+        return FALSE;
+    }
     strcpy(cin->con, cJSON_GetObjectItemCaseSensitive(content, "con")->valuestring);
+    cin->cs = rnLengthCon;
     strcpy(cin->cnf, cJSON_GetObjectItemCaseSensitive(content, "cnf")->valuestring);
     cJSON *et = cJSON_GetObjectItemCaseSensitive(content, "et");
     if (et) {
@@ -111,7 +113,7 @@ char create_cin(CINStruct * cin, cJSON *content, char** response) {
         strcpy(cin->et, get_datetime_days_later(DAYS_PLUS_ET));
     }
     strcpy(cin->ct, getCurrentTime());
-    strcpy(cin->lt, getCurrentTime());
+    strcpy(cin->lt, cin->ct);
 
     const char *keys[] = {"lbl"};
     short num_keys = sizeof(keys) / sizeof(keys[0]);
@@ -121,7 +123,7 @@ char create_cin(CINStruct * cin, cJSON *content, char** response) {
             char *json_str = cJSON_Print(json_array);
             if (json_str) {
                 size_t len = strlen(json_str);
-                if(keys[i]=="lbl"){
+                if(strcmp(keys[i],"lbl") == 0){
                     cin->json_lbl = (char *)malloc(len+1);
                     strcpy(cin->json_lbl, json_str);
                 }
@@ -130,7 +132,7 @@ char create_cin(CINStruct * cin, cJSON *content, char** response) {
             cJSON *empty_array = cJSON_CreateArray();
             size_t len = strlen(cJSON_Print(empty_array));
             
-            if(keys[i]=="lbl"){
+            if(strcmp(keys[i],"lbl") == 0){
                 cin->json_lbl = (char *)malloc(len+1);
                 strcpy(cin->json_lbl, cJSON_Print(empty_array));
             }
@@ -154,20 +156,19 @@ char create_cin(CINStruct * cin, cJSON *content, char** response) {
         closeDatabase(db);
         return FALSE;
     }
+
     // Prepare the insert statement
-    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, st, cnf, cs, con, et, ct, lt, url, blob, lbl) "
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
-                        "UPDATE mtc SET cni = cni + 1, cbs = cbs + ? WHERE ri = ?;";
+    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, st, cnf, cs, con, et, ct, lt, url, blob, lbl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
     rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr,"Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
         responseMessage(response, 400, "Bad Request", "Verify the request body");
         closeDatabase(db);
         return FALSE;
     }
 
-    // Bind the values to the statement
     sqlite3_bind_int(stmt, 1, cin->ty);
     sqlite3_bind_text(stmt, 2, cin->ri, strlen(cin->ri), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 3, cin->rn, strlen(cin->rn), SQLITE_STATIC);
@@ -175,7 +176,8 @@ char create_cin(CINStruct * cin, cJSON *content, char** response) {
     sqlite3_bind_int(stmt, 5, cin->st);
     sqlite3_bind_text(stmt, 6, cin->cnf, strlen(cin->cnf), SQLITE_STATIC);
     sqlite3_bind_int(stmt, 7, cin->cs);
-    sqlite3_bind_text(stmt, 8, cin->con, strlen(cin->cnf), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 8, cin->pi, strlen(cin->pi), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 8, cin->con, strlen(cin->con), SQLITE_STATIC);
     struct tm ct_tm, lt_tm, et_tm;
     strptime(cin->ct, "%Y%m%dT%H%M%S", &ct_tm);
     strptime(cin->lt, "%Y%m%dT%H%M%S", &lt_tm);
@@ -190,8 +192,6 @@ char create_cin(CINStruct * cin, cJSON *content, char** response) {
     sqlite3_bind_text(stmt, 12, cin->url, strlen(cin->url), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 13, cin->blob, strlen(cin->blob), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 14, cin->json_lbl, strlen(cin->json_lbl), SQLITE_STATIC);
-    sqlite3_bind_int(stmt, 15, cin->cs);
-    sqlite3_bind_text(stmt, 16, cin->pi, strlen(cin->pi), SQLITE_STATIC);
 
     // Execute the statement
     rc = sqlite3_step(stmt);
@@ -204,11 +204,13 @@ char create_cin(CINStruct * cin, cJSON *content, char** response) {
         return FALSE;
     }
 
+    sqlite3_finalize(stmt);
+
     // Actions that need to done in the CNT resource update the cni and cbs
     // Step 2: Check if cni > mni or cbs > mbs
     int cni, mni, cbs, mbs;
-    char *sql = sqlite3_mprintf("SELECT cni, mni, cbs, mbs FROM mtc WHERE ri = %s;", cin->pi);
-    sqlite3_stmt *stmt;
+    char *sql = sqlite3_mprintf("SELECT cni, mni, cbs, mbs, blob FROM mtc WHERE ri = '%s';", cin->pi);
+    printf("%s\n", sql);
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
     sqlite3_free(sql);
     if (rc != SQLITE_OK) {
@@ -220,21 +222,78 @@ char create_cin(CINStruct * cin, cJSON *content, char** response) {
         return FALSE;
     }
 
+    cJSON *cntBlob = NULL;
     if ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        cni = sqlite3_column_int(stmt, 0);
-        mni = sqlite3_column_int(stmt, 1);
-        cbs = sqlite3_column_int(stmt, 2);
-        mbs = sqlite3_column_int(stmt, 3);
+        cni = sqlite3_column_int(stmt, 0) + 1;
+        if (sqlite3_column_type(stmt, 1) == SQLITE_NULL) {
+            mni = -1;
+        } else {
+            mni = sqlite3_column_int(stmt, 1);
+        }
+        cbs = sqlite3_column_int(stmt, 2) + cin->cs;
+        if (sqlite3_column_type(stmt, 3) == SQLITE_NULL) {
+            mbs = -1;
+        } else {
+            mbs = sqlite3_column_int(stmt, 3);
+        }
+
+        cntBlob = cJSON_Parse((char *)sqlite3_column_text(stmt, 4));
+        cJSON *cnt = cJSON_GetObjectItem(cntBlob, "m2m:cnt");
+        if(cnt != NULL) {
+            cJSON *JsonCni = cJSON_GetObjectItem(cnt, "cni");
+            cJSON *JsonCbs = cJSON_GetObjectItem(cnt, "cbs");
+
+            if(JsonCni != NULL) {
+                cJSON_ReplaceItemInObject(cnt, "cni", cJSON_CreateNumber(cni));
+            }
+
+            if(JsonCbs != NULL) {
+                cJSON_ReplaceItemInObject(cnt, "cbs", cJSON_CreateNumber(cbs));
+            }
+        }
+    }
+
+    printf("cni: %d, cbs: %d, blob: %s\n", cni, cbs, cJSON_Print(cntBlob));
+
+    sqlite3_finalize(stmt);
+
+    // Update the parent container
+    const char *updateSql = "UPDATE mtc SET cni = ?, cbs = ?, blob = ? WHERE ri = ?;";
+    printf("%s\n", cJSON_Print(cntBlob));
+    
+    rc = sqlite3_prepare_v2(db, updateSql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr,"Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        responseMessage(response, 400, "Bad Request", "Verify the request body");
+        closeDatabase(db);
+        return FALSE;
+    }
+
+    sqlite3_bind_int(stmt, 1, cni);
+    sqlite3_bind_int(stmt, 2, cbs);
+    sqlite3_bind_text(stmt, 3, cJSON_Print(cntBlob), strlen(cJSON_Print(cntBlob)), SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 4, cin->pi, strlen(cin->pi), SQLITE_STATIC);
+
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+        fprintf(stderr,"Failed to execute statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Verify the request body");
+        rollback_transaction(db); // Rollback transaction
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
     }
 
     sqlite3_finalize(stmt);
 
     // Step 3: If cni > mni or cbs > mbs, delete instances as needed
-    while (cni > mni || cbs > mbs) {
+    // The mni or mbs being -1 means that the value was not set in the container and there are no limit
+    while ((mni != -1 && cni > mni) || (mbs != -1 && cbs > mbs)) {
         // Get the id and size of the earliest instance
         char instance_id[30];
         int instance_size;
-        sql = sqlite3_mprintf("SELECT ri, cs FROM mtc WHERE pi = %s ORDER BY ct LIMIT 1;", cin->pi);
+        sql = sqlite3_mprintf("SELECT ri, cs FROM mtc WHERE pi = '%s' ORDER BY ct LIMIT 1;", cin->pi);
         rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
         sqlite3_free(sql);
         if (rc != SQLITE_OK) {
@@ -249,12 +308,13 @@ char create_cin(CINStruct * cin, cJSON *content, char** response) {
         if ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
             strcpy(instance_id, (char *)sqlite3_column_text(stmt, 0));
             instance_size = sqlite3_column_int(stmt, 1);
+            printf("sql: %s\n", instance_id);
         }
 
         sqlite3_finalize(stmt);
 
         // Delete the earliest instance
-        sql = sqlite3_mprintf("DELETE FROM mtc WHERE ri = %s;", instance_id);
+        sql = sqlite3_mprintf("DELETE FROM mtc WHERE ri = '%s';", instance_id);
         char* err_msg = NULL;
         rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
         sqlite3_free(sql);
@@ -270,6 +330,46 @@ char create_cin(CINStruct * cin, cJSON *content, char** response) {
         // Update cni and cbs
         cni--;
         cbs -= instance_size;
+
+        cJSON *cnt = cJSON_GetObjectItem(cntBlob, "m2m:cnt");
+        if(cnt != NULL) {
+            cJSON *JsonCni = cJSON_GetObjectItem(cnt, "cni");
+            cJSON *JsonCbs = cJSON_GetObjectItem(cnt, "cbs");
+
+            if(JsonCni != NULL) {
+                cJSON_ReplaceItemInObject(cnt, "cni", cJSON_CreateNumber(cni));
+            }
+
+            if(JsonCbs != NULL) {
+                cJSON_ReplaceItemInObject(cnt, "cbs", cJSON_CreateNumber(cbs));
+            }
+        }
+        
+        rc = sqlite3_prepare_v2(db, updateSql, -1, &stmt, NULL);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr,"Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+            sqlite3_finalize(stmt);
+            responseMessage(response, 400, "Bad Request", "Verify the request body");
+            closeDatabase(db);
+            return FALSE;
+        }
+
+        sqlite3_bind_int(stmt, 1, cni);
+        sqlite3_bind_int(stmt, 2, cbs);
+        sqlite3_bind_text(stmt, 3, cJSON_Print(cntBlob), strlen(cJSON_Print(cntBlob)), SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 4, cin->pi, strlen(cin->pi), SQLITE_STATIC);
+
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            fprintf(stderr,"Failed to execute statement: %s\n", sqlite3_errmsg(db));
+            responseMessage(response, 400, "Bad Request", "Verify the request body");
+            rollback_transaction(db); // Rollback transaction
+            sqlite3_finalize(stmt);
+            closeDatabase(db);
+            return FALSE;
+        }
+
+        sqlite3_finalize(stmt);
     }
 
     // Free the cJSON object
@@ -278,13 +378,11 @@ char create_cin(CINStruct * cin, cJSON *content, char** response) {
     rc = commit_transaction(db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Can't commit transaction\n");
-        sqlite3_finalize(stmt);
+        responseMessage(response, 500, "Internal Server Error", (char *)sqlite3_errmsg(db));
         closeDatabase(db);
         return FALSE;
     }
 
-    // Finalize the statement and close the database
-    sqlite3_finalize(stmt);
     closeDatabase(db);
     printf("CIN data inserted successfully.\n");
     return TRUE;
@@ -355,8 +453,10 @@ char get_cin(struct Route* destination, char** response){
     }
 
     // Copy the blob from the resource to the response_data
-    char *response_data = (char *)sqlite3_column_text(stmt, 0);
-    if (response_data == NULL) {
+    char *response_data = NULL;
+    if ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        response_data = (char *)sqlite3_column_text(stmt, 0); // note the change in index to 0
+    } else {
         fprintf(stderr, "Failed to print JSON as a string.\n");
         responseMessage(response, 400, "Bad Request", "Failed to print JSON as a string.\n");
         sqlite3_finalize(stmt);
@@ -382,6 +482,5 @@ char get_cin(struct Route* destination, char** response){
     sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", response_data);
     sqlite3_finalize(stmt);
     closeDatabase(db);
-    free(response_data);
     return TRUE;
 }

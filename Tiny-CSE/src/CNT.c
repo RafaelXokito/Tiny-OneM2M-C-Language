@@ -31,12 +31,12 @@ CNTStruct *init_cnt() {
         cnt->lt[0] = '\0';
         cnt->blob = NULL;
         cnt->st = 0;
-        cnt->mbs = NULL;
-        cnt->mni = NULL;
+        cnt->mbs = -1;
+        cnt->mni = -1;
         cnt->cni = 0;
         cnt->cbs = 0;
-        cnt->li = NULL;
-        cnt->dr = NULL;
+        cnt->li = -1;
+        cnt->dr = -1;
     }
     return cnt;
 }
@@ -52,7 +52,7 @@ char create_cnt(CNTStruct * cnt, cJSON *content, char** response) {
     // the URL attribute was already populated in the caller of this function
     sqlite3_stmt *stmt;
     int result;
-    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 4) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 3";
+    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 5) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 3";
     // Prepare the SQL statement
     if (sqlite3_prepare_v2(db, query, -1, &stmt, 0) != SQLITE_OK) {
         fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
@@ -83,8 +83,8 @@ char create_cnt(CNTStruct * cnt, cJSON *content, char** response) {
     strcpy(cnt->ri, cJSON_GetObjectItemCaseSensitive(content, "ri")->valuestring);
     strcpy(cnt->rn, cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
     strcpy(cnt->pi, cJSON_GetObjectItemCaseSensitive(content, "pi")->valuestring);
-    strcpy(cnt->mbs, cJSON_GetObjectItemCaseSensitive(content, "mbs")->valuestring);
-    strcpy(cnt->mni, cJSON_GetObjectItemCaseSensitive(content, "mni")->valuestring);
+    cnt->mbs = cJSON_GetObjectItemCaseSensitive(content, "mbs")->valueint;
+    cnt->mni = cJSON_GetObjectItemCaseSensitive(content, "mni")->valueint;
     cJSON *et = cJSON_GetObjectItemCaseSensitive(content, "et");
     if (et) {
         struct tm et_tm;
@@ -112,7 +112,7 @@ char create_cnt(CNTStruct * cnt, cJSON *content, char** response) {
         strcpy(cnt->et, get_datetime_days_later(DAYS_PLUS_ET));
     }
     strcpy(cnt->ct, getCurrentTime());
-    strcpy(cnt->lt, getCurrentTime());
+    strcpy(cnt->lt, cnt->ct);
 
     const char *keys[] = {"acpi", "lbl", "daci"};
     short num_keys = sizeof(keys) / sizeof(keys[0]);
@@ -122,15 +122,15 @@ char create_cnt(CNTStruct * cnt, cJSON *content, char** response) {
             char *json_str = cJSON_Print(json_array);
             if (json_str) {
                 size_t len = strlen(json_str);
-                if(keys[i]=="acpi"){
+                if(strcmp(keys[i],"acpi") == 0){
                     cnt->json_acpi = (char *)malloc(len+1);
                     strcpy(cnt->json_acpi, json_str);
                 }
-                if(keys[i]=="lbl"){
+                if(strcmp(keys[i],"lbl") == 0){
                     cnt->json_lbl = (char *)malloc(len+1);
                     strcpy(cnt->json_lbl, json_str);
                 }
-                if(keys[i]=="daci"){
+                if(strcmp(keys[i],"daci") == 0){
                     cnt->json_daci = (char *)malloc(len+1);
                     strcpy(cnt->json_daci, json_str);
                 }
@@ -138,15 +138,15 @@ char create_cnt(CNTStruct * cnt, cJSON *content, char** response) {
         }else if (json_array == NULL){
             cJSON *empty_array = cJSON_CreateArray();
             size_t len = strlen(cJSON_Print(empty_array));
-            if(keys[i]=="acpi"){
+            if(strcmp(keys[i],"acpi") == 0){
                 cnt->json_acpi = (char *)malloc(len+1);
                 strcpy(cnt->json_acpi, cJSON_Print(empty_array));
             }
-            if(keys[i]=="lbl"){
+            if(strcmp(keys[i],"lbl") == 0){
                 cnt->json_lbl = (char *)malloc(len+1);
                 strcpy(cnt->json_lbl, cJSON_Print(empty_array));
             }
-            if(keys[i]=="daci"){
+            if(strcmp(keys[i],"daci") == 0){
                 cnt->json_daci = (char *)malloc(len+1);
                 strcpy(cnt->json_daci, cJSON_Print(empty_array));
             }
@@ -170,7 +170,7 @@ char create_cnt(CNTStruct * cnt, cJSON *content, char** response) {
         return FALSE;
     }
     // Prepare the insert statement
-    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, st, mni, mbs, cni, cbs, et, ct, lt, url, blob, acpi, lbl, daci) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, st, mni, mbs, cni, cbs, et, ct, lt, url, blob, acpi, lbl, daci) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
@@ -186,8 +186,8 @@ char create_cnt(CNTStruct * cnt, cJSON *content, char** response) {
     sqlite3_bind_text(stmt, 3, cnt->rn, strlen(cnt->rn), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 4, cnt->pi, strlen(cnt->pi), SQLITE_STATIC);
     sqlite3_bind_int(stmt, 5, cnt->st);
-    if (cnt->mni == NULL) sqlite3_bind_int(stmt, 6, cnt->mni); else sqlite3_bind_null(stmt, 6);
-    if (cnt->mbs == NULL) sqlite3_bind_int(stmt, 7, cnt->mbs); else sqlite3_bind_null(stmt, 7);
+    if (cnt->mni != -1) sqlite3_bind_int(stmt, 6, cnt->mni); else sqlite3_bind_null(stmt, 6);
+    if (cnt->mbs != -1) sqlite3_bind_int(stmt, 7, cnt->mbs); else sqlite3_bind_null(stmt, 7);
     sqlite3_bind_int(stmt, 8, cnt->cni);
     sqlite3_bind_int(stmt, 9, cnt->cbs);
     struct tm ct_tm, lt_tm, et_tm;
@@ -245,8 +245,8 @@ cJSON *cnt_to_json(const CNTStruct *cnt) {
     cJSON_AddStringToObject(innerObject, "aa", cnt->aa);
     cJSON_AddNumberToObject(innerObject, "st", cnt->st);
 
-    if (cnt->mni == NULL) cJSON_AddNumberToObject(innerObject, "mni", cnt->mni); else cJSON_AddNullToObject(innerObject, "mni");
-    if (cnt->mbs == NULL) cJSON_AddNumberToObject(innerObject, "mbs", cnt->mbs); else cJSON_AddNullToObject(innerObject, "mbs");
+    if (cnt->mni != -1) cJSON_AddNumberToObject(innerObject, "mni", cnt->mni); else cJSON_AddNullToObject(innerObject, "mni");
+    if (cnt->mbs != -1) cJSON_AddNumberToObject(innerObject, "mbs", cnt->mbs); else cJSON_AddNullToObject(innerObject, "mbs");
 
     cJSON_AddNumberToObject(innerObject, "cni", cnt->cni);
     cJSON_AddNumberToObject(innerObject, "cbs", cnt->cbs);
@@ -340,7 +340,7 @@ char update_cnt(struct Route* destination, cJSON *content, char** response){
 
     int num_keys = cJSON_GetArraySize(content); //size of my body content
     const char *key; //to get the key(s) of my content
-    const char *valueCNT; //to confirm the value already store in my CNT
+    char *valueCNT; //to confirm the value already store in my CNT
     char my_string[100]; //to convert destination->ty
     cJSON *item; //to get the values of my content MTC
 
@@ -370,11 +370,13 @@ char update_cnt(struct Route* destination, cJSON *content, char** response){
             valueCNT = cnt->or;
             strcpy(cnt->or, json_strITEM);
         } else if (strcmp(key, "mni") == 0){
-            valueCNT = cnt->mni;
-            strcpy(cnt->mni, json_strITEM);
-        } else if (strcmp(key, "mbs") == 0){
-            valueCNT = cnt->mbs;
-            strcpy(cnt->mbs, json_strITEM);
+            valueCNT = malloc(strlen(json_strITEM)+1);
+            snprintf(valueCNT, strlen(json_strITEM)+1, "%d", cnt->mni);
+            cnt->mni = atoi(json_strITEM);
+        }   else if (strcmp(key, "mbs") == 0){
+            valueCNT = malloc(strlen(json_strITEM)+1);
+            snprintf(valueCNT, strlen(json_strITEM)+1, "%d", cnt->mbs);
+            cnt->mbs = atoi(json_strITEM);
         } else if (strcmp(key, "aa") == 0){
             valueCNT = cnt->aa;
             strcpy(cnt->aa, json_strITEM);
@@ -551,8 +553,10 @@ char get_cnt(struct Route* destination, char** response){
     }
 
     // Copy the blob from the resource to the response_data
-    char *response_data = (char *)sqlite3_column_text(stmt, 0);
-    if (response_data == NULL) {
+    char *response_data = NULL;
+    if ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        response_data = (char *)sqlite3_column_text(stmt, 0); // note the change in index to 0
+    } else {
         fprintf(stderr, "Failed to print JSON as a string.\n");
         responseMessage(response, 400, "Bad Request", "Failed to print JSON as a string.\n");
         sqlite3_finalize(stmt);
@@ -578,6 +582,5 @@ char get_cnt(struct Route* destination, char** response){
     sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", response_data);
     sqlite3_finalize(stmt);
     closeDatabase(db);
-    free(response_data);
     return TRUE;
 }

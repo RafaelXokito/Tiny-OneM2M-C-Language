@@ -702,22 +702,17 @@ char post_cnt(struct Route** head, struct Route* destination, cJSON *content, ch
     cJSON *value = NULL;
     value = cJSON_GetObjectItem(content, "mbs");  // retrieve the value associated with the key
     if (value == NULL) {
-        cJSON_AddNullToObject(content, "mbs");
+        cJSON_AddNumberToObject(content, "mbs", -1);
     }
 
     value = cJSON_GetObjectItem(content, "mni");  // retrieve the value associated with the key
     if (value == NULL) {
-        cJSON_AddNullToObject(content, "mni");
+        cJSON_AddNumberToObject(content, "mni", -1);
     }
-
-    // Default values
-    cJSON_AddNumberToObject(content, "st", 0);
-    cJSON_AddNumberToObject(content, "cni", 0);
-    cJSON_AddNumberToObject(content, "cbs", 0);
 
     // Theres no Mandatory Atributes
     // Não consta no excel auxiliar: dr -> disableRetrieval
-    const char *allowed_keys[] = {"rn", "et", "acpi", "lbl", "ct", "lt", "st", "at", "aa", "daci", "cr", "mni", "mbs", "mia", "li", "or", "dr"};
+    const char *allowed_keys[] = {"rn", "et", "acpi", "lbl", "ct", "lt", "at", "aa", "daci", "cr", "mni", "mbs", "mia", "li", "or", "dr"};
     size_t num_allowed_keys = sizeof(allowed_keys) / sizeof(allowed_keys[0]);
     char disallowed = has_disallowed_keys(content, allowed_keys, num_allowed_keys);
     if (disallowed == TRUE) {
@@ -725,6 +720,11 @@ char post_cnt(struct Route** head, struct Route* destination, cJSON *content, ch
         responseMessage(response, 400, "Bad Request", "Found keys not allowed");
         return FALSE;
     }
+
+    // Default values
+    cJSON_AddNumberToObject(content, "st", 0);
+    cJSON_AddNumberToObject(content, "cni", 0);
+    cJSON_AddNumberToObject(content, "cbs", 0);
     
     char uri[60];
     snprintf(uri, sizeof(uri), "/%s",destination->value);
@@ -788,6 +788,7 @@ char post_cnt(struct Route** head, struct Route* destination, cJSON *content, ch
 
     // Append "/<rn value>" to cnt->url
     sprintf(cnt->url + destinationKeyLength, "/%s", cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
+    to_lowercase(cnt->url);
 
     rs = create_cnt(cnt, content, response);
 
@@ -799,8 +800,7 @@ char post_cnt(struct Route** head, struct Route* destination, cJSON *content, ch
     }
     
     // Add New Routes
-    to_lowercase(uri);
-    addRoute(head, uri, cnt->ri, cnt->ty, cnt->rn);
+    addRoute(head, cnt->url, cnt->ri, cnt->ty, cnt->rn);
     printf("New Route: %s -> %s -> %d -> %s \n", uri, cnt->ri, cnt->ty, cnt->rn);
     
     // Convert the CNT struct to json and the Json Object to Json String
@@ -869,7 +869,7 @@ char post_cin(struct Route** head, struct Route* destination, cJSON *content, ch
         // Remove unauthorized chars
         remove_unauthorized_chars(rn_item->valuestring);
     }
-
+    
     // Optional value with default value
     cJSON *value = NULL;
     value = cJSON_GetObjectItem(content, "cnf");  // retrieve the value associated with the key
@@ -877,25 +877,13 @@ char post_cin(struct Route** head, struct Route* destination, cJSON *content, ch
         cJSON_AddStringToObject(content, "cnf", "text/plain:0");
     }
     
-    // Default values
-    cJSON_AddNumberToObject(content, "st", 0);
-
     // Mandatory Atributes
     char *keys_m[] = {"con"};  // Content
-    num_keys = 2;  // number of keys in the array
+    num_keys = 1;  // number of keys in the array
     aux_response = NULL;
     rs = validate_keys(content, keys_m, num_keys, &aux_response);
     if (rs == FALSE) {
-        responseMessage(response, 400, "Bad Request", aux_response);
-        return FALSE;
-    }
-
-    cJSON *value = NULL;
-    value = cJSON_GetObjectItem(content, "con");  // retrieve the value associated with the key
-    if (value == NULL) {
-        cJSON_AddNumberToObject(content, "cs", 0);
-    } else {
-        cJSON_AddNumberToObject(content, "cs", sizeof(cJSON_GetObjectItem(content, "con")->valuestring));
+        cJSON_AddStringToObject(content, "con", "");
     }
 
     const char *allowed_keys[] = {"rn", "et", "at", "aa", "ct", "cnf", "cr", "or", "con", "dc", "dgt"};
@@ -905,6 +893,13 @@ char post_cin(struct Route** head, struct Route* destination, cJSON *content, ch
         fprintf(stderr, "The cJSON object has disallowed keys.\n");
         responseMessage(response, 400, "Bad Request", "Found keys not allowed");
         return FALSE;
+    }
+
+    value = cJSON_GetObjectItem(content, "con");  // retrieve the value associated with the key
+    if (value == NULL) {
+        cJSON_AddNumberToObject(content, "cs", 0);
+    } else {
+        cJSON_AddNumberToObject(content, "cs", strlen(cJSON_GetObjectItem(content, "con")->valuestring));
     }
     
     char uri[60];
@@ -969,22 +964,22 @@ char post_cin(struct Route** head, struct Route* destination, cJSON *content, ch
 
     // Append "/<rn value>" to cin->url
     sprintf(cin->url + destinationKeyLength, "/%s", cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
+    to_lowercase(cin->url);
 
     // retrieve the st from CNT from the database
-    char *sql = sqlite3_mprintf("SELECT st FROM mtc WHERE url = '%s';", destination->key);
+    struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
+    if (db == NULL) {
+        fprintf(stderr, "Failed to initialize the database.\n");
+        responseMessage(response, 500, "Internal Server Error", "Failed to initialize the database.");
+        return FALSE;
+    }
+    char *sql = sqlite3_mprintf("SELECT st FROM mtc WHERE LOWER(url) = '%s';", destination->key);
     if (sql == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
         responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
         return FALSE;
     }
     sqlite3_stmt *stmt;
-    struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
-    if (db == NULL) {
-        fprintf(stderr, "Failed to initialize the database.\n");
-        responseMessage(response, 500, "Internal Server Error", "Failed to initialize the database.");
-        sqlite3_free(sql);
-        return FALSE;
-    }
     short rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
@@ -995,12 +990,18 @@ char post_cin(struct Route** head, struct Route* destination, cJSON *content, ch
     }
 
     // Populate the st attribute
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
-        cJSON_AddStringToObject(content, "st", destination->ri);
-        break;
+    rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        cJSON_AddNumberToObject(content, "st", sqlite3_column_int(stmt, 0));
+    } else {
+        printf("Failed to step through the statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Failed to step through the statement.");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
     }
 
-    rs = create_cin(cin, content, response);
+    rs = create_cin(db, cin, content, response);
 
     if (rs == FALSE) {
         // É feito dentro da função create_cin
@@ -1010,8 +1011,7 @@ char post_cin(struct Route** head, struct Route* destination, cJSON *content, ch
     }
     
     // Add New Routes
-    to_lowercase(uri);
-    addRoute(head, uri, cin->ri, cin->ty, cin->rn);
+    addRoute(head, cin->url, cin->ri, cin->ty, cin->rn);
     printf("New Route: %s -> %s -> %d -> %s \n", uri, cin->ri, cin->ty, cin->rn);
     
     // Convert the CIN struct to json and the Json Object to Json String
@@ -1074,21 +1074,6 @@ char retrieve_ae(struct Route * destination, char **response) {
          return FALSE;
     }
 	short rs = get_ae(destination, response);
-    if (rs == FALSE) {
-        pthread_mutex_unlock(&db_mutex);
-        pthread_mutex_destroy(&db_mutex);
-        return FALSE;
-    }
-    return TRUE;
-}
-
-char retrieve_cnt(struct Route * destination, char **response) {
-    pthread_mutex_t db_mutex;
-    if (pthread_mutex_init(&db_mutex, NULL) != 0) {
-         responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
-         return FALSE;
-    }
-	short rs = get_cnt(destination, response);
     if (rs == FALSE) {
         pthread_mutex_unlock(&db_mutex);
         pthread_mutex_destroy(&db_mutex);

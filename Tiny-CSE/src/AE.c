@@ -114,7 +114,7 @@ char create_ae(AEStruct * ae, cJSON *content, char** response) {
         strcpy(ae->et, get_datetime_days_later(DAYS_PLUS_ET));
     }
     strcpy(ae->ct, getCurrentTime());
-    strcpy(ae->lt, getCurrentTime());
+    strcpy(ae->lt, ae->ct);
 
     const char *keys[] = {"acpi", "lbl", "daci", "poa"};
     short num_keys = sizeof(keys) / sizeof(keys[0]);
@@ -124,19 +124,19 @@ char create_ae(AEStruct * ae, cJSON *content, char** response) {
             char *json_str = cJSON_Print(json_array);
             if (json_str) {
                 size_t len = strlen(json_str);
-                if(keys[i]=="acpi"){
+                if(strcmp(keys[i], "acpi") == 0){
                     ae->json_acpi = (char *)malloc(len+1);
                     strcpy(ae->json_acpi, json_str);
                 }
-                if(keys[i]=="lbl"){
+                if(strcmp(keys[i],"lbl") == 0){
                     ae->json_lbl = (char *)malloc(len+1);
                     strcpy(ae->json_lbl, json_str);
                 }
-                if(keys[i]=="daci"){
+                if(strcmp(keys[i],"daci") == 0){
                     ae->json_daci = (char *)malloc(len+1);
                     strcpy(ae->json_daci, json_str);
                 }
-                if(keys[i]=="poa"){
+                if(strcmp(keys[i],"poa") == 0){
                     ae->json_poa = (char *)malloc(len+1);
                     strcpy(ae->json_poa, json_str);
                 } 
@@ -144,19 +144,19 @@ char create_ae(AEStruct * ae, cJSON *content, char** response) {
         }else if (json_array == NULL){
             cJSON *empty_array = cJSON_CreateArray();
             size_t len = strlen(cJSON_Print(empty_array));
-            if(keys[i]=="acpi"){
+            if(strcmp(keys[i],"acpi") == 0){
                 ae->json_acpi = (char *)malloc(len+1);
                 strcpy(ae->json_acpi, cJSON_Print(empty_array));
             }
-            if(keys[i]=="lbl"){
+            if(strcmp(keys[i],"lbl") == 0){
                 ae->json_lbl = (char *)malloc(len+1);
                 strcpy(ae->json_lbl, cJSON_Print(empty_array));
             }
-            if(keys[i]=="daci"){
+            if(strcmp(keys[i],"daci") == 0){
                 ae->json_daci = (char *)malloc(len+1);
                 strcpy(ae->json_daci, cJSON_Print(empty_array));
             }
-            if(keys[i]=="poa"){
+            if(strcmp(keys[i],"poa") == 0){
                 ae->json_poa = (char *)malloc(len+1);
                 strcpy(ae->json_poa, cJSON_Print(empty_array));
             }  
@@ -614,8 +614,10 @@ char get_ae(struct Route* destination, char** response){
         return FALSE;
     }
     
-    char *response_data = (char *)sqlite3_column_text(stmt, 0);
-    if (response_data == NULL) {
+    char *response_data = NULL;
+    if ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        response_data = (char *)sqlite3_column_text(stmt, 0); // note the change in index to 0
+    } else {
         fprintf(stderr, "Failed to print JSON as a string.\n");
         responseMessage(response, 400, "Bad Request", "Failed to print JSON as a string.\n");
         sqlite3_finalize(stmt);
@@ -641,6 +643,5 @@ char get_ae(struct Route* destination, char** response){
     sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", response_data);
     sqlite3_finalize(stmt);
     closeDatabase(db);
-    free(response_data);
     return TRUE;
 }

@@ -31,10 +31,8 @@ typedef struct {
 } CINStruct;
 
 CINStruct *init_cin();
-char create_cin(CINStruct * cin, cJSON *content, char** response);
+char create_cin(sqlite3 *db, CINStruct * cin, cJSON *content, char** response);
 
 cJSON *cin_to_json(const CINStruct *cin);
-
-char update_cin(struct Route* destination, cJSON *content, char** response);
 
 char get_cin(struct Route* destination, char** response);
