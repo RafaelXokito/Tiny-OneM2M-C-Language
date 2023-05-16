@@ -27,7 +27,7 @@ count=1
 # Perform CRUD operations and store timings in CSV files
 while [ $count -lt 2001 ]; do
     # POST
-    time=$(curl -X POST 'http://10.20.246.135:6000/onem2m' -H "Content-Type: application/vnd.onem2m-res+json" -d '{"m2m:ae": {"api": "placeholder2","rr": "true","rn": "AE-'${count}'","et": "20230328T234737","lbl": ["interropetores","xpto2"],"poa": ["http://127.0.0.1:1234"],"acpi": ["/id-in/acpCreateACPs"]}}' -w "%{time_total}" -o /dev/null)
+    time=$(curl -X POST 'http://192.168.1.86:8000/onem2m' -H "Content-Type: application/vnd.onem2m-res+json" -d '{"m2m:ae": {"api": "placeholder2","rr": "true","rn": "AE-'${count}'","et": "20230328T234737","lbl": ["interropetores","xpto2"],"poa": ["http://127.0.0.1:1234"],"acpi": ["/id-in/acpCreateACPs"]}}' -w "%{time_total}" -o /dev/null)
     echo "$time" >> "$post_times"
 
     count=$((count+1))

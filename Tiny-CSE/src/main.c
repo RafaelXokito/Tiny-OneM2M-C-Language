@@ -23,9 +23,10 @@ int client_socket;
 
 int DAYS_PLUS_ET = 0;
 int PORT = 8000;
+char DB_MEM[MAX_CONFIG_LINE_LENGTH] = "false";
 char BASE_RI[MAX_CONFIG_LINE_LENGTH] = "";
 char BASE_RN[MAX_CONFIG_LINE_LENGTH] = "";
-char BASE_CSI[MAX_CONFIG_LINE_LENGTH] = "";
+char BASE_CSI[MAX_CONFIG_LINE_LENGTH] = "cse-1";
 char BASE_POA[MAX_CONFIG_LINE_LENGTH] = "";
 
 int main() {

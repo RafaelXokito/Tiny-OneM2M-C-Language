@@ -8,10 +8,14 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+#include "Utils.h"
 #include "sqlite3.h"
 
 #define TRUE 1
 #define FALSE 0
+
+extern char DB_MEM[MAX_CONFIG_LINE_LENGTH];
 
 int callback(void *NotUsed, int argc, char **argv, char **azColName) {
     int i;
@@ -25,7 +29,7 @@ int callback(void *NotUsed, int argc, char **argv, char **azColName) {
 // Define an init function that returns an sqlite3 pointer
 sqlite3 *initDatabase(const char* databasename) {
     sqlite3 *db;
-    int rc = sqlite3_open_v2(databasename, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL);
+    int rc = sqlite3_open_v2((strcmp(DB_MEM, "true") == 0 ? ":memory:" : databasename), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);

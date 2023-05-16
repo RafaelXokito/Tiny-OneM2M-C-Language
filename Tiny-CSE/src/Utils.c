@@ -19,6 +19,7 @@
 
 extern int DAYS_PLUS_ET;
 extern int PORT;
+extern char DB_MEM[MAX_CONFIG_LINE_LENGTH];
 extern char BASE_RI[MAX_CONFIG_LINE_LENGTH];
 extern char BASE_RN[MAX_CONFIG_LINE_LENGTH];
 extern char BASE_CSI[MAX_CONFIG_LINE_LENGTH];
@@ -76,6 +77,8 @@ void parse_config_line(char* line) {
             DAYS_PLUS_ET = atoi(value);
         } else if (strcmp(key, "PORT") == 0) {
             PORT = atoi(value);
+        } else if (strcmp(key, "DB_MEM") == 0) {
+            strcpy(DB_MEM, value);
         } else if (strcmp(key, "BASE_RI") == 0) {
             strcpy(BASE_RI, value);
         } else if (strcmp(key, "BASE_RN") == 0) {

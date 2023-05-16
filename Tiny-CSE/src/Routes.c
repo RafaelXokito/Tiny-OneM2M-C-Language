@@ -119,6 +119,30 @@ char init_routes(struct Route** head) {
 		to_lowercase(uri);
 		addRoute(head, uri, resourceId, resourceType, resourceName);
 
+		// when we are creating CNT routes we need to make available the route 'la' and 'li' routes
+		if (resourceType == CNT) {
+			// Creating fi(rst) and la(st) routes
+			char *url_fi;
+			char *url_la;
+
+			// Allocate memory for the new URLs
+			url_fi = malloc(strlen(uri) + strlen("/fi") + 1);  // +1 for the null-terminator
+			url_la = malloc(strlen(uri) + strlen("/la") + 1);  // +1 for the null-terminator
+
+			if (url_fi == NULL || url_la == NULL) {
+				fprintf(stderr, "Memory allocation failed. \n'la' and 'li' CNT routes not available\n");
+				return FALSE;
+			}
+
+			// Copy the original URL and append /fi and /la
+			sprintf(url_fi, "%s/fi", uri);
+			sprintf(url_la, "%s/la", uri);
+
+			addRoute(head, url_fi, resourceId, CIN, "fi");
+			addRoute(head, url_la, resourceId, CIN, "la");
+		}
+		
+
 		printf("Route created: %s\n", uri);
     }
 

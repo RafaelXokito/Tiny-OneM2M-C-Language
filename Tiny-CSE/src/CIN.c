@@ -210,7 +210,6 @@ char create_cin(sqlite3 *db, CINStruct * cin, cJSON *content, char** response) {
     // Step 2: Check if cni > mni or cbs > mbs
     int cni, mni, cbs, mbs;
     char *sql = sqlite3_mprintf("SELECT cni, mni, cbs, mbs, blob FROM mtc WHERE ri = '%s';", cin->pi);
-    printf("%s\n", sql);
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
     sqlite3_free(sql);
     if (rc != SQLITE_OK) {
@@ -253,13 +252,10 @@ char create_cin(sqlite3 *db, CINStruct * cin, cJSON *content, char** response) {
         }
     }
 
-    printf("cni: %d, cbs: %d, blob: %s\n", cni, cbs, cJSON_Print(cntBlob));
-
     sqlite3_finalize(stmt);
 
     // Update the parent container
     const char *updateSql = "UPDATE mtc SET cni = ?, cbs = ?, blob = ? WHERE ri = ?;";
-    printf("%s\n", cJSON_Print(cntBlob));
     
     rc = sqlite3_prepare_v2(db, updateSql, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
@@ -308,7 +304,6 @@ char create_cin(sqlite3 *db, CINStruct * cin, cJSON *content, char** response) {
         if ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
             strcpy(instance_id, (char *)sqlite3_column_text(stmt, 0));
             instance_size = sqlite3_column_int(stmt, 1);
-            printf("sql: %s\n", instance_id);
         }
 
         sqlite3_finalize(stmt);
@@ -431,7 +426,15 @@ cJSON *cin_to_json(const CINStruct *cin) {
 }
 
 char get_cin(struct Route* destination, char** response){
-    char *sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(url) = LOWER('%s');", destination->key);
+    char *sql = NULL;
+    if ((destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la") ||
+        (destination->key + strlen(destination->key) - strlen("fi")) == strstr(destination->key, "fi")) {
+        sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(pi) = LOWER('%s') ORDER BY ROWID %s LIMIT 1;", 
+                            destination->ri, 
+                            ((destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la")) ? "DESC" : "ASC");
+    } else {
+        sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(url) = LOWER('%s');", destination->key);
+    }
 
     if (sql == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
@@ -454,8 +457,12 @@ char get_cin(struct Route* destination, char** response){
 
     // Copy the blob from the resource to the response_data
     char *response_data = NULL;
-    if ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+    rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
         response_data = (char *)sqlite3_column_text(stmt, 0); // note the change in index to 0
+    } else if (rc == SQLITE_DONE && (destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la") ||
+                                    (destination->key + strlen(destination->key) - strlen("fi")) == strstr(destination->key, "fi")) {
+        response_data = strdup("{\"m2m:dbg\": \"no instance for <latest> or <first>\"}");
     } else {
         fprintf(stderr, "Failed to print JSON as a string.\n");
         responseMessage(response, 400, "Bad Request", "Failed to print JSON as a string.\n");

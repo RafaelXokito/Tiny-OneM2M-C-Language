@@ -801,14 +801,39 @@ char post_cnt(struct Route** head, struct Route* destination, cJSON *content, ch
     
     // Add New Routes
     addRoute(head, cnt->url, cnt->ri, cnt->ty, cnt->rn);
-    printf("New Route: %s -> %s -> %d -> %s \n", uri, cnt->ri, cnt->ty, cnt->rn);
-    
+    printf("New Route: %s -> %s -> %d -> %s \n", cnt->url, cnt->ri, cnt->ty, cnt->rn);
+
+    // Creating fi(rst) and la(st) routes
+    char *url_fi;
+    char *url_la;
+
+    // Allocate memory for the new URLs
+    url_fi = malloc(strlen(cnt->url) + strlen("/fi") + 1);  // +1 for the null-terminator
+    url_la = malloc(strlen(cnt->url) + strlen("/la") + 1);  // +1 for the null-terminator
+
+    if (url_fi == NULL || url_la == NULL) {
+        fprintf(stderr, "Memory allocation failed. \n'la' and 'li' CNT routes not available\n");
+        responseMessage(response, 500, "Internal Server Error", "Memory allocation failed. 'la' and 'li' CNT routes not available");
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+
+    // Copy the original URL and append /fi and /la
+    sprintf(url_fi, "%s/fi", cnt->url);
+    sprintf(url_la, "%s/la", cnt->url);
+
+    addRoute(head, url_fi, cnt->ri, CIN, "fi");
+    addRoute(head, url_la, cnt->ri, CIN, "la");
+
     // Convert the CNT struct to json and the Json Object to Json String
     cJSON *root = cnt_to_json(cnt);
     char *str = cJSON_PrintUnformatted(root);
     if (str == NULL) {
         responseMessage(response, 500, "Internal Server Error", "Could not print cJSON object");
         cJSON_Delete(root);
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
         return FALSE;
     }
     
@@ -837,6 +862,9 @@ char post_cnt(struct Route** head, struct Route* destination, cJSON *content, ch
 
     // // clean up
     pthread_mutex_destroy(&db_mutex);
+
+    free(url_fi);
+    free(url_la);
 
     return TRUE;
 }
@@ -1058,7 +1086,7 @@ char retrieve_cnt(struct Route * destination, char **response) {
          responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
          return FALSE;
     }
-	short rs = get_cnt(destination, response);
+    short rs = get_cnt(destination, response);
     if (rs == FALSE) {
         pthread_mutex_unlock(&db_mutex);
         pthread_mutex_destroy(&db_mutex);
@@ -1088,7 +1116,7 @@ char retrieve_cin(struct Route * destination, char **response) {
          responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
          return FALSE;
     }
-	short rs = get_cin(destination, response);
+    short rs = get_cin(destination, response);
     if (rs == FALSE) {
         pthread_mutex_unlock(&db_mutex);
         pthread_mutex_destroy(&db_mutex);
@@ -1174,6 +1202,113 @@ char delete_resource(struct Route * destination, char **response) {
         return FALSE;
     }
 
+
+    if (destination->ty == CIN) {
+        // Get the parent url.
+        // Given the following key: /onem2m/ae-4
+        // The result would be: /onem2m
+        char *last_slash = strrchr(destination->key, '/');
+        char *result = NULL;
+
+        if (last_slash != NULL) {
+            int len = last_slash - destination->key;
+            result = malloc((len + 1) * sizeof(char)); // Allocate memory dynamically
+            if (result == NULL) {
+                // handle error, e.g. print error message and exit or return
+                fprintf(stderr, "Error: Unable to allocate memory for result.\n");
+                free(result);
+                responseMessage(response,500,"Internal Server Error","Error: Unable to allocate memory for result.");
+                rollback_transaction(db); // Rollback transaction
+                sqlite3_free(errMsg);
+                closeDatabase(db);
+                return FALSE;
+            }
+            strncpy(result, destination->key, len);
+            result[len] = '\0'; // Ensure the string is null terminated
+        } else {
+            result = strdup(destination->key); // Use strdup() to allocate memory and copy string
+            if (result == NULL) {
+                // handle error
+                fprintf(stderr, "Error: Unable to allocate memory for result.\n");
+                free(result);
+                responseMessage(response,500,"Internal Server Error","Error: Unable to allocate memory for result.");
+                rollback_transaction(db); // Rollback transaction
+                sqlite3_free(errMsg);
+                closeDatabase(db);
+                return FALSE;
+            }
+        }
+
+        sqlite3_stmt *stmt;
+        int cni, cbs;
+        char *sql = sqlite3_mprintf("SELECT cni - 1, cbs - (SELECT cs FROM mtc WHERE ri = '%s'), blob FROM mtc WHERE LOWER(url) = LOWER('%s');", destination->ri, result);
+        rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+        sqlite3_free(sql);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr,"Failed to execute statement: %s\n", sqlite3_errmsg(db));
+            responseMessage(response, 400, "Bad Request", "Verify the request body");
+            rollback_transaction(db); // Rollback transaction
+            sqlite3_finalize(stmt);
+            closeDatabase(db);
+            return FALSE;
+        }
+
+        cJSON *cntBlob = NULL;
+        if ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+            cni = sqlite3_column_int(stmt, 0);
+            cbs = sqlite3_column_int(stmt, 1);
+
+            cntBlob = cJSON_Parse((char *)sqlite3_column_text(stmt, 2));
+            cJSON *cnt = cJSON_GetObjectItem(cntBlob, "m2m:cnt");
+            if(cnt != NULL) {
+                cJSON *JsonCni = cJSON_GetObjectItem(cnt, "cni");
+                cJSON *JsonCbs = cJSON_GetObjectItem(cnt, "cbs");
+
+                if(JsonCni != NULL) {
+                    cJSON_ReplaceItemInObject(cnt, "cni", cJSON_CreateNumber(cni));
+                }
+
+                if(JsonCbs != NULL) {
+                    cJSON_ReplaceItemInObject(cnt, "cbs", cJSON_CreateNumber(cbs));
+                }
+            }
+        }
+
+        sqlite3_finalize(stmt);
+
+        // Update the parent container
+        const char *updateSql = "UPDATE mtc SET cni = ?, cbs = ?, blob = ? WHERE LOWER(url) = LOWER(?);";
+        
+        rc = sqlite3_prepare_v2(db, updateSql, -1, &stmt, NULL);
+        if (rc != SQLITE_OK) {
+            free(result);
+            fprintf(stderr,"Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+            sqlite3_finalize(stmt);
+            responseMessage(response, 500, "Internal Server Error", "Could not update the CNT resource.");
+            closeDatabase(db);
+            return FALSE;
+        }
+
+        sqlite3_bind_int(stmt, 1, cni);
+        sqlite3_bind_int(stmt, 2, cbs);
+        sqlite3_bind_text(stmt, 3, cJSON_Print(cntBlob), strlen(cJSON_Print(cntBlob)), SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 4, result, strlen(result), SQLITE_STATIC);
+
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            free(result);
+            fprintf(stderr,"Failed to execute statement: %s\n", sqlite3_errmsg(db));
+            responseMessage(response, 500, "Internal Server Error", "Could not update the CNT resource.");
+            rollback_transaction(db); // Rollback transaction
+            sqlite3_finalize(stmt);
+            closeDatabase(db);
+            return FALSE;
+        }
+
+        sqlite3_finalize(stmt);
+        free(result);
+    }
+
     // Delete record from SQLite3 table
     char* sql_mtc = sqlite3_mprintf("DELETE FROM mtc WHERE ri='%q'", destination->ri);
     int rs = sqlite3_exec(db, sql_mtc, NULL, NULL, &errMsg);
@@ -1186,24 +1321,6 @@ char delete_resource(struct Route * destination, char **response) {
         sqlite3_free(errMsg);
         closeDatabase(db);
         return FALSE;
-    }
-    
-    // Get the parent url.
-    // Given the following key: /onem2m/ae-4
-    // The result would be: /onem2m
-    char *last_slash = strrchr(destination->key, '/');
-    char result[100];
-
-    if (last_slash != NULL) {
-        strcpy(result, last_slash + 1);
-    } else {
-        strcpy(result, destination->key);
-    }
-
-    if (destination->ty == CIN) {
-        char* sql_mtc = sqlite3_mprintf("UPDATE mtc SET cni = cni - 1, cbs = cbs - (SELECT cs FROM mtc WHERE ri = %s) WHERE url = %s;", destination->ri, result);
-        int rs = sqlite3_exec(db, sql_mtc, NULL, NULL, &errMsg);
-        sqlite3_free(sql_mtc);
     }
 
     // Commit transaction
@@ -1242,7 +1359,6 @@ char delete_resource(struct Route * destination, char **response) {
     responseMessage(response,200,"OK","Record deleted");
 
     printf("Record deleted ri = %s\n", destination->ri);
-    
     responseMessage(response,200,"OK","Record deleted");
     
     return TRUE;
