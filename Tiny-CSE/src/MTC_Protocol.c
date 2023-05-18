@@ -77,11 +77,11 @@ char init_protocol(struct Route** head) {
 
         // Check if the table has any data
         sqlite3_stmt *stmt;
-        char *sql = sqlite3_mprintf("SELECT COUNT(*) FROM mtc WHERE ty = %d AND et > datetime('now') ORDER BY ROWID DESC LIMIT 1;", CSEBASE);
+        char *sql = sqlite3_mprintf("SELECT COUNT(*) FROM mtc WHERE ty = %d ORDER BY ROWID DESC LIMIT 1;", CSEBASE);
         rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
         sqlite3_free(sql);
         if (rc != SQLITE_OK) {
-            fprintf(stderr, "Failed to prepare 'SELECT COUNT(*) FROM mtc WHERE ty = %d AND et > datetime('now');' query: %s\n", CSEBASE, sqlite3_errmsg(db));
+            fprintf(stderr, "Failed to prepare 'SELECT COUNT(*) FROM mtc WHERE ty = %d;' query: %s\n", CSEBASE, sqlite3_errmsg(db));
             pthread_mutex_unlock(&db_mutex);
             pthread_mutex_destroy(&db_mutex);
             closeDatabase(db);
