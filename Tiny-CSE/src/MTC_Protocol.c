@@ -77,11 +77,11 @@ char init_protocol(struct Route** head) {
 
         // Check if the table has any data
         sqlite3_stmt *stmt;
-        char *sql = sqlite3_mprintf("SELECT COUNT(*) FROM mtc WHERE ty = %d ORDER BY ROWID DESC LIMIT 1;", CSEBASE);
+        char *sql = sqlite3_mprintf("SELECT COUNT(*) FROM mtc WHERE ty = %d AND et > datetime('now') ORDER BY ROWID DESC LIMIT 1;", CSEBASE);
         rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
         sqlite3_free(sql);
         if (rc != SQLITE_OK) {
-            fprintf(stderr, "Failed to prepare 'SELECT COUNT(*) FROM mtc WHERE ty = %d;' query: %s\n", CSEBASE, sqlite3_errmsg(db));
+            fprintf(stderr, "Failed to prepare 'SELECT COUNT(*) FROM mtc WHERE ty = %d AND et > datetime('now');' query: %s\n", CSEBASE, sqlite3_errmsg(db));
             pthread_mutex_unlock(&db_mutex);
             pthread_mutex_destroy(&db_mutex);
             closeDatabase(db);
@@ -91,7 +91,7 @@ char init_protocol(struct Route** head) {
 
         rc = sqlite3_step(stmt);
         if (rc != SQLITE_ROW) {
-            fprintf(stderr, "Failed to execute 'SELECT COUNT(*) FROM mtc WHERE ty = %d;' query: %s\n", CSEBASE, sqlite3_errmsg(db));
+            fprintf(stderr, "Failed to execute 'SELECT COUNT(*) FROM mtc WHERE ty = %d AND et > datetime('now');' query: %s\n", CSEBASE, sqlite3_errmsg(db));
             sqlite3_finalize(stmt);
             pthread_mutex_unlock(&db_mutex);
             pthread_mutex_destroy(&db_mutex);
@@ -151,7 +151,7 @@ char init_protocol(struct Route** head) {
 }
 
 char retrieve_csebase(struct Route * destination, char **response) {
-    char *sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
+    char *sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE ri = '%s' AND ty = %d AND et > datetime('now');", destination->ri, destination->ty);
     sqlite3_stmt *stmt;
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
@@ -803,15 +803,15 @@ char post_cnt(struct Route** head, struct Route* destination, cJSON *content, ch
     addRoute(head, cnt->url, cnt->ri, cnt->ty, cnt->rn);
     printf("New Route: %s -> %s -> %d -> %s \n", cnt->url, cnt->ri, cnt->ty, cnt->rn);
 
-    // Creating fi(rst) and la(st) routes
-    char *url_fi;
+    // Creating ol(dest) and la(test) routes
+    char *url_ol;
     char *url_la;
 
     // Allocate memory for the new URLs
-    url_fi = malloc(strlen(cnt->url) + strlen("/fi") + 1);  // +1 for the null-terminator
+    url_ol = malloc(strlen(cnt->url) + strlen("/ol") + 1);  // +1 for the null-terminator
     url_la = malloc(strlen(cnt->url) + strlen("/la") + 1);  // +1 for the null-terminator
 
-    if (url_fi == NULL || url_la == NULL) {
+    if (url_ol == NULL || url_la == NULL) {
         fprintf(stderr, "Memory allocation failed. \n'la' and 'li' CNT routes not available\n");
         responseMessage(response, 500, "Internal Server Error", "Memory allocation failed. 'la' and 'li' CNT routes not available");
         pthread_mutex_unlock(&db_mutex);
@@ -819,11 +819,11 @@ char post_cnt(struct Route** head, struct Route* destination, cJSON *content, ch
         return FALSE;
     }
 
-    // Copy the original URL and append /fi and /la
-    sprintf(url_fi, "%s/fi", cnt->url);
+    // Copy the original URL and append /ol and /la
+    sprintf(url_ol, "%s/ol", cnt->url);
     sprintf(url_la, "%s/la", cnt->url);
 
-    addRoute(head, url_fi, cnt->ri, CIN, "fi");
+    addRoute(head, url_ol, cnt->ri, CIN, "ol");
     addRoute(head, url_la, cnt->ri, CIN, "la");
 
     // Convert the CNT struct to json and the Json Object to Json String
@@ -863,7 +863,7 @@ char post_cnt(struct Route** head, struct Route* destination, cJSON *content, ch
     // // clean up
     pthread_mutex_destroy(&db_mutex);
 
-    free(url_fi);
+    free(url_ol);
     free(url_la);
 
     return TRUE;
@@ -1001,7 +1001,7 @@ char post_cin(struct Route** head, struct Route* destination, cJSON *content, ch
         responseMessage(response, 500, "Internal Server Error", "Failed to initialize the database.");
         return FALSE;
     }
-    char *sql = sqlite3_mprintf("SELECT st FROM mtc WHERE LOWER(url) = '%s';", destination->key);
+    char *sql = sqlite3_mprintf("SELECT st FROM mtc WHERE LOWER(url) = LOWER('%s') AND et > datetime('now');", destination->key);
     if (sql == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
         responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
@@ -1241,7 +1241,7 @@ char delete_resource(struct Route * destination, char **response) {
 
         sqlite3_stmt *stmt;
         int cni, cbs;
-        char *sql = sqlite3_mprintf("SELECT cni - 1, cbs - (SELECT cs FROM mtc WHERE ri = '%s'), blob FROM mtc WHERE LOWER(url) = LOWER('%s');", destination->ri, result);
+        char *sql = sqlite3_mprintf("SELECT cni - 1, cbs - (SELECT cs FROM mtc WHERE ri = '%s'), blob FROM mtc WHERE LOWER(url) = LOWER('%s') AND et > datetime('now');", destination->ri, result);
         rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
         sqlite3_free(sql);
         if (rc != SQLITE_OK) {
@@ -1310,7 +1310,7 @@ char delete_resource(struct Route * destination, char **response) {
     }
 
     // Delete record from SQLite3 table
-    char* sql_mtc = sqlite3_mprintf("DELETE FROM mtc WHERE ri='%q'", destination->ri);
+    char* sql_mtc = sqlite3_mprintf("DELETE FROM mtc WHERE ri='%q' AND et > datetime('now')", destination->ri);
     int rs = sqlite3_exec(db, sql_mtc, NULL, NULL, &errMsg);
     sqlite3_free(sql_mtc);
 

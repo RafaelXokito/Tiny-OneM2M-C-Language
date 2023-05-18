@@ -53,7 +53,7 @@ char create_ae(AEStruct * ae, cJSON *content, char** response) {
     // the URL attribute was already populated in the caller of this function
     sqlite3_stmt *stmt;
     int result;
-    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 4) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 2";
+    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 4) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 2 AND et > datetime('now')";
     // Prepare the SQL statement
     if (sqlite3_prepare_v2(db, query, -1, &stmt, 0) != SQLITE_OK) {
         fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
@@ -297,7 +297,7 @@ cJSON *ae_to_json(const AEStruct *ae) {
 
 char update_ae(struct Route* destination, cJSON *content, char** response){
     // retrieve the AE from tge database
-    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, aei, api, rr, et, ct, lt, acpi, lbl, daci, poa FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
+    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, aei, api, rr, et, ct, lt, acpi, lbl, daci, poa FROM mtc WHERE ri = '%s' AND ty = %d AND et > datetime('now');", destination->ri, destination->ty);
     if (sql == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
         responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
@@ -529,7 +529,7 @@ char update_ae(struct Route* destination, cJSON *content, char** response){
         }
         
         // Retrieve the AE with the updated expiration time
-        sql = sqlite3_mprintf("SELECT rr, et, lt FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
+        sql = sqlite3_mprintf("SELECT rr, et, lt FROM mtc WHERE ri = '%s' AND ty = %d AND et > datetime('now');", destination->ri, destination->ty);
         printf("%s\n", sql);
 
         rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
@@ -593,7 +593,7 @@ char update_ae(struct Route* destination, cJSON *content, char** response){
 }
 
 char get_ae(struct Route* destination, char** response){
-    char *sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(url) = LOWER('%s');", destination->key);
+    char *sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(url) = LOWER('%s') AND et > datetime('now');", destination->key);
 
     if (sql == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");

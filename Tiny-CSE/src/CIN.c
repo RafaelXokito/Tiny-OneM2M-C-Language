@@ -43,7 +43,7 @@ char create_cin(sqlite3 *db, CINStruct * cin, cJSON *content, char** response) {
     // the URL attribute was already populated in the caller of this function
     sqlite3_stmt *stmt;
     int result;
-    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 5) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 4";
+    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 5) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 4 AND et > datetime('now')";
     // Prepare the SQL statement
     if (sqlite3_prepare_v2(db, query, -1, &stmt, 0) != SQLITE_OK) {
         fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
@@ -209,7 +209,7 @@ char create_cin(sqlite3 *db, CINStruct * cin, cJSON *content, char** response) {
     // Actions that need to done in the CNT resource update the cni and cbs
     // Step 2: Check if cni > mni or cbs > mbs
     int cni, mni, cbs, mbs;
-    char *sql = sqlite3_mprintf("SELECT cni, mni, cbs, mbs, blob FROM mtc WHERE ri = '%s';", cin->pi);
+    char *sql = sqlite3_mprintf("SELECT cni, mni, cbs, mbs, blob FROM mtc WHERE ri = '%s' AND et > datetime('now');", cin->pi);
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
     sqlite3_free(sql);
     if (rc != SQLITE_OK) {
@@ -289,7 +289,7 @@ char create_cin(sqlite3 *db, CINStruct * cin, cJSON *content, char** response) {
         // Get the id and size of the earliest instance
         char instance_id[30];
         int instance_size;
-        sql = sqlite3_mprintf("SELECT ri, cs FROM mtc WHERE pi = '%s' ORDER BY ct LIMIT 1;", cin->pi);
+        sql = sqlite3_mprintf("SELECT ri, cs FROM mtc WHERE pi = '%s' AND et > datetime('now') ORDER BY ct LIMIT 1;", cin->pi);
         rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
         sqlite3_free(sql);
         if (rc != SQLITE_OK) {
@@ -309,7 +309,7 @@ char create_cin(sqlite3 *db, CINStruct * cin, cJSON *content, char** response) {
         sqlite3_finalize(stmt);
 
         // Delete the earliest instance
-        sql = sqlite3_mprintf("DELETE FROM mtc WHERE ri = '%s';", instance_id);
+        sql = sqlite3_mprintf("DELETE FROM mtc WHERE ri = '%s' AND et > datetime('now');", instance_id);
         char* err_msg = NULL;
         rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
         sqlite3_free(sql);
@@ -428,12 +428,12 @@ cJSON *cin_to_json(const CINStruct *cin) {
 char get_cin(struct Route* destination, char** response){
     char *sql = NULL;
     if ((destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la") ||
-        (destination->key + strlen(destination->key) - strlen("fi")) == strstr(destination->key, "fi")) {
-        sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(pi) = LOWER('%s') ORDER BY ROWID %s LIMIT 1;", 
+        (destination->key + strlen(destination->key) - strlen("ol")) == strstr(destination->key, "ol")) {
+        sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(pi) = LOWER('%s') AND et > datetime('now') ORDER BY ROWID %s LIMIT 1;", 
                             destination->ri, 
                             ((destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la")) ? "DESC" : "ASC");
     } else {
-        sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(url) = LOWER('%s');", destination->key);
+        sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(url) = LOWER('%s') AND et > datetime('now');", destination->key);
     }
 
     if (sql == NULL) {

@@ -237,7 +237,7 @@ char getLastCSEBaseStruct(CSEBaseStruct * csebase, sqlite3 *db) {
 
     // Prepare the SQL statement to retrieve the last row from the table
     
-    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, ct, lt FROM mtc WHERE ty = %d ORDER BY ROWID DESC LIMIT 1;", CSEBASE);
+    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, ct, lt FROM mtc WHERE ty = %d AND et > datetime('now') ORDER BY ROWID DESC LIMIT 1;", CSEBASE);
     sqlite3_stmt *stmt;
     int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     sqlite3_free(sql);

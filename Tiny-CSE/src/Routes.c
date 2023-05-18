@@ -52,7 +52,7 @@ char * constructPath(char * result, char * resourceName, char * parentName, stru
 	*/
 	if (strcmp("", parentName) != 0) {
 		// get the parent record
-		char *sql = sqlite3_mprintf("SELECT rn, pi FROM mtc WHERE ri='%s'", parentName);
+		char *sql = sqlite3_mprintf("SELECT rn, pi FROM mtc WHERE ri='%s' AND et > datetime('now')", parentName);
 		sqlite3_stmt *stmt;
 		int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
 		sqlite3_free(sql);
@@ -94,7 +94,7 @@ char init_routes(struct Route** head) {
 	}
 
     sqlite3_stmt *stmt;
-    short rc = sqlite3_prepare_v2(db, "SELECT ri, pi, ty, rn, url FROM mtc;", -1, &stmt, 0);
+    short rc = sqlite3_prepare_v2(db, "SELECT ri, pi, ty, rn, url FROM mtc WHERE et > datetime('now');", -1, &stmt, 0);
     if(rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", sqlite3_errmsg(db));
         return FALSE;
@@ -121,24 +121,24 @@ char init_routes(struct Route** head) {
 
 		// when we are creating CNT routes we need to make available the route 'la' and 'li' routes
 		if (resourceType == CNT) {
-			// Creating fi(rst) and la(st) routes
-			char *url_fi;
+			// Creating ol(dest) and la(test) routes
+			char *url_ol;
 			char *url_la;
 
 			// Allocate memory for the new URLs
-			url_fi = malloc(strlen(uri) + strlen("/fi") + 1);  // +1 for the null-terminator
+			url_ol = malloc(strlen(uri) + strlen("/ol") + 1);  // +1 for the null-terminator
 			url_la = malloc(strlen(uri) + strlen("/la") + 1);  // +1 for the null-terminator
 
-			if (url_fi == NULL || url_la == NULL) {
+			if (url_ol == NULL || url_la == NULL) {
 				fprintf(stderr, "Memory allocation failed. \n'la' and 'li' CNT routes not available\n");
 				return FALSE;
 			}
 
-			// Copy the original URL and append /fi and /la
-			sprintf(url_fi, "%s/fi", uri);
+			// Copy the original URL and append /ol and /la
+			sprintf(url_ol, "%s/ol", uri);
 			sprintf(url_la, "%s/la", uri);
 
-			addRoute(head, url_fi, resourceId, CIN, "fi");
+			addRoute(head, url_ol, resourceId, CIN, "ol");
 			addRoute(head, url_la, resourceId, CIN, "la");
 		}
 		

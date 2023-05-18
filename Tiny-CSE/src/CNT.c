@@ -52,7 +52,7 @@ char create_cnt(CNTStruct * cnt, cJSON *content, char** response) {
     // the URL attribute was already populated in the caller of this function
     sqlite3_stmt *stmt;
     int result;
-    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 5) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 3";
+    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 5) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 3 AND et > datetime('now')";
     // Prepare the SQL statement
     if (sqlite3_prepare_v2(db, query, -1, &stmt, 0) != SQLITE_OK) {
         fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
@@ -283,7 +283,7 @@ cJSON *cnt_to_json(const CNTStruct *cnt) {
 
 char update_cnt(struct Route* destination, cJSON *content, char** response){
     // retrieve the CNT from the database
-    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, st, mni, mbs, cni, cbs, et, ct, lt, acpi, lbl, daci FROM mtc WHERE url = '%s';", destination->key);
+    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, st, mni, mbs, cni, cbs, et, ct, lt, acpi, lbl, daci FROM mtc WHERE LOWER(url) = LOWER('%s') AND et > datetime('now');", destination->key);
     if (sql == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
         responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
@@ -531,7 +531,7 @@ char update_cnt(struct Route* destination, cJSON *content, char** response){
 }
 
 char get_cnt(struct Route* destination, char** response){
-    char *sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(url) = LOWER('%s');", destination->key);
+    char *sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(url) = LOWER('%s') AND et > datetime('now');", destination->key);
 
     if (sql == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
