@@ -121,7 +121,7 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     if (isTableCreated == FALSE) {
 
         // Create the table if it doesn't exist
-        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (  ty INTEGER,  ri TEXT PRIMARY KEY,  rn TEXT,  pi TEXT,  aei TEXT,  csi TEXT,  cst INTEGER,  api TEXT,  rr TEXT,  et DATETIME,  ct DATETIME,  lt DATETIME,  url TEXT,  lbl TEXT,  acpi TEXT,  daci TEXT,  poa TEXT,  srt TEXT,  blob TEXT,  cbs INTEGER,  cni INTEGER,  mbs INTEGER,  mni INTEGER,  st INTEGER,  cnf TEXT,  cs INTEGER,  con TEXT, FOREIGN KEY(pi) REFERENCES mtc(ri) ON DELETE CASCADE);";
+        const char *createTableSQL = "CREATE TABLE IF NOT EXISTS mtc (  ty INTEGER,  ri TEXT PRIMARY KEY,  rn TEXT,  pi TEXT,  aei TEXT,  csi TEXT,  cst INTEGER,  api TEXT,  rr TEXT,  et DATETIME,  ct DATETIME,  lt DATETIME,  url TEXT,  lbl TEXT,  acpi TEXT,  daci TEXT,  poa TEXT,  srt TEXT,  blob TEXT,  cbs INTEGER,  cni INTEGER,  mbs INTEGER,  mni INTEGER,  st INTEGER,  cnf TEXT,  cs INTEGER,  con TEXT, nu TEXT, FOREIGN KEY(pi) REFERENCES mtc(ri) ON DELETE CASCADE);";
         rc = sqlite3_exec(db, createTableSQL, NULL, NULL, &err_msg);
         if (rc != SQLITE_OK) {
             fprintf(stderr, "Failed to create table: %s\n", err_msg);
@@ -237,7 +237,7 @@ char getLastCSEBaseStruct(CSEBaseStruct * csebase, sqlite3 *db) {
 
     // Prepare the SQL statement to retrieve the last row from the table
     
-    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, ct, lt FROM mtc WHERE ty = %d AND et > datetime('now') ORDER BY ROWID DESC LIMIT 1;", CSEBASE);
+    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, ct, lt FROM mtc WHERE ty = %d ORDER BY ROWID DESC LIMIT 1;", CSEBASE);
     sqlite3_stmt *stmt;
     int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
     sqlite3_free(sql);

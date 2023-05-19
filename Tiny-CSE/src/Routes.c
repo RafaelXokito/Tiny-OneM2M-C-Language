@@ -52,7 +52,7 @@ char * constructPath(char * result, char * resourceName, char * parentName, stru
 	*/
 	if (strcmp("", parentName) != 0) {
 		// get the parent record
-		char *sql = sqlite3_mprintf("SELECT rn, pi FROM mtc WHERE ri='%s' AND et > datetime('now')", parentName);
+		char *sql = sqlite3_mprintf("SELECT rn, pi FROM mtc WHERE ri='%s'", parentName);
 		sqlite3_stmt *stmt;
 		int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
 		sqlite3_free(sql);
@@ -94,7 +94,7 @@ char init_routes(struct Route** head) {
 	}
 
     sqlite3_stmt *stmt;
-    short rc = sqlite3_prepare_v2(db, "SELECT ri, pi, ty, rn, url FROM mtc WHERE et > datetime('now');", -1, &stmt, 0);
+    short rc = sqlite3_prepare_v2(db, "SELECT ri, pi, ty, rn, url FROM mtc;", -1, &stmt, 0);
     if(rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", sqlite3_errmsg(db));
         return FALSE;

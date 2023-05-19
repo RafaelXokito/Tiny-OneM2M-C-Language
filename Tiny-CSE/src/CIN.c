@@ -71,6 +71,7 @@ char create_cin(sqlite3 *db, CINStruct * cin, cJSON *content, char** response) {
         return FALSE;
     }
 
+    
     cin->ty = CIN;
     strcpy(cin->ri, cJSON_GetObjectItemCaseSensitive(content, "ri")->valuestring);
     strcpy(cin->rn, cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
@@ -461,8 +462,8 @@ char get_cin(struct Route* destination, char** response){
     if (rc == SQLITE_ROW) {
         response_data = (char *)sqlite3_column_text(stmt, 0); // note the change in index to 0
     } else if (rc == SQLITE_DONE && (destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la") ||
-                                    (destination->key + strlen(destination->key) - strlen("fi")) == strstr(destination->key, "fi")) {
-        response_data = strdup("{\"m2m:dbg\": \"no instance for <latest> or <first>\"}");
+                                    (destination->key + strlen(destination->key) - strlen("ol")) == strstr(destination->key, "ol")) {
+        response_data = strdup("{\"m2m:dbg\": \"no instance for <latest> or <oldest>\"}");
     } else {
         fprintf(stderr, "Failed to print JSON as a string.\n");
         responseMessage(response, 400, "Bad Request", "Failed to print JSON as a string.\n");

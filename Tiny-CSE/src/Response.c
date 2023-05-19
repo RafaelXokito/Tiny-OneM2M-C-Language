@@ -110,6 +110,14 @@ void handle_get(ConnectionInfo *info, const char *queryString, struct Route *des
 			}
 			break;
 			}
+		case SUB: {
+			char rs = retrieve_sub(destination,response);
+			if (rs == FALSE) {
+				responseMessage(response,500,"Internal Server Error","Error retrieving the data");
+				fprintf(stderr,"Could not retrieve CIN resource\n");
+			}
+			break;
+			}
 		default:
 			break;
 	}
@@ -158,19 +166,31 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 					// Verify if is it possible to create the child inside the destination
 					if (destination->ty == CSEBASE && !(ty == ACP || ty == AE || ty == CNT || ty == GRP || ty == NOD || ty == FCNT || ty == SUB) ) {
 						responseMessage(response,400,"Bad Request","Invalid children type.");
-						fprintf(stderr, "Could not create AE resource. Invalid children type.\n");
+						fprintf(stderr, "Could not create inside CSEBASE resource. Invalid children type.\n");
 						return;
 					}
 					
 					if (destination->ty == AE && !(ty == CNT || ty == FCNT || ty == GRP || ty == SUB) ) {
 						responseMessage(response,400,"Bad Request","Invalid children type.");
-						fprintf(stderr, "Could not create AE resource. Invalid children type.\n");
+						fprintf(stderr, "Could not create inside AE resource. Invalid children type.\n");
 						return;
 					}
 					
 					if (destination->ty == CNT && !(ty == CNT || ty == CIN || ty == SUB) ) {
 						responseMessage(response,400,"Bad Request","Invalid children type.");
-						fprintf(stderr, "Could not create AE resource. Invalid children type.\n");
+						fprintf(stderr, "Could not create inside CNT resource. Invalid children type.\n");
+						return;
+					}
+
+					if (destination->ty == CIN) {
+						responseMessage(response,400,"Bad Request","Invalid children type.");
+						fprintf(stderr, "Could not create inside CIN resource.\n");
+						return;
+					}
+
+					if (destination->ty == SUB) {
+						responseMessage(response,400,"Bad Request","Invalid children type.");
+						fprintf(stderr, "Could not create inside SUB resource.\n");
 						return;
 					}
 
@@ -196,6 +216,14 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 						if (rs == FALSE) {
 							// The method it self already change the response properly
 							fprintf(stderr, "Could not create CIN resource\n");
+						}
+						break;
+					}
+					case SUB: {
+						char rs = post_sub(&info->route, destination, content, response);
+						if (rs == FALSE) {
+							// The method it self already change the response properly
+							fprintf(stderr, "Could not create SUB resource\n");
 						}
 						break;
 					}
@@ -286,6 +314,14 @@ void handle_put(ConnectionInfo *info, const char *request, struct Route *destina
 						if (rs == FALSE) {
 							// The method it self already change the response properly
 							fprintf(stderr, "Could not update CNT resource\n");
+						}
+						break;
+					}
+					case SUB: {
+						char rs = put_sub(destination, content, response);
+						if (rs == FALSE) {
+							// The method it self already change the response properly
+							fprintf(stderr, "Could not update SUB resource\n");
 						}
 						break;
 					}
