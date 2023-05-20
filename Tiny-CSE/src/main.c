@@ -45,6 +45,7 @@ int main() {
     // registering Routes
     struct Route *head = NULL; // initialize the head pointer to NULL
     head = addRoute(&head, "/", "", -1, "index.html"); // add the first node to the list
+    addRoute(&head, "/documentation", "", -1, "about.html"); // add the first node to the list
 
     short rs = init_protocol(&head);
     if (rs == FALSE) {

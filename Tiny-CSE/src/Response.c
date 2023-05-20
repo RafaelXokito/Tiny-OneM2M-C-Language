@@ -7,7 +7,6 @@
  * Copyright (c) 2023 IPLeiria
  */
 
-
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -430,23 +429,60 @@ void *handle_connection(void *connectioninfo) {
         close_socket_and_exit(info);
     }
 
+    // Creating the response
+    char *response = NULL;
+
     printf("Check if is the default route\n");
-    if (strcmp(destination->key, "/") == 0) {
+    if (destination->ty == -1) {
         char template[100] = "templates/";
 
         strncat(template, destination->value, sizeof(template) - strlen(template) - 1);
         char * response_data = render_static_file(template);
+
+		FILE *file;
+
+		long file_size;
+
+		// Open the file in binary mode
+		file = fopen(template, "rb");
 		
-        char response[4096] = "HTTP/1.1 200 OK\r\n\r\n";
+		if (file == NULL) {
+			fprintf(stderr, "Failed to open the file.\n");
+			responseMessage(&response, 500, "Internal", "HTTP method not supported");
+			send(info->socket_desc, response, strlen(response), 0);
+
+			close_socket_and_exit(info);
+			free(response);
+			return NULL;
+		}
+
+		// Get the size of the file
+		fseek(file, 0, SEEK_END);
+		file_size = ftell(file);
+		rewind(file);
+
+		// Close the file
+		fclose(file);
+
+		// Dynamically allocate memory for the buffer
+		response = (char*)malloc((file_size + 200) * sizeof(char));
+		if (response == NULL) {
+			fprintf(stderr, "Memory allocation failed.\n");
+			responseMessage(&response, 500, "Internal", "HTTP method not supported");
+			send(info->socket_desc, response, strlen(response), 0);
+
+			close_socket_and_exit(info);
+			free(response);
+			return NULL;
+		}
+
+		sprintf(response, "HTTP/1.1 200 OK\r\n\r\n");
         strncat(response, response_data, sizeof(response) - strlen(response) - 1);
         strncat(response, "\r\n\r\n", sizeof(response) - strlen(response) - 1);
 
         send(info->socket_desc, response, strlen(response), 0);
         close_socket_and_exit(info);
     }
-
-    // Creating the response
-    char *response = NULL;
 
 	printf("Check the HTTP method\n");
     if (strcmp(method, "GET") == 0) {

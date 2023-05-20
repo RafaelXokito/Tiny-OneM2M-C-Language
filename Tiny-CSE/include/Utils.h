@@ -9,6 +9,22 @@
 
 #define MAX_CONFIG_LINE_LENGTH 64  
 
+#define TRUE 1
+#define FALSE 0
+
+#include <stdio.h>
+#include <time.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <ctype.h>
+#include <pthread.h>
+#include <regex.h>
+
+#include "cJSON.h"
+#include "mongoose.h"
+
 typedef struct {
     char* nu;
     char* topic;

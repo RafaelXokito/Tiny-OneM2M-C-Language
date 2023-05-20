@@ -1092,7 +1092,7 @@ char post_sub(struct Route** head, struct Route* destination, cJSON *content, ch
         char unique_id[MAX_CONFIG_LINE_LENGTH];
         generate_unique_id(unique_id);
 
-        char unique_name[MAX_CONFIG_LINE_LENGTH+3];
+        char unique_name[MAX_CONFIG_LINE_LENGTH+4];
         snprintf(unique_name, sizeof(unique_name), "SUB-%s", unique_id);
         cJSON_AddStringToObject(content, "rn", unique_name);
     } else {
