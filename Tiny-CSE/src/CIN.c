@@ -379,6 +379,96 @@ char create_cin(sqlite3 *db, CINStruct * cin, cJSON *content, char** response) {
         return FALSE;
     }
 
+    char *sql_not = sqlite3_mprintf("SELECT DISTINCT nu, url, enc FROM mtc WHERE LOWER(pi) = LOWER('%s') AND nu IS NOT NULL AND et > DATETIME('now');", cin->pi);
+    if (sql_not == NULL) {
+        fprintf(stderr, "Failed to allocate memory for SQL query.\n");
+        responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
+        return FALSE;
+    }
+    rc = sqlite3_prepare_v2(db, sql_not, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Failed to prepare statement.");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
+
+    // Populate the CNT
+    pthread_t thread_id;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        notificationData* data = malloc(sizeof(notificationData));
+        pthread_t thread_id;
+        int result;
+
+        const char *nu_temp = (const char *)sqlite3_column_text(stmt, 0);
+        data->nu = malloc(strlen(nu_temp) + 1); // +1 for null terminator
+        strcpy(data->nu, nu_temp);
+
+        const char *url_temp = (const char *)sqlite3_column_text(stmt, 1);
+        data->topic = malloc(strlen(url_temp) + 1); // +1 for null terminator
+        strcpy(data->topic, url_temp);
+
+        data->body = malloc(strlen(cin->blob) + 1); // +1 for null terminator
+        strcpy(data->body, cin->blob);
+
+        const char *enc_temp = (const char *)sqlite3_column_text(stmt, 2);
+        // Check if the subscription eventNotificationCriteria contains "POST"
+        if (strstr(enc_temp, "POST") == NULL) {
+            continue;
+        }
+
+        char *suffix = "}}";
+
+        int suffix_length = strlen(suffix);
+        int body_length = strlen(data->body);
+        int enc_temp_length = strlen(enc_temp); // assuming enc_temp is a string
+        int topic_length = strlen(data->topic);
+
+        // Here we construct the prefix dynamically with sprintf. 
+        char prefix[256];  // Make sure this size is enough for your string
+        sprintf(prefix, "{\"m2m:sgn\":{\"cr\":\"admin:admin\",\"nev\":{\"net\":\"%s\",\"om\":null,\"rep\":", "POST");
+        
+        int prefix_length = strlen(prefix);
+        int total_length = prefix_length + body_length + enc_temp_length + topic_length + strlen(suffix) + 201;
+        // Allocate enough memory for the new string
+        char *wrapped_body = malloc(total_length);
+
+        if(wrapped_body == NULL) {
+            fprintf(stderr, "Failed to allocate memory for the wrapped body.\n");
+            free(data->nu); // Free the memory for the string
+            free(data->topic); // Free the memory for the string
+            free(data->body); // Free the memory for the string
+            free(data); // Then free the memory for the struct
+            continue;
+        } else {
+            // Start with the prefix
+            strcpy(wrapped_body, prefix);
+            // Append the original body
+            strcat(wrapped_body, data->body);
+            // Append the topic
+            strcat(wrapped_body, "\",\"nfu\":null,\"sud\":null,\"sur\":\"");
+            strcat(wrapped_body, data->topic);
+            strcat(wrapped_body, "\",\"vrq\":null");
+            // Append the suffix
+            strcat(wrapped_body, suffix);
+
+            // Free the original body now that it's not needed
+            free(data->body);
+            // Make the wrapped body the new body
+            data->body = wrapped_body;
+        }
+
+        result = pthread_create(&thread_id, NULL, send_notification, data); //pass data, not &data
+        if (result != 0) {
+            fprintf(stderr, "Error creating thread: %s\n", strerror(result));
+            free(data->nu); // Free the memory for the string
+            free(data->topic); // Free the memory for the string
+            free(data->body); // Free the memory for the string
+            free(data); // Then free the memory for the struct
+        }
+    }
+
     closeDatabase(db);
     printf("CIN data inserted successfully.\n");
     return TRUE;
@@ -430,11 +520,12 @@ char get_cin(struct Route* destination, char** response){
     char *sql = NULL;
     if ((destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la") ||
         (destination->key + strlen(destination->key) - strlen("ol")) == strstr(destination->key, "ol")) {
-        sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(pi) = LOWER('%s') AND et > datetime('now') ORDER BY ROWID %s LIMIT 1;", 
+        sql = sqlite3_mprintf("SELECT blob, pi FROM mtc WHERE LOWER(pi) = LOWER('%s') AND et > datetime('now') AND ty = %d ORDER BY ROWID %s LIMIT 1;", 
                             destination->ri, 
+                            CIN,
                             ((destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la")) ? "DESC" : "ASC");
     } else {
-        sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE LOWER(url) = LOWER('%s') AND et > datetime('now');", destination->key);
+        sql = sqlite3_mprintf("SELECT blob, pi FROM mtc WHERE LOWER(url) = LOWER('%s') AND et > datetime('now');", destination->key);
     }
 
     if (sql == NULL) {
@@ -458,9 +549,15 @@ char get_cin(struct Route* destination, char** response){
 
     // Copy the blob from the resource to the response_data
     char *response_data = NULL;
+    char *blob = NULL;
+    char *pi = NULL;
     rc = sqlite3_step(stmt);
     if (rc == SQLITE_ROW) {
         response_data = (char *)sqlite3_column_text(stmt, 0); // note the change in index to 0
+        blob = malloc(strlen(response_data));
+        strcpy(blob, response_data);
+        pi = malloc(strlen((char *)sqlite3_column_text(stmt, 1)));
+        strcpy(pi, (char *)sqlite3_column_text(stmt, 1));
     } else if (rc == SQLITE_DONE && (destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la") ||
                                     (destination->key + strlen(destination->key) - strlen("ol")) == strstr(destination->key, "ol")) {
         response_data = strdup("{\"m2m:dbg\": \"no instance for <latest> or <oldest>\"}");
@@ -489,6 +586,99 @@ char get_cin(struct Route* destination, char** response){
     }
     sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", response_data);
     sqlite3_finalize(stmt);
+    
+    if (blob != NULL) {
+        char *sql_not = sqlite3_mprintf("SELECT DISTINCT nu, url, enc FROM mtc WHERE LOWER(pi) = LOWER('%s') AND nu IS NOT NULL AND et > DATETIME('now');", pi);
+        if (sql_not == NULL) {
+            fprintf(stderr, "Failed to allocate memory for SQL query.\n");
+            responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
+            return FALSE;
+        }
+        rc = sqlite3_prepare_v2(db, sql_not, -1, &stmt, NULL);
+        if (rc != SQLITE_OK) {
+            printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+            responseMessage(response, 400, "Bad Request", "Failed to prepare statement.");
+            sqlite3_finalize(stmt);
+            closeDatabase(db);
+            return FALSE;
+        }
+        
+        // Populate the CNT
+        pthread_t thread_id;
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            notificationData* data = malloc(sizeof(notificationData));
+            pthread_t thread_id;
+            int result;
+
+            const char *nu_temp = (const char *)sqlite3_column_text(stmt, 0);
+            data->nu = malloc(strlen(nu_temp) + 1); // +1 for null terminator
+            strcpy(data->nu, nu_temp);
+
+            const char *url_temp = (const char *)sqlite3_column_text(stmt, 1);
+            data->topic = malloc(strlen(url_temp) + 1); // +1 for null terminator
+            strcpy(data->topic, url_temp);
+
+            data->body = malloc(strlen(blob) + 1); // +1 for null terminator
+            strcpy(data->body, blob);
+
+            const char *enc_temp = (const char *)sqlite3_column_text(stmt, 2);
+            // Check if the subscription eventNotificationCriteria contains "POST"
+            if (strstr(enc_temp, "GET") == NULL) {
+                continue;
+            }
+
+            char *suffix = "}}";
+
+            int suffix_length = strlen(suffix);
+            int body_length = strlen(data->body);
+            int enc_temp_length = strlen(enc_temp); // assuming enc_temp is a string
+            int topic_length = strlen(data->topic);
+
+            // Here we construct the prefix dynamically with sprintf. 
+            char prefix[256];  // Make sure this size is enough for your string
+            sprintf(prefix, "{\"m2m:sgn\":{\"cr\":\"admin:admin\",\"nev\":{\"net\":\"%s\",\"om\":null,\"rep\":", "GET");
+            
+            int prefix_length = strlen(prefix);
+            int total_length = prefix_length + body_length + enc_temp_length + topic_length + strlen(suffix) + 201;
+            // Allocate enough memory for the new string
+            char *wrapped_body = malloc(total_length);
+
+            if(wrapped_body == NULL) {
+                fprintf(stderr, "Failed to allocate memory for the wrapped body.\n");
+                free(data->nu); // Free the memory for the string
+                free(data->topic); // Free the memory for the string
+                free(data->body); // Free the memory for the string
+                free(data); // Then free the memory for the struct
+                continue;
+            } else {
+                // Start with the prefix
+                strcpy(wrapped_body, prefix);
+                // Append the original body
+                strcat(wrapped_body, data->body);
+                // Append the topic
+                strcat(wrapped_body, "\",\"nfu\":null,\"sud\":null,\"sur\":\"");
+                strcat(wrapped_body, data->topic);
+                strcat(wrapped_body, "\",\"vrq\":null");
+                // Append the suffix
+                strcat(wrapped_body, suffix);
+
+                // Free the original body now that it's not needed
+                free(data->body);
+                // Make the wrapped body the new body
+                data->body = wrapped_body;
+            }
+
+            result = pthread_create(&thread_id, NULL, send_notification, data); //pass data, not &data
+            if (result != 0) {
+                fprintf(stderr, "Error creating thread: %s\n", strerror(result));
+                free(data->nu); // Free the memory for the string
+                free(data->topic); // Free the memory for the string
+                free(data->body); // Free the memory for the string
+                free(data); // Then free the memory for the struct
+            }
+        }
+    }
+    
     closeDatabase(db);
     return TRUE;
 }

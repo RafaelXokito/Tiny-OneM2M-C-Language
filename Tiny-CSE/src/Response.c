@@ -19,6 +19,8 @@
 
 #include "Common.h"
 
+extern char BASE_RI[MAX_CONFIG_LINE_LENGTH];
+
 char * render_static_file(char * fileName) {
 	FILE* file = fopen(fileName, "r");
 
@@ -188,7 +190,7 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 						return;
 					}
 
-					if (destination->ty == SUB) {
+					if (destination->ty == SUB && !(ty == SUB) ) {
 						responseMessage(response,400,"Bad Request","Invalid children type.");
 						fprintf(stderr, "Could not create inside SUB resource.\n");
 						return;
@@ -250,7 +252,12 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 }
 
 void handle_delete(ConnectionInfo *info, struct Route *destination, char **response) {
-	fprintf(stderr, "%s\n", destination->key);
+	if (strcmp(destination->ri, BASE_RI) == 0) {
+		responseMessage(response,400,"Bad Request","Invalid resource.");
+		fprintf(stderr, "Could not delete CSEBASE resource.\n");
+		return;
+	}
+	
 	delete_resource(destination, response);
 }
 

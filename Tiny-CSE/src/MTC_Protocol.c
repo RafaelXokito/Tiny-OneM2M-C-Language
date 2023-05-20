@@ -560,12 +560,7 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     // Copy the result from the temporary buffer to the uri buffer
     strncpy(uri, temp_uri, sizeof(uri));
     uri[sizeof(uri) - 1] = '\0'; // Ensure null termination
-
     to_lowercase(uri);
-    if (search(*head, uri) != NULL) {
-        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
-        return FALSE;
-    }
 
     pthread_mutex_t db_mutex;
 
@@ -605,7 +600,11 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
 
     // Append "/<rn value>" to ae->url
     sprintf(ae->url + destinationKeyLength, "/%s", cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
-    
+    if (search(*head, ae->url) != NULL) {
+        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
+        return FALSE;
+    }
+
     clock_t start_time, end_time;
     double elapsed_time;
     // Record the start time
@@ -743,12 +742,7 @@ char post_cnt(struct Route** head, struct Route* destination, cJSON *content, ch
     // Copy the result from the temporary buffer to the uri buffer
     strncpy(uri, temp_uri, sizeof(uri));
     uri[sizeof(uri) - 1] = '\0'; // Ensure null termination
-
     to_lowercase(uri);
-    if (search(*head, uri) != NULL) {
-        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
-        return FALSE;
-    }
 
     pthread_mutex_t db_mutex;
 
@@ -789,6 +783,10 @@ char post_cnt(struct Route** head, struct Route* destination, cJSON *content, ch
     // Append "/<rn value>" to cnt->url
     sprintf(cnt->url + destinationKeyLength, "/%s", cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
     to_lowercase(cnt->url);
+    if (search(*head, cnt->url) != NULL) {
+        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
+        return FALSE;
+    }
 
     rs = create_cnt(cnt, content, response);
 
@@ -947,12 +945,8 @@ char post_cin(struct Route** head, struct Route* destination, cJSON *content, ch
     // Copy the result from the temporary buffer to the uri buffer
     strncpy(uri, temp_uri, sizeof(uri));
     uri[sizeof(uri) - 1] = '\0'; // Ensure null termination
-
     to_lowercase(uri);
-    if (search(*head, uri) != NULL) {
-        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
-        return FALSE;
-    }
+    
 
     pthread_mutex_t db_mutex;
 
@@ -989,10 +983,14 @@ char post_cin(struct Route** head, struct Route* destination, cJSON *content, ch
     // Copy the destination key into cin->url
     strncpy(cin->url, destination->key, destinationKeyLength);
     cin->url[destinationKeyLength] = '\0'; // Add null terminator
-
+    
     // Append "/<rn value>" to cin->url
     sprintf(cin->url + destinationKeyLength, "/%s", cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
     to_lowercase(cin->url);
+    if (search(*head, cin->url) != NULL) {
+        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
+        return FALSE;
+    }
 
     // retrieve the st from CNT from the database
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
@@ -1119,7 +1117,13 @@ char post_sub(struct Route** head, struct Route* destination, cJSON *content, ch
         return FALSE;
     }
 
-    const char *allowed_keys[] = {"rn", "acpi", "et", "lbl", "daci", "nu"};
+    cJSON *value = NULL;
+    value = cJSON_GetObjectItem(content, "enc");  // retrieve the value associated with the key
+    if (value == NULL) {
+        cJSON_AddStringToObject(content, "enc", "POST, PUT, GET, DELETE");
+    }
+    printf("%s\n", cJSON_Print(content));
+    const char *allowed_keys[] = {"rn", "acpi", "et", "lbl", "daci", "nu", "enc"};
     size_t num_allowed_keys = sizeof(allowed_keys) / sizeof(allowed_keys[0]);
     char disallowed = has_disallowed_keys(content, allowed_keys, num_allowed_keys);
     if (disallowed == TRUE) {
@@ -1145,12 +1149,6 @@ char post_sub(struct Route** head, struct Route* destination, cJSON *content, ch
     // Copy the result from the temporary buffer to the uri buffer
     strncpy(uri, temp_uri, sizeof(uri));
     uri[sizeof(uri) - 1] = '\0'; // Ensure null termination
-
-    to_lowercase(uri);
-    if (search(*head, uri) != NULL) {
-        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
-        return FALSE;
-    }
 
     pthread_mutex_t db_mutex;
 
@@ -1191,6 +1189,10 @@ char post_sub(struct Route** head, struct Route* destination, cJSON *content, ch
     // Append "/<rn value>" to sub->url
     sprintf(sub->url + destinationKeyLength, "/%s", cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
     to_lowercase(sub->url);
+    if (search(*head, sub->url) != NULL) {
+        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
+        return FALSE;
+    }
     
     clock_t start_time, end_time;
     double elapsed_time;
@@ -1214,8 +1216,7 @@ char post_sub(struct Route** head, struct Route* destination, cJSON *content, ch
     }
     
     // Add New Routes
-    to_lowercase(uri);
-    addRoute(head, uri, sub->ri, sub->ty, sub->rn);
+    addRoute(head, sub->url, sub->ri, sub->ty, sub->rn);
     printf("New Route: %s -> %s -> %d -> %s \n", uri, sub->ri, sub->ty, sub->rn);
     
     // Convert the SUB struct to json and the Json Object to Json String
@@ -1373,11 +1374,58 @@ char delete_resource(struct Route * destination, char **response) {
         return FALSE;
     }
 
+    char *sql_blob = sqlite3_mprintf("SELECT blob, pi FROM mtc WHERE LOWER(ri) = LOWER('%s') AND et > DATETIME('now');", destination->ri);
+    
+    if (sql_blob == NULL) {
+        fprintf(stderr, "Failed to allocate memory for SQL query.\n");
+        responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
+        return FALSE;
+    }
+    sqlite3_stmt *stmt;
+    short rc = sqlite3_prepare_v2(db, sql_blob, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Failed to prepare statement.");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
+    char *blob = NULL;
+    char *pi = NULL;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        blob = malloc(strlen((char *)sqlite3_column_text(stmt, 0)));
+        strcpy(blob, (char *)sqlite3_column_text(stmt, 0));
+        pi = malloc(strlen((char *)sqlite3_column_text(stmt, 1)));
+        strcpy(pi, (char *)sqlite3_column_text(stmt, 1));
+    } else {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Failed to find the resource.");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
+
+    char *sql_not = sqlite3_mprintf("SELECT DISTINCT nu, url, enc as blob FROM mtc WHERE LOWER(pi) = LOWER('%s') AND nu IS NOT NULL AND et > DATETIME('now');", pi);
+    
+    if (sql_not == NULL) {
+        fprintf(stderr, "Failed to allocate memory for SQL query.\n");
+        responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
+        return FALSE;
+    }
+    rc = sqlite3_prepare_v2(db, sql_not, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Failed to prepare statement.");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
+
     // Enable foreign keys
     char *sql = "PRAGMA foreign_keys=ON;";
     char *err_msg = 0;
 
-    short rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
+    rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
 
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Failed to enable foreign keys: %s\n", err_msg);
@@ -1392,7 +1440,6 @@ char delete_resource(struct Route * destination, char **response) {
         closeDatabase(db);
         return FALSE;
     }
-
 
     if (destination->ty == CIN) {
         // Get the parent url.
@@ -1552,6 +1599,82 @@ char delete_resource(struct Route * destination, char **response) {
     printf("Record deleted ri = %s\n", destination->ri);
     responseMessage(response,200,"OK","Record deleted");
     
+    // Populate the CNT
+    pthread_t thread_id;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        notificationData* data = malloc(sizeof(notificationData));
+        pthread_t thread_id;
+        int result;
+
+        const char *nu_temp = (const char *)sqlite3_column_text(stmt, 0);
+        data->nu = malloc(strlen(nu_temp) + 1); // +1 for null terminator
+        strcpy(data->nu, nu_temp);
+
+        const char *url_temp = (const char *)sqlite3_column_text(stmt, 1);
+        data->topic = malloc(strlen(url_temp) + 1); // +1 for null terminator
+        strcpy(data->topic, url_temp);
+
+        data->body = malloc(strlen(blob) + 1); // +1 for null terminator
+        strcpy(data->body, blob);
+
+        const char *enc_temp = (const char *)sqlite3_column_text(stmt, 2);
+        // Check if the subscription eventNotificationCriteria contains "POST"
+        if (strstr(enc_temp, "DELETE") == NULL) {
+            continue;
+        }
+
+        char *suffix = "}}";
+
+        int suffix_length = strlen(suffix);
+        int body_length = strlen(data->body);
+        int enc_temp_length = strlen(enc_temp); // assuming enc_temp is a string
+        int topic_length = strlen(data->topic);
+
+        // Here we construct the prefix dynamically with sprintf. 
+        char prefix[256];  // Make sure this size is enough for your string
+        sprintf(prefix, "{\"m2m:sgn\":{\"cr\":\"admin:admin\",\"nev\":{\"net\":\"%s\",\"om\":null,\"rep\":", "DELETE");
+        
+        int prefix_length = strlen(prefix);
+        int total_length = prefix_length + body_length + enc_temp_length + topic_length + strlen(suffix) + 201;
+        // Allocate enough memory for the new string
+        char *wrapped_body = malloc(total_length);
+
+        if(wrapped_body == NULL) {
+            fprintf(stderr, "Failed to allocate memory for the wrapped body.\n");
+            free(data->nu); // Free the memory for the string
+            free(data->topic); // Free the memory for the string
+            free(data->body); // Free the memory for the string
+            free(data); // Then free the memory for the struct
+            continue;
+        } else {
+            // Start with the prefix
+            strcpy(wrapped_body, prefix);
+            // Append the original body
+            strcat(wrapped_body, data->body);
+            // Append the topic
+            strcat(wrapped_body, "\",\"nfu\":null,\"sud\":null,\"sur\":\"");
+            strcat(wrapped_body, data->topic);
+            strcat(wrapped_body, "\",\"vrq\":null");
+            // Append the suffix
+            strcat(wrapped_body, suffix);
+
+            // Free the original body now that it's not needed
+            free(data->body);
+            // Make the wrapped body the new body
+            data->body = wrapped_body;
+        }
+
+        result = pthread_create(&thread_id, NULL, send_notification, data); //pass data, not &data
+        if (result != 0) {
+            fprintf(stderr, "Error creating thread: %s\n", strerror(result));
+            free(data->nu); // Free the memory for the string
+            free(data->topic); // Free the memory for the string
+            free(data->body); // Free the memory for the string
+            free(data); // Then free the memory for the struct
+        }
+    }
+
+    closeDatabase(db);
     return TRUE;
 }
 
@@ -1611,7 +1734,7 @@ char put_ae(struct Route* destination, cJSON *content, char** response) {
 
 char put_sub(struct Route* destination, cJSON *content, char** response) {
 
-    const char *allowed_keys[] = {"et", "acpi", "lbl", "daci", "nu"};
+    const char *allowed_keys[] = {"et", "acpi", "lbl", "daci", "nu", "enc"};
 	size_t num_allowed_keys = sizeof(allowed_keys) / sizeof(allowed_keys[0]);
     char disallowed = has_disallowed_keys(content, allowed_keys, num_allowed_keys);
     pthread_mutex_t db_mutex;
@@ -1628,7 +1751,7 @@ char put_sub(struct Route* destination, cJSON *content, char** response) {
     }
 	short rs = update_sub(destination, content, response);
     if (rs == FALSE) {
-        responseMessage(response, 400, "Bad Request", "Verify the request body");
+        // responseMessage(response, 400, "Bad Request", "Verify the request body");
         pthread_mutex_unlock(&db_mutex);
         pthread_mutex_destroy(&db_mutex);
         return FALSE;
