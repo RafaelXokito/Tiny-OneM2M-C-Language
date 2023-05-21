@@ -168,20 +168,40 @@ The paper \cite{Kim2018} discusses the design, implementation and evaluation of 
 \section{Arquitecture}
 \label{architecture}
 
-Our system architecture consists of a client-server model, where clients interact with our server over the internet. The server acts as an intermediary between the clients and the database, providing resource availability and implementing CRUD operations for the Application Entity (AE) resource and Read operations for Common Service Entities (CSE). Figure \cite{fig:architecture} provides a visual representation of our architecture.
+TinyOneM2M, a compact, cross-platform, and user-friendly implementation of the OneM2M standard, boasts a meticulously designed architecture that adapts seamlessly to both centralized and decentralized modes of operation. Designed primarily to enable decentralized, peer-to-peer applications, TinyOneM2M stands out due to its light footprint and high adaptability.
 
-\begin{figure}[t]
-	\centering
-	\includegraphics[width=7cm]{Architecture.jpg}
-	\caption{Architecture of the Proposed Solution: A Client-Server Model for Resource Management in the oneM2M Standard}
-	\label{fig:architecture}
+Reflecting on the high-level architecture of TinyOneM2M, as depicted in Figure \ref{fig:highlevelarch}, the software is installed on a hardware system and communicates with other entities using HTTP and MQTT (for subscription notifications) protocols. This flexible architecture allows TinyOneM2M to integrate seamlessly into existing infrastructure, establishing efficient communication and data transfer between nodes.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=7cm]{HightLevel}
+\caption{High Level Architecture of TinyOneM2M}
+\label{fig:highlevelarch}
 \end{figure}
 
-At the core of our system, the server acts as the central point of communication, facilitating the exchange of data and requests between the clients and the database. This approach enables us to provide a reliable and secure service, ensuring that client requests are handled efficiently and that their data is safeguarded against unauthorized access or manipulation.
+TinyOneM2M employs a set of resources for its operations: Common Services Entity Base (CSE\_Base), Application Entity (AE), Container (CNT), Content Instance (CIN), and Subscription (SUB). These resources provide a rich set of capabilities to TinyOneM2M, forming a foundational part of its functional landscape.
 
-By focusing on the AE and CSE resources, we can provide a targeted and streamlined solution that caters specifically to the needs of our clients. This approach allows us to deliver a service that is efficient, scalable, and cost-effective, enabling us to effectively meet the demands of our users and provide value to our clients.
+Central to TinyOneM2M's functioning is its resource hierarchy, which sets the structural blueprint for resource organization and management. This hierarchy, illustrated in Figure \ref{fig:hierarchy}, starts with the CSE\_Base as the root node, established during API startup. The CSE\_Base encapsulates AE, CNT, and SUB resources. AE can contain CNT and SUB resources, while CNT can house additional CNT, CIN, and SUB resources. CIN, being read-only and supporting only GET and DELETE requests, does not contain any resources. SUB resources, on the other hand, can contain additional SUB resources.
 
-In summary, our architecture provides a robust and secure system that effectively facilitates communication between clients and the database, enabling us to provide a targeted and streamlined service that caters to the needs of our users.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=7cm]{Hierarchy}
+\caption{Resource Hierarchy in TinyOneM2M}
+\label{fig:hierarchy}
+\end{figure}
+
+Each instance of TinyOneM2M manages its own database, which ensures data persistence and isolation. This design approach provides robust data management and scalability, allowing each node to manage its resources efficiently.
+
+Examining the operational scenarios of TinyOneM2M, it is important to contrast the centralized and decentralized approaches. In a centralized scenario, there exists a single instance of TinyOneM2M orchestrating all communication. Each hardware node communicates with this central point to acquire and persist information. This scenario ensures data consistency and simplifies management at the expense of potential communication bottlenecks.
+
+On the other hand, the decentralized scenario leverages peer-to-peer interactions. Each system node hosts a TinyOneM2M instance, enabling it to communicate directly with every other node. This not only enhances scalability but also optimizes data transfer by eliminating the need for a central point of communication. Figure \ref{fig:comparison} highlights these differences between the two scenarios.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=7cm]{CentralizedvsDecentralizedScenario}
+\caption{Comparison between Centralized and Decentralized Scenarios in TinyOneM2M}
+\label{fig:comparison}
+\end{figure}
 
 \section{Proposed Solution}
 
