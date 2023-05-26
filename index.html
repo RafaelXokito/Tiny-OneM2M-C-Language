@@ -35,6 +35,509 @@
 		margin-top: 50px;
 	  }
     </style>
+    <script>
+      window.onload = function() {
+        var params = new URLSearchParams(window.location.search);
+        var isDocumentation = params.get('documentation');
+        if (isDocumentation === 'true') {
+          document.getElementById('content').innerHTML = `
+            <!DOCTYPE html>
+<html>
+<head>
+    <title>oneM2M API Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #F9F9F9;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            padding: 20px;
+            background-color: #3F51B5;
+            color: white;
+        }
+        .endpoint {
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .method {
+            font-weight: bold;
+            color: #3F51B5;
+        }
+        h2 {
+            color: #3F51B5;
+        }
+        pre {
+            background-color: #EEE;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 0.9em;
+            white-space: pre-wrap;  
+            white-space: -moz-pre-wrap;  
+            white-space: -pre-wrap;  
+            white-space: -o-pre-wrap;  
+            word-wrap: break-word;
+        }
+		#overview {
+			background-color: #f2f2f2;
+			border-radius: 8px;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			padding: 20px;
+			font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+			line-height: 1.6;
+			color: #333;
+			border-radius: 5px;
+            margin: 20px;
+			margin-bottom: 30px;
+		}
+		.split {
+			display: flex;
+			flex-direction: row;
+		}
+
+		.split-left {
+			flex: 1;
+			padding-right: 20px;
+		}
+
+		.split-right {
+			flex: 1;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		.split-right img {
+			width: 70%;
+			height: auto;
+		}
+    </style>
+</head>
+<body>
+    <h1>oneM2M API Documentation</h1>
+    <section id="overview">
+        <h2>Overview</h2>
+        <p>This is the API documentation for the oneM2M API, which features an implementation of several oneM2M Standard resources, namely CSE_Base, Application Entity (AE), Container (CNT), Content Instance (CIN), and Subscription (SUB). The API follows a specific resource hierarchy and certain rules apply to how these resources can be interacted with.</p>
+		<p>Upon initialization of the API, a CSE_Base is created. Each resource can be accessed via a GET request, although the specifics of these requests vary based on the position of the resource in the hierarchy. The CSE_Base serves as the root of the hierarchy, containing AE, CNT, and SUB resources. The AE can contain CNT and SUB resources. The CNT can contain CNT, CIN, and SUB resources. The CIN is read-only, meaning it doesn't contain other resources, and can only be accessed via GET and DELETE requests. The SUB can contain SUB resources.</p>
+
+		<p>POST requests are permitted for all resources, with the exception of the CIN. The hierarchy is adhered to when creating new resources; for instance, a CNT can be created inside a SUB. Finally, PUT requests are allowed for all resources except the CIN. </p>
+	
+		<p>The following sections provide specific details on each resource and the available operations.</p>
+	</section>
+	<section id="overview">
+        <div class="split">
+			<div class="split-left">
+				<h2>Resource Hierarchy</h2>
+				<p>The API is based on resources implementing the oneM2M Standard. The following resources have been implemented:</p>
+				<ul>
+					<li>CSE_Base</li>
+					<li>Application Entity (AE)</li>
+					<li>Container (CNT)</li>
+					<li>Content Instance (CIN)</li>
+					<li>Subscription (SUB)</li>
+				</ul>
+				<p>Each resource has specific rules and can be accessed using HTTP methods based on their position in the hierarchy:</p>
+				<ul>
+					<li><strong>CSE_Base:</strong> The CSE_Base is inserted when the API starts and serves as the root resource. It can contain AE, CNT, and SUB resources.</li>
+					<li><strong>AE:</strong> The AE resource can be contained within the CSE_Base and can also contain CNT and SUB resources.</li>
+					<li><strong>CNT:</strong> The CNT resource can be contained within the CSE_Base, AE, or another CNT resource. It can also contain CNT, CIN, and SUB resources.</li>
+					<li><strong>CIN:</strong> The CIN resource is read-only and cannot contain other resources. It supports GET and DELETE requests for retrieval and deletion of its content.</li>
+					<li><strong>SUB:</strong> The SUB resource can be contained within the CSE_Base, AE, CNT, or another SUB resource.</li>
+				</ul>
+				<p>HTTP Methods and Resource Creation:</p>
+				<ul>
+					<li>All resources except CIN allow the use of the POST method for creating new resources. The resources created must follow the hierarchy specified above. For example, a CNT can be created within a SUB resource.</li>
+					<li>The PUT method is allowed for all resources except CIN. It can be used to update the existing resources.</li>
+				</ul>
+			</div>
+			<div class="split-right">
+				<img src="http://20.224.164.15/Resource_Hierarchy_UML_Diagram.png" alt="Resource Hierarchy UML Diagram">
+			</div>
+		</div>
+	</section>
+	<section id="retrieveCSE_BASE" class="endpoint">
+		<h2>Retrieve Common Services Entity Base (CSE_BASE)</h2>
+		<p class="method">GET /{cse_base-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=23</p>
+		<h3>Response</h3>
+		<p>Returns a 200 OK status code and a JSON object with the retrieved CSE_BASE's details.</p>
+		<h3>Error Codes</h3>
+		<p>404 Not Found: If the CSE_BASE resource does not exist.</p>
+	</section>
+	<section id="discovery" class="endpoint">
+		<h2>Discovery</h2>
+		<p class="method">GET /{base_url_for_discovery}?fu=1&ty=2&lbl=xpto2</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Accept</code>: application/json</p>
+		<h3>Query Parameters</h3>
+		<ul>
+			<li><code>fu</code> (Filter Usage): Specifies the filter usage for searching resources.</li>
+			<li><code>ty</code> (Resource Type): Specifies the resource type for filtering.</li>
+			<li><code>lbl</code> (Labels): Specifies the labels for filtering.</li>
+			<li><code>limit</code> (Resources retrieve limit): Specifies the maximum number of resources to retrieve.</li>
+			<li><code>createdBefore</code> (Resources created before): Filters resources created before the specified value.</li>
+			<li><code>createdAfter</code> (Resources created after): Filters resources created after the specified value.</li>
+			<li><code>modifiedSince</code> (Resources modified since): Filters resources modified after the specified value.</li>
+			<li><code>unmodifiedSince</code> (Resources unmodified since): Filters resources unmodified before the specified value.</li>
+			<li><code>expireBefore</code> (Resources expire before): Filters resources expiring before the specified value.</li>
+			<li><code>expireAfter</code> (Resources expire after): Filters resources expiring after the specified value.</li>
+			<li><code>filterOperation</code> (Filter Operation): Indicates the logical operation (AND/OR/XOR) to be used for different condition tags. Default value is logical AND.</li>
+		</ul>
+		<h3>Response</h3>
+		<p>Returns a 200 OK status code and a JSON object with the retrieved information about the places matching the search criteria.</p>
+		<h3>Error Codes</h3>
+		<p>404 Not Found: If the requested resource does not exist.</p>
+	</section>
+    <section id="createAE" class="endpoint">
+        <h2>Create Application Entity (AE)</h2>
+        <p class="method">POST /{cse_base-name}</p>
+        <h3>Headers</h3>
+        <p><code>X-M2M-Origin</code>: admin:admin</p>
+        <p><code>Content-Type</code>: application/json;ty=2</p>
+        <h3>Request Body</h3>
+        <p>Provide an object with the following fields:</p>
+        <ul>
+            <li><code>api</code>: String, required. The Application ID.</li>
+            <li><code>rn</code>: String, required. The Resource Name.</li>
+            <li><code>rr</code>: Boolean, required. The Request Reachability.</li>
+            <li><code>et</code>: DateTime, required. The Expiration Time.</li>
+            <li><code>lbl</code>: Array, required. The labels of the AE.</li>
+            <li><code>poa</code>: Array, required. The Point of Access.</li>
+            <li><code>acpi</code>: Array, required. The Access Control Policy IDs.</li>
+        </ul>
+        <h3>Example</h3>
+        <pre>
+{
+    "m2m:ae": {
+        "api": "placeholder2",
+        "rn": "AE-3",
+        "rr": "true",
+        "et": "20230630T234737",
+        "lbl": [
+            "interropetores",
+            "xpto2"
+        ],
+        "poa": [
+            "http://10.79.12.248:1400"
+        ],
+        "acpi": [
+            "/id-in/acpCreateACPs"
+        ]
+    }
+}
+        </pre>
+        <h3>Response</h3>
+        <p>Returns a 201 Created status code and a JSON object with the created AE's details.</p>
+        <h3>Error Codes</h3>
+        <p>400 Bad Request: If any of the required fields are missing or invalid.</p>
+    </section>
+	<section id="retrieveAE" class="endpoint">
+		<h2>Retrieve Application Entity (AE)</h2>
+		<p class="method">GET /{cse_base-name}/{AE-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=2</p>
+		<h3>Response</h3>
+		<p>Returns a 200 OK status code and a JSON object with the retrieved AE's details.</p>
+		<h3>Error Codes</h3>
+		<p>404 Not Found: If the AE resource does not exist.</p>
+	</section>
+	<section id="updateAE" class="endpoint">
+		<h2>Update Application Entity (AE)</h2>
+		<p class="method">PUT /{cse_base-name}/{AE-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=2</p>
+		<h3>Request Body</h3>
+		<p>Provide an object with the fields you want to update:</p>
+		<ul>
+			<li><code>et</code>: DateTime, optional. The new Expiration Time.</li>
+			<li><code>rr</code>: Boolean, optional. The new Request Reachability.</li>
+			<li><code>poa</code>: Array, optional. The new Point of Access.</li>
+		</ul>
+		<h3>Example</h3>
+		<pre>
+{
+	"m2m:ae": {
+		"et": "20230330T234737",
+		"rr": "true",
+		"poa": [
+			"http://127.0.0.2:4314"
+		]
+	}
+}
+		</pre>
+		<h3>Response</h3>
+		<p>Returns a 200 OK status code and a JSON object with the updated AE's details.</p>
+		<h3>Error Codes</h3>
+		<p>400 Bad Request: If any of the fields are invalid.</p>
+		<p>404 Not Found: If the AE resource does not exist.</p>
+	</section>
+	<section id="deleteAE" class="endpoint">
+		<h2>Delete Application Entity (AE)</h2>
+		<p class="method">DELETE /{cse_base-name}/{AE-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=2</p>
+		<h3>Response</h3>
+		<p>Returns a 204 No Content status code if the deletion was successful.</p>
+		<h3>Error Codes</h3>
+		<p>404 Not Found: If the AE resource does not exist.</p>
+	</section>
+	<section id="createCNT" class="endpoint">
+		<h2>Create CNT</h2>
+		<p class="method">POST /{cse_base-name}/{AE-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=3</p>
+		<h3>Request Body</h3>
+		<p>Provide an object with the fields you want to include in the new CNT:</p>
+		<ul>
+			<li><code>rn</code>: String, required. The name of the resource.</li>
+			<li><code>mni</code>: Number, optional. Maximum number of instances.</li>
+			<li><code>lbl</code>: Array, optional. Label.</li>
+		</ul>
+		<h3>Example</h3>
+		<pre>
+{
+	"m2m:cnt": {
+		"rn": "cntTestrvvr",
+		"mni": 1000,
+		"lbl": [
+			"temperature",
+			"xpto2"
+		]
+	}
+}
+		</pre>
+		<h3>Response</h3>
+		<p>Returns a 201 Created status code and a JSON object with the created CNT's details.</p>
+		<h3>Error Codes</h3>
+		<p>400 Bad Request: If any of the fields are invalid.</p>
+	</section>
+	<section id="updateCNT" class="endpoint">
+		<h2>Update CNT</h2>
+		<p class="method">PUT /{cse_base-name}/{AE-name}/{CNT-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=3</p>
+		<h3>Request Body</h3>
+		<p>Provide an object with the fields you want to update:</p>
+		<ul>
+			<li><code>mni</code>: Number, optional. Maximum number of instances.</li>
+			<li><code>lbl</code>: Array, optional. Label.</li>
+		</ul>
+		<h3>Example</h3>
+		<pre>
+{
+	"m2m:cnt": {
+		"mni": 501,
+		"lbl": [
+			"temperature",
+			"xpto2"
+		]
+	}
+}
+		</pre>
+		<h3>Response</h3>
+		<p>Returns a 200 OK status code and a JSON object with the updated CNT's details.</p>
+		<h3>Error Codes</h3>
+		<p>400 Bad Request: If any of the fields are invalid.</p>
+		<p>404 Not Found: If the CNT resource does not exist.</p>
+	</section>
+	<section id="retrieveCNT" class="endpoint">
+		<h2>Retrieve CNT</h2>
+		<p class="method">GET /{cse_base-name}/{AE-name}/{CNT-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=3</p>
+		<h3>Response</h3>
+		<p>Returns a 200 OK status code and a JSON object with the requested CNT's details.</p>
+		<h3>Error Codes</h3>
+		<p>404 Not Found: If the CNT resource does not exist.</p>
+	</section>
+	<section id="retrieveCNTFirst" class="endpoint">
+		<h2>Retrieve First CNT</h2>
+		<p class="method">GET /{cse_base-name}/{AE-name}/{CNT-name}/ol</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=2</p>
+		<h3>Response</h3>
+		<p>Returns a 200 OK status code and a JSON object with the first CNT's details.</p>
+		<h3>Error Codes</h3>
+		<p>404 Not Found: If the CNT resource does not exist.</p>
+	</section>
+	<section id="retrieveCNTLast" class="endpoint">
+		<h2>Retrieve Last CNT</h2>
+		<p class="method">GET /{cse_base-name}/{AE-name}/{CNT-name}/la</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=3</p>
+		<h3>Response</h3>
+		<p>Returns a 200 OK status code and a JSON object with the last CNT's details.</p>
+		<h3>Error Codes</h3>
+		<p>404 Not Found: If the CNT resource does not exist.</p>
+	</section>
+	<section id="deleteCNT" class="endpoint">
+		<h2>Delete CNT</h2>
+		<p class="method">DELETE /{cse_base-name}/{AE-name}/{CNT-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=3</p>
+		<h3>Response</h3>
+		<p>Returns a 200 OK status code if the CNT was successfully deleted.</p>
+		<h3>Error Codes</h3>
+		<p>404 Not Found: If the CNT resource does not exist.</p>
+	</section>
+	<section id="createCIN" class="endpoint">
+        <h2>Create Content Instance (CIN)</h2>
+        <p class="method">POST /{cse_base-name}/{AE-name}/{CNT-name}</p>
+        <h3>Headers</h3>
+        <p><code>X-M2M-Origin</code>: admin:admin</p>
+        <p><code>Content-Type</code>: application/json;ty=4</p>
+        <h3>Request Body</h3>
+        <p>Provide an object with the following fields:</p>
+        <ul>
+            <li><code>cnf</code>: String, required. The Application ID.</li>
+            <li><code>con</code>: String, required. The Resource Name.</li>
+            <li><code>lbl</code>: Array, required. The labels of the CIN.</li>
+        </ul>
+        <h3>Example</h3>
+        <pre>
+{
+	"m2m:cin": {
+		"cnf": "application/json",
+		"con": "{\"temperature\":27,\"timestamp\":1517912099}",
+		"lbl": [
+			"temperature",
+			"CARLA"
+		]
+	}
+}
+        </pre>
+        <h3>Response</h3>
+        <p>Returns a 201 Created status code and a JSON object with the created CIN's details.</p>
+        <h3>Error Codes</h3>
+        <p>400 Bad Request: If any of the required fields are missing or invalid.</p>
+    </section>
+	<section id="retrieveCIN" class="endpoint">
+		<h2>Retrieve Content Instance (CIN)</h2>
+		<p class="method">GET /{cse_base-name}/{AE-name}/{CNT-name}/{CIN-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=4</p>
+		<h3>Response</h3>
+		<p>Returns a 200 OK status code and a JSON object with the retrieved CIN's details.</p>
+		<h3>Error Codes</h3>
+		<p>404 Not Found: If the CIN resource does not exist.</p>
+	</section>
+	<section id="deleteCIN" class="endpoint">
+		<h2>Delete Content Instance (CIN)</h2>
+		<p class="method">DELETE /{cse_base-name}/{AE-name}/{CNT-name}/{CIN-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=4</p>
+		<h3>Response</h3>
+		<p>Returns a 204 No Content status code if the deletion was successful.</p>
+		<h3>Error Codes</h3>
+		<p>404 Not Found: If the CIN resource does not exist.</p>
+	</section>
+	<section id="createSUB" class="endpoint">
+        <h2>Create Subscription (SUB)</h2>
+        <p class="method">POST /{cse_base-name}</p>
+        <h3>Headers</h3>
+        <p><code>X-M2M-Origin</code>: admin:admin</p>
+        <p><code>Content-Type</code>: application/json;ty=23</p>
+        <h3>Request Body</h3>
+        <p>Provide an object with the following fields:</p>
+        <ul>
+            <li><code>rn</code>: String, optional. The Resource Name.</li>
+            <li><code>nu</code>: Boolean, required. The Notification URI.</li>
+            <li><code>enc</code>: DateTime, optional. The Event Notification Criteria.</li>
+        </ul>
+        <h3>Example</h3>
+        <pre>
+{
+	"m2m:sub": {
+		"rn": "subTest2234",
+		"nu": [
+			"mqtt://localhost:1883"
+		],
+		"enc": "POST, GET, PUT"
+	}
+}
+        </pre>
+        <h3>Response</h3>
+        <p>Returns a 201 Created status code and a JSON object with the created SUB's details.</p>
+        <h3>Error Codes</h3>
+        <p>400 Bad Request: If any of the required fields are missing or invalid.</p>
+    </section>
+	<section id="retrieveSUB" class="endpoint">
+		<h2>Retrieve Subscription (SUB)</h2>
+		<p class="method">GET /{cse_base-name}/{SUB-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=23</p>
+		<h3>Response</h3>
+		<p>Returns a 200 OK status code and a JSON object with the retrieved SUB's details.</p>
+		<h3>Error Codes</h3>
+		<p>404 Not Found: If the SUB resource does not exist.</p>
+	</section>
+	<section id="updateSUB" class="endpoint">
+		<h2>Update Subscription (SUB)</h2>
+		<p class="method">PUT /{cse_base-name}/{SUB-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=23</p>
+		<h3>Request Body</h3>
+		<p>Provide an object with the fields you want to update:</p>
+		<ul>
+			<li><code>nu</code>: DateTime, optional. The Notification URI.</li>
+			<li><code>enc</code>: Boolean, optional. The Event Notification Criteria.</li>
+		</ul>
+		<h3>Example</h3>
+		<pre>
+{
+	"m2m:sub": {
+		"nu": [
+			"mqtt://localhost:1883",
+			"http://localhost:1400/monitor"
+		],
+		"enc": "POST, GET, PUT, DELETE"
+	}
+}
+		</pre>
+		<h3>Response</h3>
+		<p>Returns a 200 OK status code and a JSON object with the updated SUB's details.</p>
+		<h3>Error Codes</h3>
+		<p>400 Bad Request: If any of the fields are invalid.</p>
+		<p>404 Not Found: If the SUB resource does not exist.</p>
+	</section>
+	<section id="deleteSUB" class="endpoint">
+		<h2>Delete Subscription (SUB)</h2>
+		<p class="method">DELETE /{cse_base-name}/{SUB-name}</p>
+		<h3>Headers</h3>
+		<p><code>X-M2M-Origin</code>: admin:admin</p>
+		<p><code>Content-Type</code>: application/json;ty=23</p>
+		<h3>Response</h3>
+		<p>Returns a 204 No Content status code if the deletion was successful.</p>
+		<h3>Error Codes</h3>
+		<p>404 Not Found: If the SUB resource does not exist.</p>
+	</section>
+    <!-- Additional endpoint sections would follow here... -->
+</body>
+</html>
+          `;
+        }
+      }
+    </script>
   </head>
   <body>
     <h1>Welcome to Tiny-OneM2M C API</h1>
@@ -51,7 +554,7 @@
 	The use of C language can bring several benefits to M2M and MTC implementations. C is a low-level language that provides direct access to hardware resources and memory management, making it highly efficient and fast. This is especially important in resource-constrained environments where devices have limited processing power and memory. Additionally, C has a long history of use in embedded systems and is well-suited for writing code that runs close to the hardware, making it a natural choice for M2M and MTC applications.
 	</p>
   <p>
-    To get started, you can check out the <a href="https://github.com/RafaelXokito/Tiny-OneM2M-C-Language">Tiny-OneM2M C API repository</a> on GitHub. There you'll find the API documentation, sample code, and instructions on how to install and use the library. The documentation is available in the <a href="documentation">documentation</a> directory.
+    To get started, you can check out the <a href="https://github.com/RafaelXokito/Tiny-OneM2M-C-Language">Tiny-OneM2M C API repository</a> on GitHub. There you'll find the API documentation, sample code, and instructions on how to install and use the library. The documentation is available in the <a href="?documentation=true">documentation</a> directory.
   </p>  
 	<div class="gif-container">
         <img src="https://media.giphy.com/media/MT5UUV1d4CXE2A37Dg/giphy.gif" alt="Cool C Language GIF">
