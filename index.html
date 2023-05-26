@@ -3,50 +3,14 @@
   <head>
     <meta charset="UTF-8">
     <title>Welcome to Tiny-OneM2M C API</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f5f5f5;
-        color: #333;
-        margin: 0;
-        padding: 0;
-      }
-
-      h1 {
-        font-size: 36px;
-        text-align: center;
-        margin-top: 50px;
-      }
-
-      p {
-        font-size: 18px;
-        line-height: 1.5;
-        max-width: 600px;
-        margin: 0 auto 30px auto;
-        padding: 0 20px;
-      }
-
-      a {
-        color: #009688;
-      }
-	  .gif-container {
-		display: flex;
-		justify-content: center;
-		margin-top: 50px;
-	  }
-    </style>
     <script>
       window.onload = function() {
         var params = new URLSearchParams(window.location.search);
         var isDocumentation = params.get('documentation');
         if (isDocumentation === 'true') {
           document.getElementById('content').innerHTML = `
-            <!DOCTYPE html>
-<html>
-<head>
-    <title>oneM2M API Documentation</title>
-    <style>
-        body {
+		  <style>
+			body {
             font-family: Arial, sans-serif;
             background-color: #F9F9F9;
             color: #333;
@@ -115,10 +79,20 @@
 			width: 70%;
 			height: auto;
 		}
-    </style>
-</head>
-<body>
-    <h1>oneM2M API Documentation</h1>
+		#back-button {
+			margin: 20px;
+			padding: 10px;
+			background-color: #009688;
+			color: white;
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+		}
+			</style>
+		  <h1>oneM2M API Documentation</h1>
+		  <div>
+			<button id="back-button" onclick="goBack()">Back to Home</button>
+			</div>
     <section id="overview">
         <h2>Overview</h2>
         <p>This is the API documentation for the oneM2M API, which features an implementation of several oneM2M Standard resources, namely CSE_Base, Application Entity (AE), Container (CNT), Content Instance (CIN), and Subscription (SUB). The API follows a specific resource hierarchy and certain rules apply to how these resources can be interacted with.</p>
@@ -532,15 +506,42 @@
 		<p>404 Not Found: If the SUB resource does not exist.</p>
 	</section>
     <!-- Additional endpoint sections would follow here... -->
-</body>
-</html>
           `;
-        }
+        } else {
+		  document.getElementById("content").innerHTML = `
+		  <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+        margin: 0;
+        padding: 0;
       }
-    </script>
-  </head>
-  <body>
-    <h1>Welcome to Tiny-OneM2M C API</h1>
+
+      h1 {
+        font-size: 36px;
+        text-align: center;
+        margin-top: 50px;
+      }
+
+      p {
+        font-size: 18px;
+        line-height: 1.5;
+        max-width: 600px;
+        margin: 0 auto 30px auto;
+        padding: 0 20px;
+      }
+
+      a {
+        color: #009688;
+      }
+	  .gif-container {
+		display: flex;
+		justify-content: center;
+		margin-top: 50px;
+	  }
+    </style>
+		  <h1>Welcome to Tiny-OneM2M C API</h1>
     <p>
       This is the welcome page for Tiny-OneM2M C API. Tiny-OneM2M C API is a lightweight library that provides a simple API for interacting with the OneM2M IoT platform using the C programming language.
     </p>
@@ -558,6 +559,16 @@
   </p>  
 	<div class="gif-container">
         <img src="https://media.giphy.com/media/MT5UUV1d4CXE2A37Dg/giphy.gif" alt="Cool C Language GIF">
-      </div>
+      </div>`;
+		}
+      }
+	  
+	  function goBack() {
+        window.location.search = '';  // Clear the query string
+      }
+    </script>
+  </head>
+  <body id="content">
+    
   </body>
 </html>
