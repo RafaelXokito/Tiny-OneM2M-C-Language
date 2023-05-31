@@ -510,11 +510,21 @@ For example, if a container resource contains a subscription, a POST request to 
 \section{Tests}
 \label{tests}
 
-\textcolor{red}{referir que o OpenMTC implementa a versão do standard 1.1 (verificar)}
+In this crucial section, we delve into the testing mechanisms employed to examine the TinyOneM2M solution under various scenarios, highlighting its strengths and exposing areas for improvement.
 
-In the following section we present a series of test cases to evaluate the proposed solution's performance, compatibility, and efficiency. These tests cover various aspects, including the impact of different handling methods for the "expiration time" field in database queries, a comparison of our solution with OpenMTC, cross-platform evaluations on Ubuntu and macOS systems, and compatibility with minimal hardware configurations like the ESP32. By conducting these tests, we aim to provide a comprehensive assessment of the proposed solution's strengths and limitations, allowing for further optimization and refinement to better address the needs of a wide range of applications and use cases.
+Firstly, the Database Normalisation versus Database Denormalisation test will provide a performance comparison of operation execution time between normalized and denormalized databases. The purpose of this test is to unveil any potential performance ramifications of the chosen database structure.
 
-The Table \ref{tab:machinesSpecs} presents the detailed hardware, operating system, compiler, and library configurations for the machines used for tests. This information is essential for understanding and recreating the testing environment, as well as providing context to the results obtained from the diverse test cases conducted.
+Our second test is dedicated to Assessing the Efficiency of Meeting Expiration Time Attribute Objectives in Database Queries on Performance. Here, we focus on the expiration time attribute, which either hides or eliminates records with an expiration time value surpassing the current datetime. We aim to contrast the duration of database operations with and without the implementation of this attribute, focusing on the average time spent on each operation type.
+
+A crucial part of our testing process is the Comparative Analysis of Latency for CRUD operations using both our proposed solution and OpenMTC. This test involves a direct performance comparison between our TinyOneM2M implementation, adhering to version 5.1, and OpenMTC, which complies with the standard version 1.1. We meticulously measure the average time expended on the Create, Read, Update, and Delete operations.
+
+In the Cross-Platform Evaluation, we demonstrate the adaptability of the TinyOneM2M system by evaluating its ease of installation and compilation on two distinct operating systems: Ubuntu and macOS. The test showcases the platform-independent nature of our solution, adding to its versatility.
+
+Lastly, our stress test puts the TinyOneM2M solution through rigorous trials on the Raspberry Pi 0 W microcontroller under the Minimal Hardware Stress Testing test. This test is intended to simulate high-pressure scenarios involving a large number of insertion requests to examine the resilience of our solution.
+
+We've conducted these tests on three machines of varying specifications, each listed in Table \ref{tab:machinesSpecs}. The diversity in our testing apparatus reiterates the solution's flexibility across an array of hardware and software configurations. Notably, the libraries deployed on each machine, along with their respective versions, remain static across the board as outlined in Section \ref{sec:tinyonem2msolution}.
+
+Table \ref{tab:machinesSpecs} delivers a comprehensive overview of the specific hardware, operating system, compiler, and library configurations for the machines used in our tests. This information is instrumental for anyone aiming to replicate the testing environment and offers valuable context to our results.
 
 \begin{table}[h]
 	\scriptsize
@@ -541,11 +551,6 @@ The Table \ref{tab:machinesSpecs} presents the detailed hardware, operating syst
 	\multicolumn{2}{c}{\textbf{Compiler}} \\
 	\midrule
 	GCC Version         & Apple clang version 14.0.0 (clang-1400.0.29.102) \\
-	\midrule
-	\multicolumn{2}{c}{\textbf{Packages}} \\
-	\midrule
-	SQLite3 Version     & 3.39.3 \\
-	\bottomrule
 	\bottomrule
 	
 	\toprule
@@ -569,43 +574,103 @@ The Table \ref{tab:machinesSpecs} presents the detailed hardware, operating syst
 	GCC Version         & Ubuntu 9.4.0-1ubuntu1~20.04.1 \\
 	\midrule
 	\bottomrule
-	\bottomrule
 	
 	\toprule
 	\multicolumn{2}{c}{\textbf{Machine3}} \\
 	\toprule
 	\toprule
 	\multicolumn{2}{c}{\textbf{Hardware}} \\
-	\midrule
-	Chip                & Quad-Core Intel Core i7 @ 2,2 GHz \\
-	Total Number of Cores & 4 \\
-	RAM Memory          & 16 GB \\
+ 	\midrule
+	Chip                & BCM2835 @ 1GHz ARMv6 \\
+	Total Number of Cores & 1 \\
+	RAM Memory          & 512MB \\
 	\midrule
 	\multicolumn{2}{c}{\textbf{Operating System}} \\
 	\midrule
-	Product Name         & macOS \\
+	Product Name         & Debian \\
 	Product Version      & 12.6.3 \\
 	Kernel Version       & Darwin 21.6.0 \\
 	\midrule
 	\multicolumn{2}{c}{\textbf{Compiler}} \\
 	\midrule
-	GCC Version         & Apple clang version 14.0.0 (clang-1400.0.29.202) \\
-	\midrule
-	\multicolumn{2}{c}{\textbf{Packages}} \\
-	\midrule
-	SQLite3 Version     & 3.37.0 \\
+	GCC Version         & Debian 8.3.0-6 \\
 	\bottomrule
-	\bottomrule
+
 	\end{tabular}
 \end{table}
 
-To thoroughly evaluate the effectiveness and applicability of our proposed solution, we have designed a comprehensive set of test cases. The first test case aims to evaluate the impact of implementing expiration time field conditions in database queries. By comparing the performance of three different scenarios, we can assess the time cost of each approach and determine which is most effective. The second test case focuses on a comparative analysis of latency for 500 AE resource CRUD operations using the proposed solution and OpenMTC. This will enable us to gauge the relative efficiency of our approach, highlighting its strengths and areas for improvement. The third test case involves performing a cross-platform evaluation through installation and compilation on Ubuntu and macOS systems, ensuring that our solution is versatile and can be seamlessly integrated into different operating environments. In the fourth test case, we will further compare our solution with OpenMTC by measuring the time efficiency of 500 resource discovery requests when the database has 500, 1000, and 2000 records. This test will provide insight into the performance and scalability of our solution in comparison to OpenMTC. Finally, testing the compatibility of our solution with minimal hardware, such as the ESP32 case study, will help verify its suitability for resource-constrained scenarios, broadening its potential applications and enabling its adoption in a wider range of use cases. By conducting these test cases, we will gain a comprehensive understanding of the effectiveness and applicability of our proposed solution, enabling us to refine and optimize it to meet the evolving needs and challenges of the oneM2M standard.
-
 \subsection{Database Normalization VS Database Denormalization} \label{sec:normalizationvsdenormalization}
 
-Comparação a nível da base de dados apenas, sem implementação na solução entre duas implementações de bases de dados, normalizadas e desnormalizadas.
+In this section, we present an investigation into the performance of database normalization versus denormalization. This analysis does not directly implement the OneM2M standard but instead provides a comparative assessment of these two database structuring strategies.
 
-\subsection{Assessing the Efficiency of Meeting Expiration Time Field Objectives in Database Queries on Performance}
+To execute the tests, we employed a Python script directly on the SQLite3 database. The script uses the SQLite3 library and was run on Machine 1. The version of Python used was 3.9.10 and the version of the SQLite3 library used was 3.37.0. The SQLite3 database was allocated in the RAM.
+
+\begin{algorithm}
+\scriptsize
+\caption{Pseudocode to compare SQLite Performance with Hierarchy Complexity}
+\label{alg:dbstrategycomparison}
+\begin{algorithmic}[1]
+\Procedure{[Insert/Select/Update/Delete]Data}{conn, table, depth}
+    \State $\text{start time}$
+    \For{$i=1$ to $\text{depth}$}
+        \State $\text{execute SQL to [Insert/Select/Update/Delete] data in table with hierarchy depth i}$
+    \EndFor
+    \State $\text{end time}$
+    \State $\text{calculate and print time difference divided by depth}$
+\EndProcedure
+\\
+\Procedure{ComparePerformance}{}
+    \State $\text{conn} \gets \text{open database connection}$
+    \State $\text{tables} \gets \text{[OneM2M\_Denorm, CSE\_Base\_Norm, AE\_Norm, CNT\_Norm, SUB\_Norm]}$
+    \State $\text{depth} \gets \text{15}$
+    \State $\text{CreateDenormalizedTables(conn)}$
+    \State $\text{CreateNormalizedTables(conn)}$
+    \For{each $\text{table}$ in $\text{tables}$}
+        \State $\text{InsertData(conn, table, depth)}$
+        \State $\text{SelectData(conn, table, depth)}$
+        \State $\text{UpdateData(conn, table, depth)}$
+        \State $\text{DeleteData(conn, table, depth)}$
+    \EndFor
+    \State $\text{close database connection}$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+To execute the tests, we employed a Python script directly on the SQLite3 database. A pseudocode representation of the script used can be found in Algorithm \ref{alg:dbstrategycomparison}. The script performs Insert, Select, Update, and Delete operations on tables of different hierarchical depths, calculating the average operation time per depth. The depth used for these operations was 15, and each operation was performed 1000 times for each database. The structures of the normalized and denormalized databases are depicted in Figure \ref{fig:TestComparisionDBsStrategies} mainly showing the hierarchy of resources.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\linewidth]{TestComparisionDBsStrategies}
+	\caption{Diagram of Database Structure used for Comparison of the Normalized Strategy and Denormalized Strategy.}
+	\label{fig:TestComparisionDBsStrategies}
+\end{figure}
+
+To analyze the results, let's refer to Table \ref{tab:DBComparisonResults}. For the insertion operation, the denormalized structure was slightly more time-efficient, taking an average of $6.96 \times 10^{-6}$ seconds per depth layer to insert a record, while the normalized structure ranged between $6.82 \times 10^{-6}$ and $7.23 \times 10^{-6}$ seconds per depth layer.
+
+The selection operation showed a notable difference between the two database structures. Simple read operations on the denormalized structure consumed significantly more time (around $0.0045$ seconds) than the normalized structure. However, with deep querying, the normalized structure showed an increase in operation time (up to $0.0033$ seconds) due to the complexity of join operations.
+
+In the case of the update operation, the normalized structure was slightly quicker, taking about $6.77 \times 10^{-6}$ to $7.32 \times 10^{-6}$ seconds per depth layer compared to $6.90 \times 10^{-6}$ seconds in the denormalized structure. Similar to the update operation, the delete operation was slightly faster in the normalized structure, taking between $3.67 \times 10^{-6}$ and $4.01 \times 10^{-6}$ seconds per depth layer, while the denormalized structure took about $3.60 \times 10^{-6}$ seconds.
+
+\begin{table}[h]
+\scriptsize
+\centering
+\caption{Average time per depth layer for CRUD operations on the databases}
+\label{tab:DBComparisonResults}
+\begin{tabular}{ p{1cm} p{3cm} p{3cm} }
+\hline
+\textbf{Operation} & \textbf{Denormalized Structure Seconds} & \textbf{Normalized Structure Seconds} \\
+\hline \hline
+Insert & $6.96 \times 10^{-6}$ (s) & $6.82 \times 10^{-6}$ to $7.23 \times 10^{-6}$ (s) \\
+Select & $0.0045$ (s) & $1.33 \times 10^{-6}$ to $0.0033$ (s) \\
+Update & $6.90 \times 10^{-6}$ (s) & $6.77 \times 10^{-6}$ to $7.32 \times 10^{-6}$ (s) \\
+Delete & $3.60 \times 10^{-6}$ (s) & $3.67 \times 10^{-6}$ to $4.01 \times 10^{-6}$ (s) \\
+\hline
+\end{tabular}
+\end{table}
+
+From these results, we observe that the denormalized structure was more efficient in terms of insert operations, a crucial factor for applications necessitating large volumes of data insertions. However, when it comes to deep querying in a hierarchical structure, the denormalized structure outperforms due to the overhead of join operations in normalized tables. While these results are based on a relatively small example and an embedded database system, it is expected that as the database scales, these differences could become more pronounced.
+
+\subsection{Assessing the Efficiency of Meeting Expiration Time Attribute Objectives in Database Queries on Performance}
 
 In this section, we focus on a specific test case that aims to assess the efficiency of meeting expiration time field objectives in database queries on performance, using codebase version 1.1. The database contains 2000 records in the "mtc" table and 41,000 in the "multivalue" table, adding difficulty to the SELECT queries. The "expiration time" field's purpose is to ensure that resources are deleted or become unused after their expiration. The test will be performed on a "discovery" request with five parameters: ty (resource type), lbl (labels), expireAfter using the "expiration time" field, expireBefore using the "expiration time" field, and filterOperation. It is important to note that the "labels" attribute is an array and its search requires more effort because it searches in the "multivalue" table. By default, the "discovery" request will have a limit of 50 rows listed, which can be adjusted as a parameter, but for this test, the default value will be used. As the limit value increases, the query's latency may grow exponentially, making it crucial to optimize the database and query structure. Three distinct approaches were considered, with the first one being the primary focus of this study:
 
@@ -698,42 +763,27 @@ This test case will involve the installation of necessary dependencies, compilat
 
 The insights gained from this cross-platform evaluation will contribute to the ongoing refinement of our solution, ensuring that it remains robust and effective across various operating environments. This, in turn, enhances its potential for widespread adoption and application in the context of the oneM2M standard.
 
-In this test case, we successfully installed and compiled the proposed solution on Ubuntu, one of the two operating systems being evaluated for cross-platform compatibility. The process began by importing the source code to "Machine 2", as shown in Table \ref{tab:machinesSpecs}, using SFTP, followed by the installation of the necessary dependency, SQLite3, via the Advanced Package Tool (APT).
+In this test case, we successfully installed and compiled the proposed solution on Ubuntu, one of the two operating systems being evaluated for cross-platform compatibility. The process began by importing the source code to "Machine 2", as shown in Table \ref{tab:machinesSpecs}, using SFTP, since the operation system have already installed the GCC compiler theres no more dependencies to install and the system is ready to be compiled.
 
-The proposed solution was successfully compiled using the provided Makefile, which facilitated the creation of the executable without any issues. A closer examination of the dependencies of the compiled executable was carried out using the 'ldd' command. The command revealed that the proposed solution relies exclusively on system libraries such as libdl.so.2, libpthread.so.0, and libc.so.6, which provide essential functionality for dynamic loading, multi-threading, and standard C functions, respectively.
+The proposed solution was successfully compiled using the provided Makefile, which facilitated the creation of the executable without any issues. A closer examination of the dependencies of the compiled executable was carried out using the \texttt{ldd} command. The command revealed that the proposed solution relies exclusively on system libraries such as 'libdl.so.2', 'libpthread.so.0', and 'libc.so.6', which provide essential functionality for dynamic loading, multi-threading, and standard C functions, respectively.
 
 By relying solely on system libraries, the proposed solution demonstrates a significant advantage in terms of portability and maintainability. This approach eliminates the need for third-party dependencies, reducing potential compatibility issues and simplifying the installation process across various platforms. Furthermore, it ensures that the solution benefits from the stability and performance optimizations provided by the operating system's native libraries, which are generally well-maintained and frequently updated.
 
-In summary, the use of system libraries for the proposed solution highlights its robustness and adaptability to different system configurations, ultimately enhancing its potential for widespread adoption and application in the context of the oneM2M standard.
-
 The successful installation, compilation, and identification of dependencies on Ubuntu demonstrate that the proposed solution is adaptable to various operating environments. This adaptability is essential in the realm of computer science as it ensures the portability and interoperability of the software across different platforms. By validating our solution's compatibility with Ubuntu, we have shown its ability to cater to a broader range of users and potential applications.
 
-As the next step in the cross-platform evaluation, the proposed solution will be installed and compiled on macOS. This process will involve identifying and installing any necessary dependencies, compiling the source code, and executing the solution on this operating system. Similar to the evaluation on Ubuntu, the focus will be on the successful completion of these tasks and identifying any platform-specific issues, discrepancies, or bottlenecks that may arise.
+As the next step in the cross-platform evaluation, the proposed solution will be installed and compiled on macOS. This process will involve identifying and installing any necessary dependencies, compiling the source code, and executing the solution on this operating system.
 
-In this test case, the proposed solution was successfully installed and compiled on the macOS operating system. The source code was imported to "Machine 3", and the necessary dependency, SQLite3, was found to be already installed on the system. The provided Makefile facilitated the compilation of the files, resulting in the generation of the executable without any issues.
+In this test case, the proposed solution was successfully installed and compiled on the macOS operating system. The source code was imported to "Machine 1", and the necessary dependency, GCC, was found to be already installed on the system. The provided Makefile facilitated the compilation of the files, resulting in the generation of the executable without any issues.
 
-The examination of the dependencies of the compiled executable revealed that the proposed solution relies exclusively on system libraries. The 'ldd' command showed that the solution depends on /usr/lib/libSystem.B.dylib, which provides essential functionality for dynamic loading, memory allocation, and system calls. By relying solely on system libraries, the proposed solution demonstrates a significant advantage in terms of portability and maintainability, as it eliminates the need for third-party dependencies.
+The examination of the dependencies of the compiled executable revealed that the proposed solution relies exclusively on system libraries. The \texttt{otool} command showed that the solution depends on '/usr/lib/libSystem.B.dylib', which provides essential functionality for dynamic loading, memory allocation, and system calls. By relying solely on system libraries, the proposed solution demonstrates a significant advantage in terms of portability and maintainability, as it eliminates the need for third-party dependencies.
 
 The use of system libraries highlights the proposed solution's adaptability to different system configurations, ultimately enhancing its potential for widespread adoption and application in the context of the oneM2M standard. This approach ensures that the solution benefits from the stability and performance optimizations provided by the operating system's native libraries, which are generally well-maintained and frequently updated.
 
 By successfully installing and compiling the proposed solution on both Ubuntu and macOS, we have demonstrated its ability to function effectively in diverse contexts, catering to a broader range of users and potential applications. The insights gained from this cross-platform evaluation will inform any necessary adjustments or refinements to ensure seamless integration into various operating environments.
 
-In conclusion, the cross-platform evaluation provides a comprehensive understanding of the proposed solution's compatibility with different operating systems, demonstrating its adaptability and versatility to various system configurations. The use of system libraries ensures the solution's portability and maintainability, while also enhancing its potential for widespread adoption and application in the context of the oneM2M standard.
+\textcolor{red}{...Final Thoughts...}
 
-\subsection{Comparative Analysis of Latency for Resource Discovery Requests Using the Proposed Solution and OpenMTC}
-
-In this section, we present a fourth test case aimed at evaluating the relative efficiency of our proposed solution compared to OpenMTC in the context of resource discovery requests. This test case is essential as it enables us to gauge the effectiveness of our approach in terms of discovering resources in a large-scale environment, thereby providing insights into the scalability and performance of our solution.
-
-To conduct this test case, we will be using "Machine 2", as it is the most suitable machine for testing. We will divide the test into three different scenarios, each with varying numbers of resources in the database (500, 1000, and 2000). By comparing the latency of resource discovery requests for each scenario using the proposed solution and OpenMTC, we can determine which solution performs better in a large-scale environment.
-
-Resource discovery is a crucial aspect of the oneM2M standard, enabling clients to search for and access resources within the system. As such, the latency of resource discovery requests is a significant factor in determining the overall performance and effectiveness of an oneM2M-compliant system. By conducting this test case, we can identify potential bottlenecks or areas for improvement in our proposed solution, enhancing its scalability and performance in the context of large-scale resource discovery requests.
-
-The insights gained from this test case will contribute to the ongoing refinement and optimization of our solution, ensuring that it remains effective and competitive in the realm of oneM2M-compliant systems.
-
-
-
-
-\subsection{Minimal Hardware Compatibility Testing: Raspberry Pi 0W Case Study}
+\subsection{Minimal Hardware Compatibility Testing: Raspberry Pi 0 W Case Study}
 
 In this section, we present a test case focused on assessing the compatibility of our proposed solution with minimal hardware, specifically using the ESP32 microcontroller as a case study. The objective of this test case is to verify the suitability of our solution for resource-constrained environments, thereby broadening its potential applications and enabling its adoption in a wider range of use cases.
 
