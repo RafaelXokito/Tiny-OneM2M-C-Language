@@ -18,8 +18,4 @@ $(exec): $(objects)
 	gcc -c $(flags) $< -o $@
 
 clean:
-	-rm *.out
-	-rm *.o
-	-rm *.a
-	-rm src/*.a
 	-rm src/*.o

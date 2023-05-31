@@ -7,7 +7,6 @@
  * Copyright (c) 2023 IPLeiria
  */
 
-
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,6 +17,8 @@
 #include <regex.h>
 
 #include "Common.h"
+
+extern char BASE_RI[MAX_CONFIG_LINE_LENGTH];
 
 char * render_static_file(char * fileName) {
 	FILE* file = fopen(fileName, "r");
@@ -92,8 +93,32 @@ void handle_get(ConnectionInfo *info, const char *queryString, struct Route *des
 				responseMessage(response,500,"Internal Server Error","Error retrieving the data");
 				fprintf(stderr,"Could not retrieve AE resource\n");
 			}
+			break;
+			}
+		case CNT: {
+			char rs = retrieve_cnt(destination,response);
+			if (rs == FALSE) {
+				responseMessage(response,500,"Internal Server Error","Error retrieving the data");
+				fprintf(stderr,"Could not retrieve CNT resource\n");
 			}
 			break;
+			}
+		case CIN: {
+			char rs = retrieve_cin(destination,response);
+			if (rs == FALSE) {
+				responseMessage(response,500,"Internal Server Error","Error retrieving the data");
+				fprintf(stderr,"Could not retrieve CIN resource\n");
+			}
+			break;
+			}
+		case SUB: {
+			char rs = retrieve_sub(destination,response);
+			if (rs == FALSE) {
+				responseMessage(response,500,"Internal Server Error","Error retrieving the data");
+				fprintf(stderr,"Could not retrieve CIN resource\n");
+			}
+			break;
+			}
 		default:
 			break;
 	}
@@ -142,19 +167,31 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 					// Verify if is it possible to create the child inside the destination
 					if (destination->ty == CSEBASE && !(ty == ACP || ty == AE || ty == CNT || ty == GRP || ty == NOD || ty == FCNT || ty == SUB) ) {
 						responseMessage(response,400,"Bad Request","Invalid children type.");
-						fprintf(stderr, "Could not create AE resource. Invalid children type.\n");
+						fprintf(stderr, "Could not create inside CSEBASE resource. Invalid children type.\n");
 						return;
 					}
 					
 					if (destination->ty == AE && !(ty == CNT || ty == FCNT || ty == GRP || ty == SUB) ) {
 						responseMessage(response,400,"Bad Request","Invalid children type.");
-						fprintf(stderr, "Could not create AE resource. Invalid children type.\n");
+						fprintf(stderr, "Could not create inside AE resource. Invalid children type.\n");
 						return;
 					}
 					
 					if (destination->ty == CNT && !(ty == CNT || ty == CIN || ty == SUB) ) {
 						responseMessage(response,400,"Bad Request","Invalid children type.");
-						fprintf(stderr, "Could not create AE resource. Invalid children type.\n");
+						fprintf(stderr, "Could not create inside CNT resource. Invalid children type.\n");
+						return;
+					}
+
+					if (destination->ty == CIN) {
+						responseMessage(response,400,"Bad Request","Invalid children type.");
+						fprintf(stderr, "Could not create inside CIN resource.\n");
+						return;
+					}
+
+					if (destination->ty == SUB && !(ty == SUB) ) {
+						responseMessage(response,400,"Bad Request","Invalid children type.");
+						fprintf(stderr, "Could not create inside SUB resource.\n");
 						return;
 					}
 
@@ -164,6 +201,30 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 						if (rs == FALSE) {
 							// The method it self already change the response properly
 							fprintf(stderr, "Could not create AE resource\n");
+						}
+						break;
+					}
+					case CNT: {
+						char rs = post_cnt(&info->route, destination, content, response);
+						if (rs == FALSE) {
+							// The method it self already change the response properly
+							fprintf(stderr, "Could not create CNT resource\n");
+						}
+						break;
+					}
+					case CIN: {
+						char rs = post_cin(&info->route, destination, content, response);
+						if (rs == FALSE) {
+							// The method it self already change the response properly
+							fprintf(stderr, "Could not create CIN resource\n");
+						}
+						break;
+					}
+					case SUB: {
+						char rs = post_sub(&info->route, destination, content, response);
+						if (rs == FALSE) {
+							// The method it self already change the response properly
+							fprintf(stderr, "Could not create SUB resource\n");
 						}
 						break;
 					}
@@ -190,7 +251,12 @@ void handle_post(ConnectionInfo *info, const char *request, struct Route *destin
 }
 
 void handle_delete(ConnectionInfo *info, struct Route *destination, char **response) {
-	fprintf(stderr, "%s\n", destination->key);
+	if (strcmp(destination->ri, BASE_RI) == 0) {
+		responseMessage(response,400,"Bad Request","Invalid resource.");
+		fprintf(stderr, "Could not delete CSEBASE resource.\n");
+		return;
+	}
+	
 	delete_resource(destination, response);
 }
 
@@ -246,6 +312,22 @@ void handle_put(ConnectionInfo *info, const char *request, struct Route *destina
 						if (rs == FALSE) {
 							// The method it self already change the response properly
 							fprintf(stderr, "Could not update AE resource\n");
+						}
+						break;
+					}
+					case CNT: {
+						char rs = put_cnt(destination, content, response);
+						if (rs == FALSE) {
+							// The method it self already change the response properly
+							fprintf(stderr, "Could not update CNT resource\n");
+						}
+						break;
+					}
+					case SUB: {
+						char rs = put_sub(destination, content, response);
+						if (rs == FALSE) {
+							// The method it self already change the response properly
+							fprintf(stderr, "Could not update SUB resource\n");
 						}
 						break;
 					}
@@ -347,23 +429,60 @@ void *handle_connection(void *connectioninfo) {
         close_socket_and_exit(info);
     }
 
+    // Creating the response
+    char *response = NULL;
+
     printf("Check if is the default route\n");
-    if (strcmp(destination->key, "/") == 0) {
+    if (destination->ty == -1) {
         char template[100] = "templates/";
 
         strncat(template, destination->value, sizeof(template) - strlen(template) - 1);
         char * response_data = render_static_file(template);
+
+		FILE *file;
+
+		long file_size;
+
+		// Open the file in binary mode
+		file = fopen(template, "rb");
 		
-        char response[4096] = "HTTP/1.1 200 OK\r\n\r\n";
+		if (file == NULL) {
+			fprintf(stderr, "Failed to open the file.\n");
+			responseMessage(&response, 500, "Internal", "HTTP method not supported");
+			send(info->socket_desc, response, strlen(response), 0);
+
+			close_socket_and_exit(info);
+			free(response);
+			return NULL;
+		}
+
+		// Get the size of the file
+		fseek(file, 0, SEEK_END);
+		file_size = ftell(file);
+		rewind(file);
+
+		// Close the file
+		fclose(file);
+
+		// Dynamically allocate memory for the buffer
+		response = (char*)malloc((file_size + 200) * sizeof(char));
+		if (response == NULL) {
+			fprintf(stderr, "Memory allocation failed.\n");
+			responseMessage(&response, 500, "Internal", "HTTP method not supported");
+			send(info->socket_desc, response, strlen(response), 0);
+
+			close_socket_and_exit(info);
+			free(response);
+			return NULL;
+		}
+
+		sprintf(response, "HTTP/1.1 200 OK\r\n\r\n");
         strncat(response, response_data, sizeof(response) - strlen(response) - 1);
         strncat(response, "\r\n\r\n", sizeof(response) - strlen(response) - 1);
 
         send(info->socket_desc, response, strlen(response), 0);
         close_socket_and_exit(info);
     }
-
-    // Creating the response
-    char *response = NULL;
 
 	printf("Check the HTTP method\n");
     if (strcmp(method, "GET") == 0) {

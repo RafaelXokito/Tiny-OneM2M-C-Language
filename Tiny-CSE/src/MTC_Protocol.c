@@ -151,7 +151,7 @@ char init_protocol(struct Route** head) {
 }
 
 char retrieve_csebase(struct Route * destination, char **response) {
-    char *sql = sqlite3_mprintf("SELECT ty, ri, rn, pi, csi, cst, ct, lt FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
+    char *sql = sqlite3_mprintf("SELECT blob FROM mtc WHERE ri = '%s' AND ty = %d;", destination->ri, destination->ty);
     sqlite3_stmt *stmt;
     struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
@@ -170,42 +170,16 @@ char retrieve_csebase(struct Route * destination, char **response) {
     printf("Creating the json object\n");
     CSEBaseStruct *csebase = init_cse_base();
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        csebase->ty = sqlite3_column_int(stmt, 0);
-        strncpy(csebase->ri, (char *)sqlite3_column_text(stmt, 1), 50);
-        strncpy(csebase->rn, (char *)sqlite3_column_text(stmt, 2), 50);
-        strncpy(csebase->pi, (char *)sqlite3_column_text(stmt, 3), 50);
-        csebase->cst = sqlite3_column_int(stmt, 4);
-        strncpy(csebase->csi, (char *)sqlite3_column_text(stmt, 5), 50);
-        const char *ct_iso = (const char *)sqlite3_column_text(stmt, 6);
-        const char *lt_iso = (const char *)sqlite3_column_text(stmt, 7);
-        struct tm ct_tm, lt_tm;
-        strptime(ct_iso, "%Y-%m-%d %H:%M:%S", &ct_tm);
-        strptime(lt_iso, "%Y-%m-%d %H:%M:%S", &lt_tm);
-        char ct_str[20], lt_str[20];
-        strftime(ct_str, sizeof(ct_str), "%Y%m%dT%H%M%S", &ct_tm);
-        strftime(lt_str, sizeof(lt_str), "%Y%m%dT%H%M%S", &lt_tm);
-        strncpy(csebase->ct, ct_str, 25);
-        strncpy(csebase->lt, lt_str, 25);
+        
+        char *blob = (char *)sqlite3_column_text(stmt, 0);
+        csebase->blob = (char *)malloc(strlen(blob)+1);
+        strcpy(csebase->blob, blob);
         break;
     }
-
-    cJSON *root = csebase_to_json(csebase);
-    if (root == NULL) {
-        fprintf(stderr, "Failed to convert CSEBaseStruct to JSON.\n");
-        responseMessage(response, 500, "Internal Server Error", "Failed to prepare statement");
-        sqlite3_finalize(stmt);
-        closeDatabase(db);
-        return FALSE;
-    }
-
-    char *keys[] = {"srt", "lbl", "poa", "acpi"};
-    int num_keys = sizeof(keys) / sizeof(keys[0]);
-    add_arrays_to_json(db, csebase->ri, cJSON_GetObjectItem(root, "m2m:cb"), keys, num_keys);
-
-    char *json_str = cJSON_PrintUnformatted(root);
+    
+    char *json_str = csebase->blob;
     if (json_str == NULL) {
         fprintf(stderr, "Failed to print JSON as a string.\n");
-        cJSON_Delete(root);
         sqlite3_finalize(stmt);
         closeDatabase(db);
         return FALSE;
@@ -223,13 +197,11 @@ char retrieve_csebase(struct Route * destination, char **response) {
         // Cleanup
         sqlite3_finalize(stmt);
         closeDatabase(db);
-        cJSON_Delete(root);
         free(json_str);
         return FALSE;
     }
     sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", json_str);
 
-    cJSON_Delete(root);
     sqlite3_finalize(stmt);
     closeDatabase(db);
     free(json_str);
@@ -359,7 +331,7 @@ char discovery(struct Route *head, struct Route *destination, const char *queryS
         if (!found && key_in_array(key, keysA, keysA_len)) {
             found = 1;
             // Add the condition to the query string
-            char *newMVconditions = sqlite3_mprintf("%s %s EXISTS (SELECT 1 FROM multivalue WHERE mtc_ri = m.mtc_ri AND atr = %Q AND value = %Q)", MVconditions ? MVconditions : "", filter_operation, key, value);
+            char *newMVconditions = sqlite3_mprintf("%s %s EXISTS (SELECT 1 FROM mtc WHERE %Q = %Q)", MVconditions ? MVconditions : "", filter_operation, key, value);
             if (MVconditions) sqlite3_free(MVconditions);
             MVconditions = newMVconditions;
         }
@@ -433,15 +405,9 @@ char discovery(struct Route *head, struct Route *destination, const char *queryS
     // Execute the dynamic SELECT statement
     char *query = sqlite3_mprintf("SELECT * FROM (SELECT url FROM mtc WHERE ri = \"%s\" AND 1 = 1%s LIMIT %d) "
                               "UNION "
-                              "SELECT mtc.url FROM mtc "
-                              "INNER JOIN ( "
-                              "SELECT DISTINCT mtc_ri as ri FROM multivalue AS m WHERE 1 = 1 %s LIMIT %d"
-                              ") AS res ON res.ri = mtc.ri "
-                              "WHERE mtc.pi = \"%s\" AND mtc.et > datetime('now') AND 1=1%s LIMIT %d",
+                              "SELECT mtc.url FROM mtc WHERE mtc.pi = \"%s\" AND mtc.et > datetime('now') AND 1=1%s LIMIT %d",
                               destination->ri,
                               MTCconditions ? MTCconditions : "",
-                              limit,
-                              MVconditions ? MVconditions : "",
                               limit,
                               destination->ri,
                               MTCconditions ? MTCconditions : "",
@@ -546,6 +512,16 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
         char unique_name[MAX_CONFIG_LINE_LENGTH+3];
         snprintf(unique_name, sizeof(unique_name), "AE-%s", unique_id);
         cJSON_AddStringToObject(content, "rn", unique_name);
+    } else {
+        cJSON *rn_item = cJSON_GetObjectItem(content, "rn");
+        if (rn_item == NULL || !cJSON_IsString(rn_item)) {
+            printf("Error: RN not found or is not a string\n");
+            responseMessage(response, 400, "Bad Request", "Error: RN not found or is not a string");
+            return FALSE;
+        }
+
+        // Remove unauthorized chars
+        remove_unauthorized_chars(rn_item->valuestring);
     }
 
     // Mandatory Atributes
@@ -558,7 +534,7 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
         return FALSE;
     }
 
-    const char *allowed_keys[] = {"apn", "ct", "ty", "acpi", "et", "lbl", "pi", "daci", "poa", "ch", "aa", "aei", "rn", "api", "rr", "csz", "ri", "nl", "at", "or", "lt"};
+    const char *allowed_keys[] = {"apn", "acpi", "et", "lbl", "daci", "poa", "ch", "aa", "aei", "rn", "api", "rr", "csz", "nl", "at", "or"};
     size_t num_allowed_keys = sizeof(allowed_keys) / sizeof(allowed_keys[0]);
     char disallowed = has_disallowed_keys(content, allowed_keys, num_allowed_keys);
     if (disallowed == TRUE) {
@@ -584,12 +560,7 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     // Copy the result from the temporary buffer to the uri buffer
     strncpy(uri, temp_uri, sizeof(uri));
     uri[sizeof(uri) - 1] = '\0'; // Ensure null termination
-
     to_lowercase(uri);
-    if (search_byrn_ty(*head, value_rn->valuestring, AE) != NULL) {
-        responseMessage(response, 400, "Bad Request", "rn (resource name) key already exist in this ty (resource type)");
-        return FALSE;
-    }
 
     pthread_mutex_t db_mutex;
 
@@ -616,6 +587,7 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     // Check if memory allocation is successful
     if (ae->url == NULL) {
         // Handle memory allocation error
+        responseMessage(response, 500, "Internal Server Error", "Memory allocation error");
         fprintf(stderr, "Memory allocation error\n");
         pthread_mutex_unlock(&db_mutex);
         pthread_mutex_destroy(&db_mutex);
@@ -628,7 +600,11 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
 
     // Append "/<rn value>" to ae->url
     sprintf(ae->url + destinationKeyLength, "/%s", cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
-    
+    if (search(*head, ae->url) != NULL) {
+        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
+        return FALSE;
+    }
+
     clock_t start_time, end_time;
     double elapsed_time;
     // Record the start time
@@ -693,6 +669,609 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     return TRUE;
 }
 
+char post_cnt(struct Route** head, struct Route* destination, cJSON *content, char** response) {
+    
+    // JSON Validation
+    
+    // "rn" is an optional, but if dont come with it we need to generate a resource name
+    char *keys_rn[] = {"rn"};  // Resource Name
+    int num_keys = 1;  // number of keys in the array
+    char *aux_response = NULL;
+    char rs = validate_keys(content, keys_rn, num_keys, &aux_response);
+    if (rs == FALSE) {
+        // Se não tiver "rn" geramos um com "CNT-<UniqueID>"
+        char unique_id[MAX_CONFIG_LINE_LENGTH];
+        generate_unique_id(unique_id);
+
+        char unique_name[MAX_CONFIG_LINE_LENGTH+4];
+        snprintf(unique_name, sizeof(unique_name), "CNT-%s", unique_id);
+        cJSON_AddStringToObject(content, "rn", unique_name);
+    } else {
+        cJSON *rn_item = cJSON_GetObjectItem(content, "rn");
+        if (rn_item == NULL || !cJSON_IsString(rn_item)) {
+            printf("Error: RN not found or is not a string\n");
+            responseMessage(response, 400, "Bad Request", "Error: RN not found or is not a string");
+            return FALSE;
+        }
+
+        // Remove unauthorized chars
+        remove_unauthorized_chars(rn_item->valuestring);
+    }
+
+    cJSON *value = NULL;
+    value = cJSON_GetObjectItem(content, "mbs");  // retrieve the value associated with the key
+    if (value == NULL) {
+        cJSON_AddNumberToObject(content, "mbs", -1);
+    }
+
+    value = cJSON_GetObjectItem(content, "mni");  // retrieve the value associated with the key
+    if (value == NULL) {
+        cJSON_AddNumberToObject(content, "mni", -1);
+    }
+
+    // Theres no Mandatory Atributes
+    // Não consta no excel auxiliar: dr -> disableRetrieval
+    const char *allowed_keys[] = {"rn", "et", "acpi", "lbl", "at", "aa", "daci", "cr", "mni", "mbs", "mia", "li", "or", "dr"};
+    size_t num_allowed_keys = sizeof(allowed_keys) / sizeof(allowed_keys[0]);
+    char disallowed = has_disallowed_keys(content, allowed_keys, num_allowed_keys);
+    if (disallowed == TRUE) {
+        fprintf(stderr, "The cJSON object has disallowed keys.\n");
+        responseMessage(response, 400, "Bad Request", "Found keys not allowed");
+        return FALSE;
+    }
+
+    // Default values
+    cJSON_AddNumberToObject(content, "st", 0);
+    cJSON_AddNumberToObject(content, "cni", 0);
+    cJSON_AddNumberToObject(content, "cbs", 0);
+    
+    char uri[60];
+    snprintf(uri, sizeof(uri), "/%s",destination->value);
+    cJSON *value_rn = cJSON_GetObjectItem(content, "rn");
+    if (value_rn == NULL) {
+        responseMessage(response, 400, "Bad Request", "rn (resource name) key not found");
+        return FALSE;
+    }
+    char temp_uri[60];
+    int result = snprintf(temp_uri, sizeof(temp_uri), "%s/%s", uri, value_rn->valuestring);
+    if (result < 0 || result >= sizeof(temp_uri)) {
+        responseMessage(response, 400, "Bad Request", "URI is too long");
+        return FALSE;
+    }
+    
+    // Copy the result from the temporary buffer to the uri buffer
+    strncpy(uri, temp_uri, sizeof(uri));
+    uri[sizeof(uri) - 1] = '\0'; // Ensure null termination
+    to_lowercase(uri);
+
+    pthread_mutex_t db_mutex;
+
+    // initialize mutex
+    if (pthread_mutex_init(&db_mutex, NULL) != 0) {
+        responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
+        return FALSE;
+    }
+
+    printf("Creating CNT\n");
+    CNTStruct *cnt = init_cnt();
+    // Should be garantee that the content (json object) dont have this keys
+    cJSON_AddStringToObject(content, "pi", destination->ri);
+
+    // perform database operations
+    pthread_mutex_lock(&db_mutex);
+    
+    size_t destinationKeyLength = strlen(destination->key);
+    size_t rnLength = strlen(cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
+
+    // Allocate memory for cnt->url, considering the extra characters for "/", and the null terminator.
+    cnt->url = (char *)malloc(destinationKeyLength + rnLength + 2);
+
+    // Check if memory allocation is successful
+    if (cnt->url == NULL) {
+        // Handle memory allocation error
+        fprintf(stderr, "Memory allocation error\n");
+        responseMessage(response, 500, "Internal Server Error", "Memory allocation error");
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+
+    // Copy the destination key into cnt->url
+    strncpy(cnt->url, destination->key, destinationKeyLength);
+    cnt->url[destinationKeyLength] = '\0'; // Add null terminator
+
+    // Append "/<rn value>" to cnt->url
+    sprintf(cnt->url + destinationKeyLength, "/%s", cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
+    to_lowercase(cnt->url);
+    if (search(*head, cnt->url) != NULL) {
+        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
+        return FALSE;
+    }
+
+    rs = create_cnt(cnt, content, response);
+
+    if (rs == FALSE) {
+        // É feito dentro da função create_cnt
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+    
+    // Add New Routes
+    addRoute(head, cnt->url, cnt->ri, cnt->ty, cnt->rn);
+    printf("New Route: %s -> %s -> %d -> %s \n", cnt->url, cnt->ri, cnt->ty, cnt->rn);
+
+    // Creating ol(dest) and la(test) routes
+    char *url_ol;
+    char *url_la;
+
+    // Allocate memory for the new URLs
+    url_ol = malloc(strlen(cnt->url) + strlen("/ol") + 1);  // +1 for the null-terminator
+    url_la = malloc(strlen(cnt->url) + strlen("/la") + 1);  // +1 for the null-terminator
+
+    if (url_ol == NULL || url_la == NULL) {
+        fprintf(stderr, "Memory allocation failed. \n'la' and 'li' CNT routes not available\n");
+        responseMessage(response, 500, "Internal Server Error", "Memory allocation failed. 'la' and 'li' CNT routes not available");
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+
+    // Copy the original URL and append /ol and /la
+    sprintf(url_ol, "%s/ol", cnt->url);
+    sprintf(url_la, "%s/la", cnt->url);
+
+    addRoute(head, url_ol, cnt->ri, CIN, "ol");
+    addRoute(head, url_la, cnt->ri, CIN, "la");
+
+    // Convert the CNT struct to json and the Json Object to Json String
+    cJSON *root = cnt_to_json(cnt);
+    char *str = cJSON_PrintUnformatted(root);
+    if (str == NULL) {
+        responseMessage(response, 500, "Internal Server Error", "Could not print cJSON object");
+        cJSON_Delete(root);
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+    
+    // Calculate the required buffer size
+    size_t response_size = strlen("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n") + strlen(str) + 1;
+    
+    // Allocate memory for the response buffer
+    *response = (char *)malloc(response_size * sizeof(char));
+
+    // Check if memory allocation was successful
+    if (*response == NULL) {
+        fprintf(stderr, "Failed to allocate memory for the response buffer\n");
+        // Cleanup
+        cJSON_free(str);
+        cJSON_Delete(root);
+        return FALSE;
+    }
+    sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", str);
+
+    // Free allocated resources
+    cJSON_Delete(root);
+    cJSON_free(str);
+
+    // // access database here
+    pthread_mutex_unlock(&db_mutex);
+
+    // // clean up
+    pthread_mutex_destroy(&db_mutex);
+
+    free(url_ol);
+    free(url_la);
+
+    return TRUE;
+}
+
+char post_cin(struct Route** head, struct Route* destination, cJSON *content, char** response) {
+    
+    // JSON Validation
+    
+    // "rn" is an optional, but if dont come with it we need to generate a resource name
+    char *keys_rn[] = {"rn"};  // Resource Name
+    int num_keys = 1;  // number of keys in the array
+    char *aux_response = NULL;
+    char rs = validate_keys(content, keys_rn, num_keys, &aux_response);
+    if (rs == FALSE) {
+        // Se não tiver "rn" geramos um com "CIN-<UniqueID>"
+        char unique_id[MAX_CONFIG_LINE_LENGTH];
+        generate_unique_id(unique_id);
+
+        char unique_name[MAX_CONFIG_LINE_LENGTH+4];
+        snprintf(unique_name, sizeof(unique_name), "CIN-%s", unique_id);
+        cJSON_AddStringToObject(content, "rn", unique_name);
+    } else {
+        cJSON *rn_item = cJSON_GetObjectItem(content, "rn");
+        if (rn_item == NULL || !cJSON_IsString(rn_item)) {
+            printf("Error: RN not found or is not a string\n");
+            responseMessage(response, 400, "Bad Request", "Error: RN not found or is not a string");
+            return FALSE;
+        }
+
+        // Remove unauthorized chars
+        remove_unauthorized_chars(rn_item->valuestring);
+    }
+    
+    // Optional value with default value
+    cJSON *value = NULL;
+    value = cJSON_GetObjectItem(content, "cnf");  // retrieve the value associated with the key
+    if (value == NULL) {
+        cJSON_AddStringToObject(content, "cnf", "text/plain:0");
+    }
+    
+    // Mandatory Atributes
+    char *keys_m[] = {"con"};  // Content
+    num_keys = 1;  // number of keys in the array
+    aux_response = NULL;
+    rs = validate_keys(content, keys_m, num_keys, &aux_response);
+    if (rs == FALSE) {
+        cJSON_AddStringToObject(content, "con", "");
+    }
+
+    const char *allowed_keys[] = {"rn", "et", "at", "aa", "lbl", "cnf", "cr", "or", "con", "dc", "dgt"};
+    size_t num_allowed_keys = sizeof(allowed_keys) / sizeof(allowed_keys[0]);
+    char disallowed = has_disallowed_keys(content, allowed_keys, num_allowed_keys);
+    if (disallowed == TRUE) {
+        fprintf(stderr, "The cJSON object has disallowed keys.\n");
+        responseMessage(response, 400, "Bad Request", "Found keys not allowed");
+        return FALSE;
+    }
+
+    value = cJSON_GetObjectItem(content, "con");  // retrieve the value associated with the key
+    if (value == NULL) {
+        cJSON_AddNumberToObject(content, "cs", 0);
+    } else {
+        cJSON_AddNumberToObject(content, "cs", strlen(cJSON_GetObjectItem(content, "con")->valuestring));
+    }
+    
+    char uri[60];
+    snprintf(uri, sizeof(uri), "/%s",destination->value);
+    cJSON *value_rn = cJSON_GetObjectItem(content, "rn");
+    if (value_rn == NULL) {
+        responseMessage(response, 400, "Bad Request", "rn (resource name) key not found");
+        return FALSE;
+    }
+    char temp_uri[60];
+    int result = snprintf(temp_uri, sizeof(temp_uri), "%s/%s", uri, value_rn->valuestring);
+    if (result < 0 || result >= sizeof(temp_uri)) {
+        responseMessage(response, 400, "Bad Request", "URI is too long");
+        return FALSE;
+    }
+    
+    // Copy the result from the temporary buffer to the uri buffer
+    strncpy(uri, temp_uri, sizeof(uri));
+    uri[sizeof(uri) - 1] = '\0'; // Ensure null termination
+    to_lowercase(uri);
+    
+
+    pthread_mutex_t db_mutex;
+
+    // initialize mutex
+    if (pthread_mutex_init(&db_mutex, NULL) != 0) {
+        responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
+        return FALSE;
+    }
+
+    printf("Creating CIN\n");
+    CINStruct *cin = init_cin();
+    // Should be garantee that the content (json object) dont have this keys
+    cJSON_AddStringToObject(content, "pi", destination->ri);
+
+    // perform database operations
+    pthread_mutex_lock(&db_mutex);
+    
+    size_t destinationKeyLength = strlen(destination->key);
+    size_t rnLength = strlen(cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
+
+    // Allocate memory for cin->url, considering the extra characters for "/", and the null terminator.
+    cin->url = (char *)malloc(destinationKeyLength + rnLength + 2);
+
+    // Check if memory allocation is successful
+    if (cin->url == NULL) {
+        // Handle memory allocation error
+        fprintf(stderr, "Memory allocation error\n");
+        responseMessage(response, 500, "Internal Server Error", "Memory allocation error");
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+
+    // Copy the destination key into cin->url
+    strncpy(cin->url, destination->key, destinationKeyLength);
+    cin->url[destinationKeyLength] = '\0'; // Add null terminator
+    
+    // Append "/<rn value>" to cin->url
+    sprintf(cin->url + destinationKeyLength, "/%s", cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
+    to_lowercase(cin->url);
+    if (search(*head, cin->url) != NULL) {
+        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
+        return FALSE;
+    }
+
+    // retrieve the st from CNT from the database
+    struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
+    if (db == NULL) {
+        fprintf(stderr, "Failed to initialize the database.\n");
+        responseMessage(response, 500, "Internal Server Error", "Failed to initialize the database.");
+        return FALSE;
+    }
+    char *sql = sqlite3_mprintf("SELECT st FROM mtc WHERE LOWER(url) = LOWER('%s') AND et > datetime('now');", destination->key);
+    if (sql == NULL) {
+        fprintf(stderr, "Failed to allocate memory for SQL query.\n");
+        responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
+        return FALSE;
+    }
+    sqlite3_stmt *stmt;
+    short rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Failed to prepare statement.");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
+
+    // Populate the st attribute
+    rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        cJSON_AddNumberToObject(content, "st", sqlite3_column_int(stmt, 0));
+    } else {
+        printf("Failed to step through the statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Failed to step through the statement.");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
+
+    rs = create_cin(db, cin, content, response);
+
+    if (rs == FALSE) {
+        // É feito dentro da função create_cin
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+    
+    // Add New Routes
+    addRoute(head, cin->url, cin->ri, cin->ty, cin->rn);
+    printf("New Route: %s -> %s -> %d -> %s \n", uri, cin->ri, cin->ty, cin->rn);
+    
+    // Convert the CIN struct to json and the Json Object to Json String
+    cJSON *root = cin_to_json(cin);
+    char *str = cJSON_PrintUnformatted(root);
+    if (str == NULL) {
+        responseMessage(response, 500, "Internal Server Error", "Could not print cJSON object");
+        cJSON_Delete(root);
+        return FALSE;
+    }
+    
+    // Calculate the required buffer size
+    size_t response_size = strlen("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n") + strlen(str) + 1;
+    
+    // Allocate memory for the response buffer
+    *response = (char *)malloc(response_size * sizeof(char));
+
+    // Check if memory allocation was successful
+    if (*response == NULL) {
+        fprintf(stderr, "Failed to allocate memory for the response buffer\n");
+        // Cleanup
+        cJSON_free(str);
+        cJSON_Delete(root);
+        return FALSE;
+    }
+    sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", str);
+
+    // Free allocated resources
+    cJSON_Delete(root);
+    cJSON_free(str);
+
+    // // access database here
+    pthread_mutex_unlock(&db_mutex);
+
+    // // clean up
+    pthread_mutex_destroy(&db_mutex);
+
+    return TRUE;
+}
+
+char post_sub(struct Route** head, struct Route* destination, cJSON *content, char** response) {
+    
+    // JSON Validation
+    
+    // "rn" is an optional, but if dont come with it we need to generate a resource name
+    char *keys_rn[] = {"rn"};  // Resource Name
+    int num_keys = 1;  // number of keys in the array
+    char *aux_response = NULL;
+    char rs = validate_keys(content, keys_rn, num_keys, &aux_response);
+    if (rs == FALSE) {
+        // Se não tiver "rn" geramos um com "SUB-<UniqueID>"
+        char unique_id[MAX_CONFIG_LINE_LENGTH];
+        generate_unique_id(unique_id);
+
+        char unique_name[MAX_CONFIG_LINE_LENGTH+4];
+        snprintf(unique_name, sizeof(unique_name), "SUB-%s", unique_id);
+        cJSON_AddStringToObject(content, "rn", unique_name);
+    } else {
+        cJSON *rn_item = cJSON_GetObjectItem(content, "rn");
+        if (rn_item == NULL || !cJSON_IsString(rn_item)) {
+            printf("Error: RN not found or is not a string\n");
+            responseMessage(response, 400, "Bad Request", "Error: RN not found or is not a string");
+            return FALSE;
+        }
+
+        // Remove unauthorized chars
+        remove_unauthorized_chars(rn_item->valuestring);
+    }
+
+    // Mandatory Atributes
+    char *keys_m[] = {"nu"};  // App-ID, requestReachability
+    num_keys = 1;  // number of keys in the array
+    aux_response = NULL;
+    rs = validate_keys(content, keys_m, num_keys, &aux_response);
+    if (rs == FALSE) {
+        responseMessage(response, 400, "Bad Request", aux_response);
+        return FALSE;
+    }
+
+    cJSON *value = NULL;
+    value = cJSON_GetObjectItem(content, "enc");  // retrieve the value associated with the key
+    if (value == NULL) {
+        cJSON_AddStringToObject(content, "enc", "POST, PUT, GET, DELETE");
+    }
+    printf("%s\n", cJSON_Print(content));
+    const char *allowed_keys[] = {"rn", "acpi", "et", "lbl", "daci", "nu", "enc"};
+    size_t num_allowed_keys = sizeof(allowed_keys) / sizeof(allowed_keys[0]);
+    char disallowed = has_disallowed_keys(content, allowed_keys, num_allowed_keys);
+    if (disallowed == TRUE) {
+        fprintf(stderr, "The cJSON object has disallowed keys.\n");
+        responseMessage(response, 400, "Bad Request", "Found keys not allowed");
+        return FALSE;
+    }
+    
+    char uri[60];
+    snprintf(uri, sizeof(uri), "/%s",destination->value);
+    cJSON *value_rn = cJSON_GetObjectItem(content, "rn");
+    if (value_rn == NULL) {
+        responseMessage(response, 400, "Bad Request", "rn (resource name) key not found");
+        return FALSE;
+    }
+    char temp_uri[60];
+    int result = snprintf(temp_uri, sizeof(temp_uri), "%s/%s", uri, value_rn->valuestring);
+    if (result < 0 || result >= sizeof(temp_uri)) {
+        responseMessage(response, 400, "Bad Request", "URI is too long");
+        return FALSE;
+    }
+    
+    // Copy the result from the temporary buffer to the uri buffer
+    strncpy(uri, temp_uri, sizeof(uri));
+    uri[sizeof(uri) - 1] = '\0'; // Ensure null termination
+
+    pthread_mutex_t db_mutex;
+
+    // initialize mutex
+     if (pthread_mutex_init(&db_mutex, NULL) != 0) {
+         responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
+         return FALSE;
+    }
+
+    printf("Creating SUB\n");
+    SUBStruct *sub = init_sub();
+    // Should be garantee that the content (json object) dont have this keys
+    cJSON_AddStringToObject(content, "pi", destination->ri);
+
+    // perform database operations
+    pthread_mutex_lock(&db_mutex);
+    
+    size_t destinationKeyLength = strlen(destination->key);
+    size_t rnLength = strlen(cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
+
+    // Allocate memory for sub->url, considering the extra characters for "/", and the null terminator.
+    sub->url = (char *)malloc(destinationKeyLength + rnLength + 2);
+
+    // Check if memory allocation is successful
+    if (sub->url == NULL) {
+        // Handle memory allocation error
+        responseMessage(response, 500, "Internal Server Error", "Memory allocation error");
+        fprintf(stderr, "Memory allocation error\n");
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+
+    // Copy the destination key into sub->url
+    strncpy(sub->url, destination->key, destinationKeyLength);
+    sub->url[destinationKeyLength] = '\0'; // Add null terminator
+
+    // Append "/<rn value>" to sub->url
+    sprintf(sub->url + destinationKeyLength, "/%s", cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
+    to_lowercase(sub->url);
+    if (search(*head, sub->url) != NULL) {
+        responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
+        return FALSE;
+    }
+    
+    clock_t start_time, end_time;
+    double elapsed_time;
+    // Record the start time
+    start_time = clock();
+
+    rs = create_sub(sub, content, response);
+
+    // Record the end time
+    end_time = clock();
+
+    // Calculate the elapsed time in seconds
+    elapsed_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+
+    printf("Time taken by create_sub: %f seconds\n", elapsed_time);
+    if (rs == FALSE) {
+        // É feito dentro da função create_sub
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+    
+    // Add New Routes
+    addRoute(head, sub->url, sub->ri, sub->ty, sub->rn);
+    printf("New Route: %s -> %s -> %d -> %s \n", uri, sub->ri, sub->ty, sub->rn);
+    
+    // Convert the SUB struct to json and the Json Object to Json String
+    cJSON *root = sub_to_json(sub);
+    char *str = cJSON_PrintUnformatted(root);
+    if (str == NULL) {
+        responseMessage(response, 500, "Internal Server Error", "Could not print cJSON object");
+        cJSON_Delete(root);
+        return FALSE;
+    }
+    
+    // Calculate the required buffer size
+    size_t response_size = strlen("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n") + strlen(str) + 1;
+    
+    // Allocate memory for the response buffer
+    *response = (char *)malloc(response_size * sizeof(char));
+
+    // Check if memory allocation was successful
+    if (*response == NULL) {
+        fprintf(stderr, "Failed to allocate memory for the response buffer\n");
+        // Cleanup
+        cJSON_free(str);
+        cJSON_Delete(root);
+        return FALSE;
+    }
+    sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", str);
+
+    // Free allocated resources
+    cJSON_Delete(root);
+    cJSON_free(str);
+
+    // // access database here
+    pthread_mutex_unlock(&db_mutex);
+
+    // // clean up
+    pthread_mutex_destroy(&db_mutex);
+
+    return TRUE;
+}
+
+char retrieve_cnt(struct Route * destination, char **response) {
+    pthread_mutex_t db_mutex;
+    if (pthread_mutex_init(&db_mutex, NULL) != 0) {
+         responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
+         return FALSE;
+    }
+    short rs = get_cnt(destination, response);
+    if (rs == FALSE) {
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+    return TRUE;
+}
+
 char retrieve_ae(struct Route * destination, char **response) {
     pthread_mutex_t db_mutex;
     if (pthread_mutex_init(&db_mutex, NULL) != 0) {
@@ -700,6 +1279,36 @@ char retrieve_ae(struct Route * destination, char **response) {
          return FALSE;
     }
 	short rs = get_ae(destination, response);
+    if (rs == FALSE) {
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+    return TRUE;
+}
+
+char retrieve_cin(struct Route * destination, char **response) {
+    pthread_mutex_t db_mutex;
+    if (pthread_mutex_init(&db_mutex, NULL) != 0) {
+         responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
+         return FALSE;
+    }
+    short rs = get_cin(destination, response);
+    if (rs == FALSE) {
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+    return TRUE;
+}
+
+char retrieve_sub(struct Route * destination, char **response) {
+    pthread_mutex_t db_mutex;
+    if (pthread_mutex_init(&db_mutex, NULL) != 0) {
+         responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
+         return FALSE;
+    }
+	short rs = get_sub(destination, response);
     if (rs == FALSE) {
         pthread_mutex_unlock(&db_mutex);
         pthread_mutex_destroy(&db_mutex);
@@ -765,31 +1374,183 @@ char delete_resource(struct Route * destination, char **response) {
         return FALSE;
     }
 
-    short rc = begin_transaction(db);
+    char *sql_blob = sqlite3_mprintf("SELECT blob, pi FROM mtc WHERE LOWER(ri) = LOWER('%s') AND et > DATETIME('now');", destination->ri);
+    
+    if (sql_blob == NULL) {
+        fprintf(stderr, "Failed to allocate memory for SQL query.\n");
+        responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
+        return FALSE;
+    }
+    sqlite3_stmt *stmt;
+    short rc = sqlite3_prepare_v2(db, sql_blob, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Failed to prepare statement.");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
+    char *blob = NULL;
+    char *pi = NULL;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        blob = malloc(strlen((char *)sqlite3_column_text(stmt, 0)));
+        strcpy(blob, (char *)sqlite3_column_text(stmt, 0));
+        pi = malloc(strlen((char *)sqlite3_column_text(stmt, 1)));
+        strcpy(pi, (char *)sqlite3_column_text(stmt, 1));
+    } else {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Failed to find the resource.");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
+
+    char *sql_not = sqlite3_mprintf("SELECT DISTINCT nu, url, enc as blob FROM mtc WHERE LOWER(pi) = LOWER('%s') AND nu IS NOT NULL AND et > DATETIME('now');", pi);
+    
+    if (sql_not == NULL) {
+        fprintf(stderr, "Failed to allocate memory for SQL query.\n");
+        responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
+        return FALSE;
+    }
+    rc = sqlite3_prepare_v2(db, sql_not, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        responseMessage(response, 400, "Bad Request", "Failed to prepare statement.");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        return FALSE;
+    }
+
+    // Enable foreign keys
+    char *sql = "PRAGMA foreign_keys=ON;";
+    char *err_msg = 0;
+
+    rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Failed to enable foreign keys: %s\n", err_msg);
+        sqlite3_free(err_msg);
+    } else {
+        fprintf(stdout, "Foreign keys enabled successfully\n");
+    }
+
+    rc = begin_transaction(db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Can't begin transaction\n");
         closeDatabase(db);
         return FALSE;
     }
 
-    // Delete record from SQLite3 table
-    char* sql_mtc = sqlite3_mprintf("DELETE FROM mtc WHERE ri='%q'", destination->ri);
-    int rs = sqlite3_exec(db, sql_mtc, NULL, NULL, &errMsg);
-    sqlite3_free(sql_mtc);
+    if (destination->ty == CIN) {
+        // Get the parent url.
+        // Given the following key: /onem2m/ae-4
+        // The result would be: /onem2m
+        char *last_slash = strrchr(destination->key, '/');
+        char *result = NULL;
 
-    if (rs != SQLITE_OK) {
-        responseMessage(response,400,"Bad Request","Error deleting record");
-        fprintf(stderr, "Error deleting record: %s\n", errMsg);
-        rollback_transaction(db); // Rollback transaction
-        sqlite3_free(errMsg);
-        closeDatabase(db);
-        return FALSE;
+        if (last_slash != NULL) {
+            int len = last_slash - destination->key;
+            result = malloc((len + 1) * sizeof(char)); // Allocate memory dynamically
+            if (result == NULL) {
+                // handle error, e.g. print error message and exit or return
+                fprintf(stderr, "Error: Unable to allocate memory for result.\n");
+                free(result);
+                responseMessage(response,500,"Internal Server Error","Error: Unable to allocate memory for result.");
+                rollback_transaction(db); // Rollback transaction
+                sqlite3_free(errMsg);
+                closeDatabase(db);
+                return FALSE;
+            }
+            strncpy(result, destination->key, len);
+            result[len] = '\0'; // Ensure the string is null terminated
+        } else {
+            result = strdup(destination->key); // Use strdup() to allocate memory and copy string
+            if (result == NULL) {
+                // handle error
+                fprintf(stderr, "Error: Unable to allocate memory for result.\n");
+                free(result);
+                responseMessage(response,500,"Internal Server Error","Error: Unable to allocate memory for result.");
+                rollback_transaction(db); // Rollback transaction
+                sqlite3_free(errMsg);
+                closeDatabase(db);
+                return FALSE;
+            }
+        }
+
+        sqlite3_stmt *stmt;
+        int cni, cbs;
+        char *sql = sqlite3_mprintf("SELECT cni - 1, cbs - (SELECT cs FROM mtc WHERE ri = '%s'), blob FROM mtc WHERE LOWER(url) = LOWER('%s') AND et > datetime('now');", destination->ri, result);
+        rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+        sqlite3_free(sql);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr,"Failed to execute statement: %s\n", sqlite3_errmsg(db));
+            responseMessage(response, 400, "Bad Request", "Verify the request body");
+            rollback_transaction(db); // Rollback transaction
+            sqlite3_finalize(stmt);
+            closeDatabase(db);
+            return FALSE;
+        }
+
+        cJSON *cntBlob = NULL;
+        if ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+            cni = sqlite3_column_int(stmt, 0);
+            cbs = sqlite3_column_int(stmt, 1);
+
+            cntBlob = cJSON_Parse((char *)sqlite3_column_text(stmt, 2));
+            cJSON *cnt = cJSON_GetObjectItem(cntBlob, "m2m:cnt");
+            if(cnt != NULL) {
+                cJSON *JsonCni = cJSON_GetObjectItem(cnt, "cni");
+                cJSON *JsonCbs = cJSON_GetObjectItem(cnt, "cbs");
+
+                if(JsonCni != NULL) {
+                    cJSON_ReplaceItemInObject(cnt, "cni", cJSON_CreateNumber(cni));
+                }
+
+                if(JsonCbs != NULL) {
+                    cJSON_ReplaceItemInObject(cnt, "cbs", cJSON_CreateNumber(cbs));
+                }
+            }
+        }
+
+        sqlite3_finalize(stmt);
+
+        // Update the parent container
+        const char *updateSql = "UPDATE mtc SET cni = ?, cbs = ?, blob = ? WHERE LOWER(url) = LOWER(?);";
+        
+        rc = sqlite3_prepare_v2(db, updateSql, -1, &stmt, NULL);
+        if (rc != SQLITE_OK) {
+            free(result);
+            fprintf(stderr,"Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+            sqlite3_finalize(stmt);
+            responseMessage(response, 500, "Internal Server Error", "Could not update the CNT resource.");
+            closeDatabase(db);
+            return FALSE;
+        }
+
+        sqlite3_bind_int(stmt, 1, cni);
+        sqlite3_bind_int(stmt, 2, cbs);
+        sqlite3_bind_text(stmt, 3, cJSON_Print(cntBlob), strlen(cJSON_Print(cntBlob)), SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 4, result, strlen(result), SQLITE_STATIC);
+
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            free(result);
+            fprintf(stderr,"Failed to execute statement: %s\n", sqlite3_errmsg(db));
+            responseMessage(response, 500, "Internal Server Error", "Could not update the CNT resource.");
+            rollback_transaction(db); // Rollback transaction
+            sqlite3_finalize(stmt);
+            closeDatabase(db);
+            return FALSE;
+        }
+
+        sqlite3_finalize(stmt);
+        free(result);
     }
 
     // Delete record from SQLite3 table
-    char* sql_multi = sqlite3_mprintf("DELETE FROM multivalue WHERE mtc_ri='%q'", destination->ri);
-    rs = sqlite3_exec(db, sql_multi, NULL, NULL, &errMsg);
-    sqlite3_free(sql_multi);
+    char* sql_mtc = sqlite3_mprintf("DELETE FROM mtc WHERE ri='%q' AND et > datetime('now')", destination->ri);
+    int rs = sqlite3_exec(db, sql_mtc, NULL, NULL, &errMsg);
+    sqlite3_free(sql_mtc);
 
     if (rs != SQLITE_OK) {
         responseMessage(response,400,"Bad Request","Error deleting record");
@@ -836,10 +1597,112 @@ char delete_resource(struct Route * destination, char **response) {
     responseMessage(response,200,"OK","Record deleted");
 
     printf("Record deleted ri = %s\n", destination->ri);
-    
     responseMessage(response,200,"OK","Record deleted");
     
+    // Populate the CNT
+    pthread_t thread_id;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        notificationData* data = malloc(sizeof(notificationData));
+        pthread_t thread_id;
+        int result;
+
+        const char *nu_temp = (const char *)sqlite3_column_text(stmt, 0);
+        data->nu = malloc(strlen(nu_temp) + 1); // +1 for null terminator
+        strcpy(data->nu, nu_temp);
+
+        const char *url_temp = (const char *)sqlite3_column_text(stmt, 1);
+        data->topic = malloc(strlen(url_temp) + 1); // +1 for null terminator
+        strcpy(data->topic, url_temp);
+
+        data->body = malloc(strlen(blob) + 1); // +1 for null terminator
+        strcpy(data->body, blob);
+
+        const char *enc_temp = (const char *)sqlite3_column_text(stmt, 2);
+        // Check if the subscription eventNotificationCriteria contains "POST"
+        if (strstr(enc_temp, "DELETE") == NULL) {
+            continue;
+        }
+
+        char *suffix = "}}";
+
+        int suffix_length = strlen(suffix);
+        int body_length = strlen(data->body);
+        int enc_temp_length = strlen(enc_temp); // assuming enc_temp is a string
+        int topic_length = strlen(data->topic);
+
+        // Here we construct the prefix dynamically with sprintf. 
+        char prefix[256];  // Make sure this size is enough for your string
+        sprintf(prefix, "{\"m2m:sgn\":{\"cr\":\"admin:admin\",\"nev\":{\"net\":\"%s\",\"om\":null,\"rep\":", "DELETE");
+        
+        int prefix_length = strlen(prefix);
+        int total_length = prefix_length + body_length + enc_temp_length + topic_length + strlen(suffix) + 201;
+        // Allocate enough memory for the new string
+        char *wrapped_body = malloc(total_length);
+
+        if(wrapped_body == NULL) {
+            fprintf(stderr, "Failed to allocate memory for the wrapped body.\n");
+            free(data->nu); // Free the memory for the string
+            free(data->topic); // Free the memory for the string
+            free(data->body); // Free the memory for the string
+            free(data); // Then free the memory for the struct
+            continue;
+        } else {
+            // Start with the prefix
+            strcpy(wrapped_body, prefix);
+            // Append the original body
+            strcat(wrapped_body, data->body);
+            // Append the topic
+            strcat(wrapped_body, "\",\"nfu\":null,\"sud\":null,\"sur\":\"");
+            strcat(wrapped_body, data->topic);
+            strcat(wrapped_body, "\",\"vrq\":null");
+            // Append the suffix
+            strcat(wrapped_body, suffix);
+
+            // Free the original body now that it's not needed
+            free(data->body);
+            // Make the wrapped body the new body
+            data->body = wrapped_body;
+        }
+
+        result = pthread_create(&thread_id, NULL, send_notification, data); //pass data, not &data
+        if (result != 0) {
+            fprintf(stderr, "Error creating thread: %s\n", strerror(result));
+            free(data->nu); // Free the memory for the string
+            free(data->topic); // Free the memory for the string
+            free(data->body); // Free the memory for the string
+            free(data); // Then free the memory for the struct
+        }
+    }
+
+    closeDatabase(db);
     return TRUE;
+}
+
+char put_cnt(struct Route* destination, cJSON *content, char** response) {
+
+    const char *allowed_keys[] = {"et", "acpi", "lbl", "daci", "ch", "aa", "at", "mbs", "mni", "mia", "or", "dr"};
+	size_t num_allowed_keys = sizeof(allowed_keys) / sizeof(allowed_keys[0]);
+    char disallowed = has_disallowed_keys(content, allowed_keys, num_allowed_keys);
+    pthread_mutex_t db_mutex;
+
+    if (disallowed == TRUE) {
+        fprintf(stderr, "The cJSON object has disallowed keys.\n");
+        responseMessage(response, 400, "Bad Request", "Found keys not allowed");
+        return FALSE;
+    }
+	
+	if (pthread_mutex_init(&db_mutex, NULL) != 0) {
+         responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
+         return FALSE;
+    }
+	short rs = update_cnt(destination, content, response);
+    if (rs == FALSE) {
+        responseMessage(response, 400, "Bad Request", "Verify the request body");
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+	return TRUE;
 }
 
 char put_ae(struct Route* destination, cJSON *content, char** response) {
@@ -869,106 +1732,31 @@ char put_ae(struct Route* destination, cJSON *content, char** response) {
 	return TRUE;
 }
 
-static int insert_element_into_multivalue_table(sqlite3 *db, const char *mtc_ri, int parent_id, const char* atr, const char *key, const char *value, const char *type) {
+char put_sub(struct Route* destination, cJSON *content, char** response) {
 
-    sqlite3_stmt *stmt;
-    const char *sql = "INSERT INTO multivalue (mtc_ri, parent_id, atr, key, value, type) VALUES (?, ?, ?, ?, ?, ?);";
+    const char *allowed_keys[] = {"et", "acpi", "lbl", "daci", "nu", "enc"};
+	size_t num_allowed_keys = sizeof(allowed_keys) / sizeof(allowed_keys[0]);
+    char disallowed = has_disallowed_keys(content, allowed_keys, num_allowed_keys);
+    pthread_mutex_t db_mutex;
 
-    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
-        return rc;
-    }
-
-    sqlite3_bind_text(stmt, 1, mtc_ri, strlen(mtc_ri), SQLITE_STATIC);
-    sqlite3_bind_int(stmt, 2, parent_id);
-    sqlite3_bind_text(stmt, 3, atr, strlen(atr), SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 4, key, strlen(key), SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 5, value, strlen(value), SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 6, type, strlen(type), SQLITE_STATIC);
-
-    rc = sqlite3_step(stmt);
-    if (rc != SQLITE_DONE) {
-        fprintf(stderr, "Execution failed: %s\n", sqlite3_errmsg(db));
-        sqlite3_finalize(stmt);
-        return rc;
-    }
-
-    sqlite3_finalize(stmt);
-    return SQLITE_OK;
-}
-
-char insert_multivalue_element(cJSON *element, const char *mtc_ri, int parent_id, const char *atr, const char *key, sqlite3 *db) {
-    if (cJSON_IsObject(element)) {
-        // Insert root entry for the object
-        if (insert_element_into_multivalue_table(db, mtc_ri, parent_id, atr, key, "root", "object") != SQLITE_OK) {
-            fprintf(stderr, "Failed to insert root entry for the object\n");
-            return FALSE;
-        }
-        // Retrieve the ID of the root entry
-        int root_id = (int)sqlite3_last_insert_rowid(db);
-
-        cJSON *item;
-        cJSON_ArrayForEach(item, element) {
-            insert_multivalue_element(item, mtc_ri, root_id, atr, item->string, db);
-        }
-    } else if (cJSON_IsArray(element)) {
-
-        // Insert root entry for the object
-        if (insert_element_into_multivalue_table(db, mtc_ri, parent_id, atr, key, "root", "array") != SQLITE_OK) {
-            fprintf(stderr, "Failed to insert root entry for the object\n");
-            return FALSE;
-        }
-
-        // Retrieve the ID of the root entry
-        int root_id = (int)sqlite3_last_insert_rowid(db);
-
-        cJSON *item;
-        cJSON_ArrayForEach(item, element) {
-            insert_multivalue_element(item, mtc_ri, root_id, atr, "", db);
-        }
-    } else {
-        const char *type;
-        char value_str[64];
-
-        if (cJSON_IsString(element)) {
-            type = "string";
-            strncpy(value_str, element->valuestring, sizeof(value_str) - 1);
-            value_str[sizeof(value_str) - 1] = '\0';
-        } else if (cJSON_IsNumber(element)) {
-            type = "number";
-            snprintf(value_str, sizeof(value_str), "%lf", element->valuedouble);
-        } else {
-            fprintf(stderr, "Unsupported cJSON type\n");
-            return FALSE;
-        }
-
-        if (insert_element_into_multivalue_table(db, mtc_ri, parent_id, atr, key, value_str, type) != SQLITE_OK) {
-            fprintf(stderr, "Failed to insert multivalue element\n");
-            return FALSE;
-        }
-    }
-    return TRUE;
-}
-
-char insert_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *atr, const char *key, cJSON *atr_array) {
-    // Insert root entry for the array attribute
-    if (insert_element_into_multivalue_table(db, parent_ri, 0, atr, key, "root", "root") != SQLITE_OK) {
-        fprintf(stderr, "Failed to insert root entry for the multivalue element\n");
+    if (disallowed == TRUE) {
+        fprintf(stderr, "The cJSON object has disallowed keys.\n");
+        responseMessage(response, 400, "Bad Request", "Found keys not allowed");
         return FALSE;
     }
-    // Retrieve the ID of the root entry
-    int root_id = (int)sqlite3_last_insert_rowid(db);
-
-    for (int i = 0; i < cJSON_GetArraySize(atr_array); i++) {
-        cJSON *element = cJSON_GetArrayItem(atr_array, i);
-        if (element) {
-            if (!insert_multivalue_element(element, parent_ri, root_id, atr, "", db)) {
-                return FALSE;
-            }
-        }
+	
+	if (pthread_mutex_init(&db_mutex, NULL) != 0) {
+         responseMessage(response, 500, "Internal Server Error", "Could not initialize the mutex");
+         return FALSE;
     }
-    return TRUE;
+	short rs = update_sub(destination, content, response);
+    if (rs == FALSE) {
+        // responseMessage(response, 400, "Bad Request", "Verify the request body");
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+	return TRUE;
 }
 
 char *get_element_value_as_string(cJSON *element) {
@@ -993,102 +1781,4 @@ char *get_element_value_as_string(cJSON *element) {
     }
 
     return value_str;
-}
-
-cJSON *build_json_recursively(sqlite3 *db, int parent_rowid, char is_root_array) {
-    sqlite3_stmt *stmt;
-    cJSON *result = NULL;
-
-    const char *sql = "SELECT rowid, parent_id, type, key, value FROM multivalue WHERE parent_id = ? ORDER BY rowid";
-
-    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
-        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
-        return NULL;
-    }
-
-    sqlite3_bind_int(stmt, 1, parent_rowid);
-
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
-        int rowid = sqlite3_column_int(stmt, 0);
-        const char *value_type = (const char *)sqlite3_column_text(stmt, 2);
-        const char *key = (const char *)sqlite3_column_text(stmt, 3);
-        const char *value = (const char *)sqlite3_column_text(stmt, 4);
-
-        cJSON *item = NULL;
-
-        if (strcmp(value_type, "object") == 0) {
-            item = build_json_recursively(db, rowid, FALSE);
-            if (strcmp(key, "root") == 0) {
-                cJSON *temp = item;
-                item = cJSON_Duplicate(cJSON_GetObjectItem(temp, "root"), 1);
-                cJSON_Delete(temp);
-            }
-        } else if (strcmp(value_type, "array") == 0) {
-            item = build_json_recursively(db, rowid, TRUE);
-        } else if (strcmp(value_type, "number") == 0) {
-            double num_value = atof(value);
-            item = cJSON_CreateNumber(num_value);
-        } else {
-            item = cJSON_CreateString(value);
-        }
-
-        if (!result) {
-            if (is_root_array == TRUE) {
-                result = cJSON_CreateArray();
-            } else {
-                result = cJSON_CreateObject();
-            }
-        }
-
-        if (is_root_array) {
-            cJSON_AddItemToArray(result, item);
-        } else {
-            cJSON_AddItemToObject(result, key, item);
-        }
-    }
-
-    sqlite3_finalize(stmt);
-    return result;
-}
-
-cJSON *retrieve_multivalue_elements(sqlite3 *db, const char *parent_ri, const char *key) {
-    sqlite3_stmt *stmt;
-
-    const char *sql = "SELECT rowid FROM multivalue WHERE mtc_ri = ? AND key = ?";
-
-    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
-        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db));
-        return NULL;
-    }
-
-    sqlite3_bind_text(stmt, 1, parent_ri, -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, key, -1, SQLITE_TRANSIENT);
-
-    int rowid = 0;
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        rowid = sqlite3_column_int(stmt, 0);
-    }
-
-    sqlite3_finalize(stmt);
-
-    if (rowid == 0) {
-        return NULL;
-    }
-
-    cJSON *result = build_json_recursively(db, rowid, TRUE);
-    return result;
-}
-
-void add_arrays_to_json(sqlite3 *db, const char *ri, cJSON *parent_json, char **keys, int num_keys) {
-    // Loop through the keys array
-    for (int i = 0; i < num_keys; i++) {
-        char *current_key = keys[i];
-
-        cJSON *arrays = retrieve_multivalue_elements(db, ri, current_key);
-
-        if (arrays != NULL) {
-            // Add the arrays cJSON object to the parent_json object
-            cJSON_ReplaceItemInObject(parent_json, current_key, arrays);
-        }
-    }
 }

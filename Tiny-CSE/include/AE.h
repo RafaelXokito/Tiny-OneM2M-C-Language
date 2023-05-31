@@ -30,6 +30,7 @@ typedef struct {
     char *json_at; // Announce To
     char or[50]; // Ontology Ref
     char lt[20]; // lastModifiedTime
+    char *blob;
 } AEStruct;
 
 

@@ -22,10 +22,11 @@
 int client_socket;
 
 int DAYS_PLUS_ET = 0;
-int PORT = 6000;
+int PORT = 8000;
+char DB_MEM[MAX_CONFIG_LINE_LENGTH] = "false";
 char BASE_RI[MAX_CONFIG_LINE_LENGTH] = "";
 char BASE_RN[MAX_CONFIG_LINE_LENGTH] = "";
-char BASE_CSI[MAX_CONFIG_LINE_LENGTH] = "";
+char BASE_CSI[MAX_CONFIG_LINE_LENGTH] = "cse-1";
 char BASE_POA[MAX_CONFIG_LINE_LENGTH] = "";
 
 int main() {
@@ -44,6 +45,7 @@ int main() {
     // registering Routes
     struct Route *head = NULL; // initialize the head pointer to NULL
     head = addRoute(&head, "/", "", -1, "index.html"); // add the first node to the list
+    addRoute(&head, "/documentation", "", -1, "about.html"); // add the first node to the list
 
     short rs = init_protocol(&head);
     if (rs == FALSE) {

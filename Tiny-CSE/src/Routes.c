@@ -33,6 +33,7 @@ struct Route * initRoute(char* key, char* ri, short ty, char* value) {
 }
 
 // function to recursively construct the string for a resource
+//__deprecated
 char * constructPath(char * result, char * resourceName, char * parentName, struct sqlite3 *db) {
 	/*
 	#pseudo-code from the whole algorithm#
@@ -93,7 +94,7 @@ char init_routes(struct Route** head) {
 	}
 
     sqlite3_stmt *stmt;
-    short rc = sqlite3_prepare_v2(db, "SELECT ri, pi, ty, rn FROM mtc;", -1, &stmt, 0);
+    short rc = sqlite3_prepare_v2(db, "SELECT ri, pi, ty, rn, url FROM mtc;", -1, &stmt, 0);
     if(rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", sqlite3_errmsg(db));
         return FALSE;
@@ -108,8 +109,8 @@ char init_routes(struct Route** head) {
 		char * resourceName = (char *) sqlite3_column_text(stmt, 3);
 		printf("Initializing route: %s\n", resourceName);
         char * parentName = (char *) sqlite3_column_text(stmt, 1);
-		char uri[60] = "";
-        constructPath(uri, resourceName, parentName, db);
+        // constructPath(uri, resourceName, parentName, db);
+		char * uri = (char *) sqlite3_column_text(stmt, 4);
 
 		char * resourceId = (char *) sqlite3_column_text(stmt, 0);
 		short resourceType = sqlite3_column_int(stmt, 2);
@@ -117,6 +118,30 @@ char init_routes(struct Route** head) {
 		// Add New Routes
 		to_lowercase(uri);
 		addRoute(head, uri, resourceId, resourceType, resourceName);
+
+		// when we are creating CNT routes we need to make available the route 'la' and 'li' routes
+		if (resourceType == CNT) {
+			// Creating ol(dest) and la(test) routes
+			char *url_ol;
+			char *url_la;
+
+			// Allocate memory for the new URLs
+			url_ol = malloc(strlen(uri) + strlen("/ol") + 1);  // +1 for the null-terminator
+			url_la = malloc(strlen(uri) + strlen("/la") + 1);  // +1 for the null-terminator
+
+			if (url_ol == NULL || url_la == NULL) {
+				fprintf(stderr, "Memory allocation failed. \n'la' and 'li' CNT routes not available\n");
+				return FALSE;
+			}
+
+			// Copy the original URL and append /ol and /la
+			sprintf(url_ol, "%s/ol", uri);
+			sprintf(url_la, "%s/la", uri);
+
+			addRoute(head, url_ol, resourceId, CIN, "ol");
+			addRoute(head, url_la, resourceId, CIN, "la");
+		}
+		
 
 		printf("Route created: %s\n", uri);
     }

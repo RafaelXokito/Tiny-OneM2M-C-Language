@@ -8,10 +8,14 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+#include "Utils.h"
 #include "sqlite3.h"
 
 #define TRUE 1
 #define FALSE 0
+
+extern char DB_MEM[MAX_CONFIG_LINE_LENGTH];
 
 int callback(void *NotUsed, int argc, char **argv, char **azColName) {
     int i;
@@ -25,7 +29,7 @@ int callback(void *NotUsed, int argc, char **argv, char **azColName) {
 // Define an init function that returns an sqlite3 pointer
 sqlite3 *initDatabase(const char* databasename) {
     sqlite3 *db;
-    int rc = sqlite3_open_v2(databasename, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL);
+    int rc = sqlite3_open_v2((strcmp(DB_MEM, "true") == 0 ? ":memory:" : databasename), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
@@ -77,30 +81,6 @@ int closeDatabase(sqlite3 *db) {
         return FALSE;
     }
     return TRUE;
-}
-
-int create_multivalue_table(sqlite3 *db) {
-    const char *sql = "CREATE TABLE IF NOT EXISTS multivalue ("
-                      "id INTEGER PRIMARY KEY,"
-                      "mtc_ri INTEGER,"
-                      "parent_id INTEGER,"
-                      "atr TEXT,"
-                      "key TEXT,"
-                      "value TEXT,"
-                      "type TEXT,"
-                      "FOREIGN KEY (mtc_ri) REFERENCES mtc (ri),"
-                      "FOREIGN KEY (parent_id) REFERENCES multivalue (id));";
-
-    char *errmsg = 0;
-    int rc = sqlite3_exec(db, sql, 0, 0, &errmsg);
-
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "SQL error: %s\n", errmsg);
-        sqlite3_free(errmsg);
-        return rc;
-    }
-
-    return SQLITE_OK;
 }
 
 int begin_transaction(sqlite3 *db) {

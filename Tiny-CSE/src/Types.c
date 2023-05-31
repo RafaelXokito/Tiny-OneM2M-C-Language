@@ -57,8 +57,11 @@ int search_type(HashTable* table, char* key) {
 
 // Test the hash table implementation
 char init_types() {
-    insert_type(&types, "csebase", 5);
-    insert_type(&types, "ae", 2);
+    insert_type(&types, "csebase", CSEBASE);
+    insert_type(&types, "ae", AE);
+    insert_type(&types, "cnt", CNT);
+    insert_type(&types, "cin", CIN);
+    insert_type(&types, "sub", SUB);
 
     // printf("%d\n", search_type(&types, "csebase")); 5
     // printf("%d\n", search_type(&types, "ae")); 2
