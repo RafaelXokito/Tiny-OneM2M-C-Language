@@ -476,7 +476,7 @@ SUB & 12 & 30 & 40\% \\
 
 The CSE\_Base resource can be seen as a system's set of databases, the AE resource as a database containing an application's information, the CNT resource as an information table, and the CIN resource as the table's rows. Subscriptions (SUB) can be thought of as watchers that can be added to the resources CSE\_Base, AE, CNT, or even within another subscription.
 
-The implementation of each feature is based on the attributes suggested in Section 9.6.3 of the OneM2M standard documentation (version 5.1), excluding some less relevant attributes like \texttt{appName}, \texttt{AE-ID}, \texttt{CSE- ID}, etc.
+The implementation of each feature is based on the attributes suggested in Section 9.6.3 of the OneM2M standard documentation (version 5.1), excluding some less relevant attributes like \texttt{appName}, \texttt{AE-ID}, \texttt{CSE-ID}, etc.
 
 Crucially, the implementation of certain attributes alters the system's normal functioning. All resources implement the expiration time attribute, thus preventing access to any resource whose expiration time is less than the current datetime. For the CNT resource, the attributes max byte size, max number of instance, current byte size, and current number of instances were implemented. For the SUB resource, the event notification criteria attribute was implemented to specify which HTTP request methods will trigger notifications.
 
