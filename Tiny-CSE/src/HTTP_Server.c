@@ -53,5 +53,5 @@ void init_server(HTTP_Server * http_server, int port) {
 	listen(server_socket, 5);
 
 	http_server->socket = server_socket;
-	printf("HTTP Server Initialized\nPort: %d\n", http_server->port);
+	printf("HTTP Server Initialized\nPort: %d\n", port);
 }

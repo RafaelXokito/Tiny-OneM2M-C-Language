@@ -35,8 +35,12 @@
 %%%
 % -------------------------------------------------------------------
 % Pacotes para inserção de figuras e subfiguras
-\usepackage{subfig,epsfig,tikz,float}		            % Packages de figuras. 
+%\usepackage{subfig,epsfig,tikz,float}		            % Packages de figuras. 
 \usepackage{graphicx}
+
+\usepackage{caption}
+\usepackage{subcaption}
+
 \graphicspath{ {./figs/} }
 % -------------------------------------------------------------------
 % \usepackage{amssymb}
@@ -93,7 +97,7 @@
 
 \author[1]{Rafael Pereira}[type=editor,
                         %auid=000,bioid=1,
-                        linkedin='rafaelmendespereira',
+                        linkedin=rafaelmendespereira,
                         orcid=0000-0001-8313-7253]
 %\cormark[1]
 %\fnmark[1]
@@ -132,6 +136,8 @@ quadrupole exciton \sep polariton \sep \WGM \sep \BEC
 
 \section{Introdution}
 
+\textcolor{red}{adicionar footnode com o link do standard OneM2M}
+
 The \gls{iot} has experienced tremendous growth in recent years, with an ever-increasing number of devices being connected and integrated into various applications, such as smart cities, industrial automation, and environmental monitoring. One key aspect enabling this widespread adoption is \gls{mtc}, which facilitates seamless communication between machines and devices without human intervention. \gls{mtc} allows for efficient data exchange among heterogeneous devices, leading to better coordination and improved overall system performance.
 
 In this context, interoperability plays a vital role in ensuring the seamless functioning of \gls{iot} ecosystems. As the number and diversity of connected devices continue to grow, so does the need for a robust mechanism to manage communication between devices employing different communication protocols, data formats, and standards. \gls{mtc} gateways serve as an essential bridge between these devices and the network infrastructure, enabling effective data routing and ensuring smooth communication among heterogeneous devices.
@@ -165,48 +171,351 @@ The paper \cite{Kim2018} discusses the design, implementation and evaluation of 
 
 % https://www.scopus.com/results/results.uri?sort=plf-f&src=s&st1=%28onem2m+OR+mtc%29+and+%22API%22&sid=2e6f61fce202fa9e6635e553544fee3c&sot=b&sdt=b&sl=40&s=TITLE-ABS-KEY%28%28onem2m+OR+mtc%29+and+%22API%22%29&origin=searchbasic&editSaveS=&yearFrom=Before+1960&yearTo=Present
 
-\section{Arquitecture}
+\section{Architecture}
 \label{architecture}
 
-TinyOneM2M, a compact, cross-platform, and user-friendly implementation of the OneM2M standard, boasts a meticulously designed architecture that adapts seamlessly to both centralized and decentralized modes of operation. Designed primarily to enable decentralized, peer-to-peer applications, TinyOneM2M stands out due to its light footprint and high adaptability.
+The architecture of TinyOneM2M, a compact, cross-platform, and easy-to-use implementation of the OneM2M standard, is meticulously designed to adapt to various scenarios. The flexible architecture supports different modes of operation, allowing it to integrate seamlessly into existing infrastructure. This section details the system architecture and the specific modules that constitute the TinyOneM2M software.
 
-Reflecting on the high-level architecture of TinyOneM2M, as depicted in Figure \ref{fig:highlevelarch}, the software is installed on a hardware system and communicates with other entities using HTTP and MQTT (for subscription notifications) protocols. This flexible architecture allows TinyOneM2M to integrate seamlessly into existing infrastructure, establishing efficient communication and data transfer between nodes.
+\subsection{System Architecture}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=7cm]{HightLevel}
-\caption{High Level Architecture of TinyOneM2M}
-\label{fig:highlevelarch}
+The system architecture of TinyOneM2M is developed considering the diverse range of scenarios that could arise in IoT settings. Three primary scenarios have been identified where TinyOneM2M can be effectively employed, namely, the Home Gateway Scenario, the Single Devices Scenario (Peer-to-Peer), and the Cloud Scenario.
+
+\begin{figure}[htb]
+     \centering
+     \begin{subfigure}[h]{7cm}
+         \centering
+         \includegraphics[width=6cm]{HomeGatewaysScenario.jpg}
+         \caption{Home Gateway Scenario.}
+         \label{fig:hgw}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[h]{7cm}
+         \centering
+         \includegraphics[width=6cm]{SingleDevicesScenario.jpg}
+         \caption{Single Devices Scenario (Peer-to-Peer).}
+         \label{fig:sdc}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[h]{7cm}
+         \centering
+         \includegraphics[width=6cm]{CloudScenario.jpg}
+         \caption{Cloud Scenario.}
+         \label{fig:cs}
+     \end{subfigure}
+     \caption{TinyOneM2M System Architecture.}
+     \label{fig:scenarios}
 \end{figure}
 
-TinyOneM2M employs a set of resources for its operations: Common Services Entity Base (CSE\_Base), Application Entity (AE), Container (CNT), Content Instance (CIN), and Subscription (SUB). These resources provide a rich set of capabilities to TinyOneM2M, forming a foundational part of its functional landscape.
+In the Home Gateway Scenario (Figure \ref{fig:hgw}), TinyOneM2M serves as a central gateway within a home network, facilitating communication between different devices in the network. This centralized approach allows for efficient data transfer and coordination between devices.
 
-Central to TinyOneM2M's functioning is its resource hierarchy, which sets the structural blueprint for resource organization and management. This hierarchy, illustrated in Figure \ref{fig:hierarchy}, starts with the CSE\_Base as the root node, established during API startup. The CSE\_Base encapsulates AE, CNT, and SUB resources. AE can contain CNT and SUB resources, while CNT can house additional CNT, CIN, and SUB resources. CIN, being read-only and supporting only GET and DELETE requests, does not contain any resources. SUB resources, on the other hand, can contain additional SUB resources.
+The Single Devices Scenario (Figure \ref{fig:sdc}) represents a decentralized, Peer-to-Peer (P2P) approach where each device contains its instance of TinyOneM2M. This approach allows devices to communicate directly with each other, enhancing scalability and data transfer efficiency by eliminating the need for a central point of communication.
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=7cm]{Hierarchy}
-\caption{Resource Hierarchy in TinyOneM2M}
-\label{fig:hierarchy}
+In the Cloud Scenario (Figure \ref{fig:cs}), TinyOneM2M is hosted on a cloud provider and can be distributed in several machines/instances and be managed by a load balancer, allowing devices to connect and communicate via the internet. This scenario facilitates large-scale, distributed IoT applications, providing the advantages of cloud computing such as high availability, scalability, and efficient data management.
+
+\subsection{TinyOneM2M Architecture}
+
+TinyOneM2M is architected in a way that distinctly separates responsibilities across various modules, providing a robust and efficient system. Its architecture is underpinned by a seamless flow of operations that handles and processes incoming HTTP REST requests, ultimately leading to action being taken, such as data persistence or triggering notifications. An overview of the architecture is depicted in Figure \ref{fig:TinyOneM2Mchitecture} and will be described in the following sections dividing each module by section.
+
+\begin{figure*}[htbp]
+	\centering
+	\includegraphics[width=\linewidth]{SolutionArchitecture.jpg}
+	\caption{TinyOneM2M System Architecture.}
+	\label{fig:TinyOneM2Mchitecture}
+\end{figure*}
+
+\subsubsection{Overview of Resource Oriented Architecture}
+
+A crucial aspect of TinyOneM2M's system architecture, as depicted in Figure \ref{fig:systemarchitecture}, is the interaction between third-party applications and TinyOneM2M, and between TinyOneM2M and external MQTT brokers or HTTP web servers. This figure outlines these interactions and the hierarchy of resources (described in Section \ref{sec:M2MResource}) within the TinyOneM2M system.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\linewidth]{SystemArchitectuRE.jpg}
+	\caption{System Architecture.}
+	\label{fig:systemarchitecture}
 \end{figure}
 
-Each instance of TinyOneM2M manages its own database, which ensures data persistence and isolation. This design approach provides robust data management and scalability, allowing each node to manage its resources efficiently.
+Third-party applications communicate with TinyOneM2M to create or retrieve resources. They send HTTP REST requests to the REST Webservice module in TinyOneM2M, which acts as an intermediary, accepting and processing various types of requests, including POST, GET, PUT, and DELETE. Depending on the type of request, the application can create a new resource, retrieve details of an existing resource, update a resource, or remove a resource.
 
-Examining the operational scenarios of TinyOneM2M, it is important to contrast the centralized and decentralized approaches. In a centralized scenario, there exists a single instance of TinyOneM2M orchestrating all communication. Each hardware node communicates with this central point to acquire and persist information. This scenario ensures data consistency and simplifies management at the expense of potential communication bottlenecks.
+TinyOneM2M also communicates with MQTT brokers or HTTP WebServers, primarily for notifying about events based on subscriptions inserted into the TinyOneM2M system. If a resource marked as notifiable changes - for instance, if a new data point is added to a monitored sensor - TinyOneM2M's Notification module creates an MQTT or HTTP client to send a notification to the relevant MQTT broker or HTTP server at the moment the changes happen. This notification mechanism allows applications to react promptly to changes in monitored resources, making it an integral part of many IoT scenarios, from anomaly detection in industrial settings to updates in smart home environments.
 
-On the other hand, the decentralized scenario leverages peer-to-peer interactions. Each system node hosts a TinyOneM2M instance, enabling it to communicate directly with every other node. This not only enhances scalability but also optimizes data transfer by eliminating the need for a central point of communication. Figure \ref{fig:comparison} highlights these differences between the two scenarios.
+\subsubsection{WebService REST}\label{sec:archwebservice}
+
+The REST Webservice module in TinyOneM2M functions as the system's primary interface, accepting and processing various types of HTTP REST requests. When a request is received, this module generates a non-blocking thread to manage the request, which is then passed onto the next layer for further processing.
+
+The types of HTTP requests that are supported by TinyOneM2M are primarily structured around CRUD (Create, Retrieve, Update, Delete) operations for various resources. These operations pertain to different resources identified by OneM2M standards, including Application Entity (AE), Content Instance (CIN), and Subscription (SUB) resources.
+
+For Application Entities (AEs), users can create a new AE by sending a POST request, retrieve the details of an AE using a GET request, update an AE using a PUT request, and remove an AE by means of a DELETE request. These requests are sent to a specific URL structure, targeting the CSE\_Base and the \texttt{AE\_ResourceName}.
+
+For Content Instances (CINs), the operations mirror those for AEs, but are extended with an additional URL parameter to specify the CIN. The operations thus allow users to create, retrieve, and delete CINs within a specific AE and Container (CNT) resource.
+
+Similarly, Subscription (SUB) resources can be managed with POST, GET, PUT, and DELETE requests. These requests target a specific \texttt{SUB\_ResourceName} within a specified CSE\_Base, \texttt{AE\_ResourceName}, and \texttt{CNT\_ResourceName}.
+
+The system also provides functionality to retrieve the root resource information with a specific GET request and perform discovery operations. The discovery operation uses a GET request with query parameters to filter resources based on their type and labels. These operations can be used to retrieve general or specific information about the resources available in the system.
+
+\subsubsection{Response Processor} \label{sec:archresponseprocessor}
+
+The instantiated thread uses the Response Processor module to validate the request, determine the HTTP method, and conduct preliminary validations. The processed request is then forwarded to the next module for further action.
+
+\subsubsection{M2M Protocol Wrapper}
+
+The M2M Protocol Wrapper is responsible for processing and validating the incoming request according to the OneM2M standard. It acts as a bridge between the protocol-specific details of the request and the M2M resource module, ensuring that all processed requests comply with the OneM2M standard.
+
+\subsubsection{M2M Resources}\label{sec:M2MResource}
+
+The M2M Resources module in TinyOneM2M is a crucial component that handles data persistence and retrieval operations. Acting as an intermediary between the incoming requests and the database, this module either persists data to the database or retrieves data from it, based on the action specified in the processed request. Additionally, it checks if the parent resource associated with the incoming request is notifiable. If it is, the module triggers a new non-blocking thread for the Notification module, thus effectively bridging the communication between the client and the notification mechanisms.
+
+This module supports different types of resources, following a hierarchical structure as prescribed by the OneM2M standard and as shown in Figure \ref{fig:hierarchy}. The CSE\_Base (Common Services Entity Base) resource sits at the root of this hierarchy, providing an entry point for all other resources in the system.
+
+The AE (Application Entity) is an application-level entity that provides services to end-users. It can encapsulate CNT (Container) and SUB (Subscription) resources, which provide data organization and condition-based notification services, respectively.
+
+The CNT resource represents a container for organizing data within AE and other CNT resources. It can contain other CNT, CIN (Content Instance), and SUB resources, allowing an organized and hierarchical data structure.
+
+The CIN resource, residing under a CNT, encapsulates the actual data or content in the system. The SUB resource, which can be nested under CSE\_Base, AE, and CNT resources, is responsible for managing subscriptions. This enables applications to receive notifications about changes in resources they're interested in.
 
 \begin{figure}[htbp]
-\centering
-\includegraphics[width=7cm]{CentralizedvsDecentralizedScenario}
-\caption{Comparison between Centralized and Decentralized Scenarios in TinyOneM2M}
-\label{fig:comparison}
+	\centering
+	\includegraphics[width=7cm]{Hierarchy}
+	\caption{TinyOneM2M supported resources hierarchy.}
+	\label{fig:hierarchy}
 \end{figure}
 
-\section{Proposed Solution}
+\subsubsection{Embedded Single File Database}
+
+The TinyOneM2M system relies on an embedded single-file database for optimized data storage and retrieval. This format offers high efficiency due to its low overhead and quick access time. The system employs a denormalized structure in certain areas, an approach commonly used in database design to improve performance, even at the expense of data redundancy.
+
+In this setup, there is one main table named \texttt{mtc}. This table in \ref{tab:database} is a combination of multiple entity types in the TinyOneM2M hierarchy, such as Application Entity (AE), Content Instance (CIN), and Subscription (SUB). The attributes of these entities are represented as columns in the \texttt{mtc} table.
+
+Looking deeper into the table structure, the \texttt{ri} column serves as the primary key, providing unique identification for each record. It establishes relations with the pi column (parent identifier), which refers to the \texttt{ri} of the parent record. This sets up a hierarchical relationship between records, which mirrors the resource hierarchy in the TinyOneM2M system.
+
+The table also includes specific columns for different resource attributes. For example, \texttt{ty} for resource type, \texttt{rn} for resource name, and et for expiration time. It also stores specific attributes for AE like \texttt{aei}, for SUB like nu and \texttt{enc}, and for \texttt{CIN} like con and \texttt{cnf}.
+
+Some columns like \texttt{cbs} and \texttt{mni} are used for handling quotas and limits in the TinyOneM2M system. For instance, \texttt{cbs} (current byte size) and \texttt{mbs} (maximum byte size) are related to the storage size occupied by CIN resource inside a CNT and its maximum allowed size, respectively.
+
+The \texttt{mtc} table also includes columns like \texttt{url}, \texttt{lbl}, \texttt{acpi}, \texttt{daci}, and \texttt{poa}, which store various types of information required for OneM2M standard operations.
+
+Finally, to optimize performance, especially for read operations, the database employs indexes on selected columns. This setup allows faster data retrieval and processing, a key requirement for real-time operations in IoT environments. For instance, the \texttt{sqlite\_autoindex\_mtc\_1} index on the \texttt{ri} column helps in quickly locating records based on their unique identifiers.
+
+
+\begin{table}[h]
+\scriptsize
+\caption{Database structure.}
+\label{tab:database}
+\begin{tabular}{ |>{\bfseries}p{1.5cm}|c|p{3cm}| }
+    \hline
+    \textbf{Column Name} & \textbf{Type} & \textbf{Reference} \\
+    \hline
+    \texttt{ty} & INTEGER & - \\
+    \hline
+    \texttt{ri} & TEXT & PRIMARY KEY \\
+    \hline
+    \texttt{rn} & TEXT & - \\
+    \hline
+    \texttt{pi} & TEXT & REFERENCES mtc(ri) ON DELETE CASCADE \\
+    \hline
+    \texttt{aei} & TEXT & - \\
+    \hline
+    \texttt{csi} & TEXT & - \\
+    \hline
+    \texttt{cst} & INTEGER & - \\
+    \hline
+    \texttt{api} & TEXT & - \\
+    \hline
+    \texttt{rr} & TEXT & - \\
+    \hline
+    \texttt{et} & DATETIME & - \\
+    \hline
+    \texttt{ct} & DATETIME & - \\
+    \hline
+    \texttt{lt} & DATETIME & - \\
+    \hline
+    \texttt{url} & TEXT & - \\
+    \hline
+    \texttt{lbl} & TEXT & - \\
+    \hline
+    \texttt{acpi} & TEXT & - \\
+    \hline
+    \texttt{daci} & TEXT & - \\
+    \hline
+    \texttt{poa} & TEXT & - \\
+    \hline
+    \texttt{srt} & TEXT & - \\
+    \hline
+    \texttt{blob} & TEXT & - \\
+    \hline
+    \texttt{cbs} & INTEGER & - \\
+    \hline
+    \texttt{cni} & INTEGER & - \\
+    \hline
+    \texttt{mbs} & INTEGER & - \\
+    \hline
+    \texttt{mni} & INTEGER & - \\
+    \hline
+    \texttt{st} & INTEGER & - \\
+    \hline
+    \texttt{cnf} & TEXT & - \\
+    \hline
+    \texttt{cs} & INTEGER & - \\
+    \hline
+    \texttt{con} & TEXT & - \\
+    \hline
+    \texttt{nu} & TEXT & - \\
+    \hline
+    \texttt{enc} & TEXT & - \\
+    \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Notifications}
+
+The Notification module is responsible for sending notifications based on subscription resources. When a resource (e.g. Container) contains a subscription directly inside and other resource (e.g. Content Instance) is created directly inside the resource (e.g. Container) an MQTT or HTTP client is asynchronous created to send a notification to the respective third-party MQTT or HTTP broker.
+
+\section{Implementation}
+
+Introdução à secção.
+
+\subsection{TinyOneM2M Solution} \label{sec:tinyonem2msolution}
+
+Our solution adheres to the OneM2M standard version 5.1 \footnote{\url{https://www.onem2m.org/technical/published-specifications\#listofreleases}}, implementing a set of key resources integral to our intended functionalities. We opted for the implementation of the resources CSE\_Base, AE, CNT, CIN, and SUB. The implementation of TinyOneM2M is designed with a strong focus on the system architecture presented in Figure \ref{fig:TinyOneM2Mchitecture} in the Architecture section. Each component of the architecture has a corresponding implementation detail which we aim to elucidate throughout this section.
+
+The development of the TinyOneM2M solution was carried out using the C language. There are several reasons for this choice. Firstly, C is highly portable and efficient, making it ideal for IoT applications where devices can have varied processing capabilities. It also offers low-level access to memory, which allows fine-tuned control over system resources. However, C also has some disadvantages. It lacks the built-in object-oriented features found in languages like C++ or Python, which can lead to more complex code structures for large systems. Moreover, the developer is responsible for memory management, which can introduce potential issues if not handled carefully.
+
+To gauge our level of compliance with the OneM2M standard, we quantified the degree of our implementation based on each resource. We calculated the percentage of implementation by comparing the number of implemented attributes to the total number of attributes suggested by the standard, all multiplied by one hundred.
+
+Based on this calculation, we estimate that our solution covers approximately 57\% of the standard on average. A detailed breakdown of this calculation, per resource, will be further elucidated in the section \ref{sec:m2mresources}.
+
+Our implementation is designed to ensure compatibility with services utilizing the OpenMTC \footnote{\url{https://github.com/OpenMTC/OpenMTC}} SDK, an open-source framework that provides a OneM2M-based version 1.1 platform. This interoperability is possible because the REST requests in our implementation have the same structure as those in the OpenMTC implementation and return similar error codes.
+
+Throughout the development process, we've leveraged a variety of external and non-native libraries. The specific libraries used, along with their corresponding versions, will be duly referenced in the following sections. We believe this level of transparency is crucial to understand the depth and scope of our work.
+
+In the subsequent sections, we will delve into greater detail about our implementation, covering different aspects of our TinyOneM2M solution, providing a comprehensive view of what was achieved.
+
+\subsubsection{WebService REST}
+
+The WebService REST module, as discussed in the Section \ref{sec:archwebservice}, plays a vital role in our TinyOneM2M solution. It functions as the primary communication hub, receiving HTTP requests and handling client connections. This module is pivotal to our architecture, acting as the gateway through which third-party systems and applications interact with our TinyOneM2M solution.
+
+The implementation of this module is carried out with the pthread library for thread creation, and the native socket library for setting up and managing the REST Webserver. When the webserver detects new clients, it accepts them and launches a new thread. This thread is responsible for reading the content of the request and executing the complete request processing workflow.
+
+To manage webserver routes, a double sorted list was employed. This list uses the alphabetical order of the resource path as the key for sorting and simple fields to facilitate resource queries. The resource path, which is a composite of the \texttt{resource name} of the resources in the resource hierarchy, is immutable.
+
+Upon the application's start, the database is scanned to construct the ordered double list, which is subsequently stored in Random Access Memory (RAM). This strategy ensures enhanced query efficiency whenever the existence of a request's resource path needs to be verified. When a resource is inserted or deleted, the list is updated accordingly.
+
+However, the use of pthread and the native socket library present a few limitations. While efficient, these libraries may not offer optimal compatibility for systems like Windows, thus limiting the platform independence of our solution. A potential enhancement could be the use of a cross-platform library, such as Drogon\footnote{\url{https://github.com/drogonframework/drogon}} for C++, which could offer non-blocking operations for the HTTP server.
+
+It's important to note that the algorithm for managing the double sorted list was custom implemented by the authors. While this allowed for a tailored solution to our specific needs, a well-tested library could have been utilized for this purpose, potentially offering more robustness and efficiency. Nonetheless, our current implementation is situated within the main process and has shown competent performance in managing routes for the webserver.
+
+\subsubsection{Response Processor}
+
+As introduced in the Section \ref{sec:archresponseprocessor}, the Response Processor module is central to handling the incoming content from the solution's clients. It undertakes critical tasks such as reading the content of the clients' connections, validating the routes based on the sorted double list, and processing the HTTP request types.
+
+The module employs a built-in hash table to efficiently map the resources affected by the requests. The hash table provides swift access to key values, making it highly suitable for this task. It inspects and interprets the resource types encapsulated in the HTTP requests, facilitating the subsequent processing steps.
+
+One important aspect to note is the static nature of the hash table. Stored in memory, the hash table remains constant for the entire lifetime of the service. This means it is built only once during the service initialization and does not change over time.
+
+However, similar to the WebService REST module, the algorithm to manage the hash table was also a custom implementation by the authors. Although it is designed to meet the specific needs of this application, a pre-existing, well-tested library could offer enhanced reliability and potentially better performance.
+
+\subsubsection{M2M Protocol Wrapper}
+
+As established in the Architecture section, the \texttt{M2M Protocol Wrapper} is instrumental for the operation of the entire system. Its functions range from initial protocol initialization, resource discovery, and building values, to defining default values and facilitating the insertion of resources into the database.
+
+Upon protocol initialization, the database is created and the resource CSE\_Base is populated if this has not been done previously. The resource discovery feature is 28\% implemented according to the standard, implementing 9 of the suggested 32 filters.
+
+Table \ref{tab:discovery_attributes} describes each implemented discovery attribute:
+
+\begin{table}[ht]
+\scriptsize
+\centering
+\caption{Description of implemented discovery attributes}
+\label{tab:discovery_attributes}
+\begin{tabular}{c c p{4cm}}
+\hline
+\textbf{Filter Name} & \textbf{Cardinality} & \textbf{Description} \\
+\hline \hline
+resourceType & 0..1 & The \texttt{resourceType} attribute of the matched resource is the same as the specified value. It also allows \texttt{differentiating} between normal and announced resources. \\
+labels & 0..1 & The \texttt{labels} attribute of the matched resource matches the specified value. \\
+createdBefore & 0..1 & The \texttt{creationTime} attribute of the matched resource is chronologically before the specified value. \\
+createdAfter & 0..1 & The \texttt{creationTime} attribute of the matched resource is chronologically after the specified value. \\
+modifiedSince & 0..1 & The \texttt{lastModifiedTime} attribute of the matched resource is chronologically after the specified value. \\
+unmodifiedSince & 0..1 & The \texttt{lastModifiedTime} attribute of the matched resource is chronologically before the specified value. \\
+expireBefore & 0..1 & The \texttt{expirationTime} attribute of the matched resource is chronologically before the specified value. \\
+expireAfter & 0..1 & The \texttt{expirationTime} attribute of the matched resource is chronologically after the specified value. \\
+filterOperation & 0..1 & Indicates the logical operation (AND/OR) to be used for different condition tags. The default value is logical AND. \\
+limit & 0..1 & The maximum number of resources to be included in the filtering result. \\
+\hline
+\end{tabular}
+\end{table}
+
+The module performs minor database queries to build values before their use. It also validates the attributes of the resources and defines default values, such as creating the automatic "Resource Name" when necessary. Furthermore, it builds a Json structure that gets mapped to a native structure for later insertion into the database by the resource module.
+
+The CJson\footnote{\url{https://github.com/DaveGamble/cJSON}} library (version 1.7.15) is utilized for handling Json content. Note that this library is used statically, as the source code was imported into this project.
+
+\subsubsection{M2M Resources}\label{sec:m2mresources}
+
+Our TinyOneM2M solution provides a comprehensive implementation of several critical resources as per the OneM2M standard. These resources -- CSE\_Base, AE, CNT, CIN, and SUB -- serve as the backbone of our application, enabling diverse functionalities and providing a robust foundation upon which our solution operates.
+
+The CSE\_Base resource acts as a central hub, organizing and managing the other resources and services of our solution. The AE resource encapsulates application-specific information, allowing our solution to be adaptable across multiple use cases and applications. The CNT and CIN resources work in tandem to handle and manage the information table and its records, enabling efficient and effective data management. Lastly, the SUB resource provides the functionality to 'watch' other resources, a crucial feature that allows for real-time monitoring and quick response to changes.
+
+As shown in Table \ref{tab:resourceimplementationpercentage}, we have been successful in achieving substantial coverage of the OneM2M standard. Our implementation covers 52\% of the standard for the CSE\_Base resource, 57\% for AE, 68\% for CNT, 70\% for CIN, and 40\% for SUB. These percentages reflect our commitment to aligning our solution as closely as possible with the OneM2M standard, ensuring compatibility and interoperability, while also adapting the solution to meet the specific needs and constraints of our use case.
+
+\begin{table}[h]
+\scriptsize
+\centering
+\caption{Resource Implementation Percentage}
+\label{tab:resourceimplementationpercentage}
+\begin{tabular}{p{1.5cm}p{1.5cm}p{1.5cm}p{1.5cm}}
+\hline
+\textbf{Resource Type} & \textbf{Implemented Attributes} & \textbf{Attributes Suggested by the Standard} & \textbf{Percentage (\%)} \\
+\hline \hline
+CSE\_Base & 12 & 23 & 52\% \\
+AE & 20 & 35 & 57\% \\
+CNT & 17 & 25 & 68\% \\
+CIN & 14 & 20 & 70\% \\
+SUB & 12 & 30 & 40\% \\
+\hline
+\end{tabular}
+\end{table}
+
+The CSE\_Base resource can be seen as a system's set of databases, the AE resource as a database containing an application's information, the CNT resource as an information table, and the CIN resource as the table's rows. Subscriptions (SUB) can be thought of as watchers that can be added to the resources CSE\_Base, AE, CNT, or even within another subscription.
+
+The implementation of each feature is based on the attributes suggested in Section 9.6.3 of the OneM2M standard documentation (version 5.1), excluding some less relevant attributes like \texttt{appName}, \texttt{AE-ID}, \texttt{CSE- ID}, etc.
+
+Crucially, the implementation of certain attributes alters the system's normal functioning. All resources implement the expiration time attribute, thus preventing access to any resource whose expiration time is less than the current datetime. For the CNT resource, the attributes max byte size, max number of instance, current byte size, and current number of instances were implemented. For the SUB resource, the event notification criteria attribute was implemented to specify which HTTP request methods will trigger notifications.
+
+The standard is broad, and some fields may not be relevant for all users. Hence, we have selected the most pertinent attributes for implementation and earmarked the remainder for potential future work.
+
+\subsubsection{Embedded Single File Database}
+
+The architecture of our TinyOneM2M solution employs an Embedded Single File Database module, serving as the central data repository. Tasked with persisting resource data, managing hierarchical relationships between resource entities, and enabling efficient data retrieval mechanisms, this module is instrumental in achieving a reliable, efficient, and manageable software system.
+
+For our database management system, we selected SQLite3 \footnote{\url{https://www.sqlite.org/cintro.html}}, an established file-based database known for its performance and simplicity. We integrated the SQLite3 library, specifically version 3.41.1, as source code into our architecture, thereby ensuring broad compatibility across different operating systems. This choice aligns well with our commitment to a platform-independent solution.
+
+SQLite3's incorporation offers numerous advantages, aligning perfectly with our solution's design principles. It is lightweight, efficient, and enables swift database operations with minimal resource usage. Its ease in executing queries contributes directly to our system's responsiveness and performance.
+
+The initial architecture of our database comprised two tables: one for single-valued attributes and another for multi-valued attributes, such as labels and points of access. This design aimed to maintain the structure and initial order of these attributes. However, this approach posed performance challenges during database operations, prompting us to shift towards a denormalized, single-table design to enhance performance. Section \ref{sec:normalizationvsdenormalization} provides a detailed comparison of operations on normalized versus denormalized databases.
+
+To optimize our database further, we strategically added indexes on attributes such as parent id, resource id, and url (resource path). Despite not being a standard attribute, url was implemented to facilitate query operations, particularly during route mapping.
+
+While SQLite3 serves our current needs effectively, we are mindful of potential limitations. Alternative embedded database solutions like MySQL or PostgreSQL could prove beneficial under specific conditions such as high concurrency or heightened system requirements. One area for potential enhancement within SQLite3 is the use of cache mode, leveraging RAM for faster operations \footnote{\url{https://www.sqlite.org/inmemorydb.html}}. However, this approach can pose challenges with memory blocking in a multi-threaded environment and requires careful handling \cite{}.
+
+For future development, detailed analysis of SQLite3 database operations could identify potential optimizations at the attribute level, possibly using the PRAGMA operator. Transactional behavior could also be improved by exploring write-ahead logging (WAL) to enhance concurrency. Particularly in a multi-threaded environment, concurrent reads and writes can be significantly optimized with WAL, providing a valuable addition to our implementation \cite{}.
+
+\subsubsection{Notifications}
+
+The Notifications module plays an integral role in our TinyOneM2M solution, responsible for alerting subscribers about changes in resources they have subscribed to. Notifications, often generated through modifications in resources, are essential to ensure subscribers stay informed about the current state of resources they are interested in.
+
+Our notification system is built around the subscriptions resource feature. Whenever a notification needs to be dispatched, a new thread is spun up to handle the delivery process. This thread-centric approach enables our system to maintain a high level of responsiveness and efficiency by preventing blocking of main execution threads. A subscription in TinyOneM2M serves as a contractual agreement between a subscriber and a resource. Whenever a resource that a client has subscribed to undergoes any change, a notification is triggered. This subscription-driven approach ensures that notifications are contextually relevant and valuable to the subscriber.
+
+To facilitate the creation of MQTT and/or HTTP clients within these notification threads, we have utilized the Mongoose library \footnote{\url{https://github.com/cesanta/mongoose/tree/master}} (version 7.10). The use of this library greatly simplifies the process of setting up clients and managing connections, contributing to the overall efficiency and reliability of our notification system.
+
+The delivery addresses for notifications are defined within the \texttt{nu} attribute in the subscription. For example, the delivery addresses could be specified as \texttt{mqtt://0.0.0.0:1883, http://0.0.0.0:1400/monitor}. Similarly, the topic or resource path, such as \texttt{/onem2m/ae-test/cnttest/subtest}, denotes the address of the resource associated with the notification.
+
+Further enhancing the specificity of our notification system, we've implemented an attribute called event notification criteria, as described in Section \ref{sec:m2mresources}. This attribute allows specifying which HTTP request methods should trigger notifications. For instance, setting this attribute to \texttt{"GET, POST"} ensures that notifications are triggered only when HTTP GET or POST requests affecting direct child resources occur. This gives subscribers precise control over which actions result in notifications, thus providing a highly customizable notification experience. 
+
+For example, if a container resource contains a subscription, a POST request to create a content instance resource within this container will trigger a notification. However, a DELETE request will not lead to a notification, as the DELETE method is not included in the event notification criteria. This flexibility provides precise control over notification triggers, tailoring notifications based on subscribers' specific interests or system requirements.
 
 \section{Tests}
 \label{tests}
+
+\textcolor{red}{referir que o OpenMTC implementa a versão do standard 1.1 (verificar)}
 
 In the following section we present a series of test cases to evaluate the proposed solution's performance, compatibility, and efficiency. These tests cover various aspects, including the impact of different handling methods for the "expiration time" field in database queries, a comparison of our solution with OpenMTC, cross-platform evaluations on Ubuntu and macOS systems, and compatibility with minimal hardware configurations like the ESP32. By conducting these tests, we aim to provide a comprehensive assessment of the proposed solution's strengths and limitations, allowing for further optimization and refinement to better address the needs of a wide range of applications and use cases.
 
@@ -296,6 +605,10 @@ The Table \ref{tab:machinesSpecs} presents the detailed hardware, operating syst
 \end{table}
 
 To thoroughly evaluate the effectiveness and applicability of our proposed solution, we have designed a comprehensive set of test cases. The first test case aims to evaluate the impact of implementing expiration time field conditions in database queries. By comparing the performance of three different scenarios, we can assess the time cost of each approach and determine which is most effective. The second test case focuses on a comparative analysis of latency for 500 AE resource CRUD operations using the proposed solution and OpenMTC. This will enable us to gauge the relative efficiency of our approach, highlighting its strengths and areas for improvement. The third test case involves performing a cross-platform evaluation through installation and compilation on Ubuntu and macOS systems, ensuring that our solution is versatile and can be seamlessly integrated into different operating environments. In the fourth test case, we will further compare our solution with OpenMTC by measuring the time efficiency of 500 resource discovery requests when the database has 500, 1000, and 2000 records. This test will provide insight into the performance and scalability of our solution in comparison to OpenMTC. Finally, testing the compatibility of our solution with minimal hardware, such as the ESP32 case study, will help verify its suitability for resource-constrained scenarios, broadening its potential applications and enabling its adoption in a wider range of use cases. By conducting these test cases, we will gain a comprehensive understanding of the effectiveness and applicability of our proposed solution, enabling us to refine and optimize it to meet the evolving needs and challenges of the oneM2M standard.
+
+\subsection{Database Normalization VS Database Denormalization} \label{sec:normalizationvsdenormalization}
+
+Comparação a nível da base de dados apenas, sem implementação na solução entre duas implementações de bases de dados, normalizadas e desnormalizadas.
 
 \subsection{Assessing the Efficiency of Meeting Expiration Time Field Objectives in Database Queries on Performance}
 
@@ -425,7 +738,7 @@ The insights gained from this test case will contribute to the ongoing refinemen
 
 
 
-\subsection{Minimal Hardware Compatibility Testing: ESP32 Case Study}
+\subsection{Minimal Hardware Compatibility Testing: Raspberry Pi 0W Case Study}
 
 In this section, we present a test case focused on assessing the compatibility of our proposed solution with minimal hardware, specifically using the ESP32 microcontroller as a case study. The objective of this test case is to verify the suitability of our solution for resource-constrained environments, thereby broadening its potential applications and enabling its adoption in a wider range of use cases.
 
@@ -458,7 +771,11 @@ The insights gained from this minimal hardware compatibility testing will contri
 %
 %? Fazer testes com Hardware minimo - por exemplo ESP32 ?
 
-\section{Conclusion}
+\section{Lessons Learned}
+
+Referir que as bibliotecas por serem estáticas não são atualizadas quando uma nova versão é lançada, porém isto trás X vantagens e Y desvantagens.
+
+\section{Conclusion and Future Work}
 \label{conclusion}
 \printcredits
 
