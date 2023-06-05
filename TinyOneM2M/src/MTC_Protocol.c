@@ -1584,16 +1584,32 @@ char delete_resource(struct Route * destination, char **response) {
         return TRUE;
     }
 
-
     if (destination->right == NULL) {
         destination->left->right = NULL;
         responseMessage(response,200,"OK","Record deleted");
         return TRUE;
     }
 
-    
     destination->left->right = destination->right;
     destination->right->left = destination->left;
+
+    char *resourcePath = destination->key;
+    struct Route *currentNode = destination->right;
+    struct Route *nextNode = NULL;
+
+    while (currentNode != NULL && strncmp(currentNode->key, resourcePath, strlen(resourcePath)) == 0) {
+        nextNode = currentNode->right;
+
+        if (nextNode != NULL) {
+            nextNode->left = currentNode->left;
+        }
+
+        // Assuming we need to free the memory for the deleted node.
+        free(currentNode);
+
+        currentNode = nextNode;
+    }
+
     responseMessage(response,200,"OK","Record deleted");
 
     printf("Record deleted ri = %s\n", destination->ri);

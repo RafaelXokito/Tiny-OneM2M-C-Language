@@ -603,7 +603,7 @@ Table \ref{tab:machinesSpecs} delivers a comprehensive overview of the specific 
 
 In this section, we present an investigation into the performance of database normalization versus denormalization. This analysis does not directly implement the OneM2M standard but instead provides a comparative assessment of these two database structuring strategies.
 
-To execute the tests, we employed a Python script directly on the SQLite3 database. The script uses the SQLite3 library and was run on Machine 1. The version of Python used was 3.9.10 and the version of the SQLite3 library used was 3.37.0. The SQLite3 database was allocated in the RAM.
+To execute the tests, we employed a Python script directly on the SQLite3 database. The script uses the SQLite3 library and was run on Machine 1 from Table \ref{tab:machinesSpecs}. The version of Python used was 3.9.10 and the version of the SQLite3 library used was 3.37.0. The SQLite3 database was allocated in the RAM.
 
 \begin{algorithm}
 \scriptsize
@@ -672,72 +672,45 @@ From these results, we observe that the denormalized structure was more efficien
 
 \subsection{Assessing the Efficiency of Meeting Expiration Time Attribute Objectives in Database Queries on Performance}
 
-In this section, we focus on a specific test case that aims to assess the efficiency of meeting expiration time field objectives in database queries on performance, using codebase version 1.1. The database contains 2000 records in the "mtc" table and 41,000 in the "multivalue" table, adding difficulty to the SELECT queries. The "expiration time" field's purpose is to ensure that resources are deleted or become unused after their expiration. The test will be performed on a "discovery" request with five parameters: ty (resource type), lbl (labels), expireAfter using the "expiration time" field, expireBefore using the "expiration time" field, and filterOperation. It is important to note that the "labels" attribute is an array and its search requires more effort because it searches in the "multivalue" table. By default, the "discovery" request will have a limit of 50 rows listed, which can be adjusted as a parameter, but for this test, the default value will be used. As the limit value increases, the query's latency may grow exponentially, making it crucial to optimize the database and query structure. Three distinct approaches were considered, with the first one being the primary focus of this study:
+In this part of our study, we focus on assessing the efficiency of meeting the 'expiration time' attribute objectives in database queries on performance. This test was carried out on Machine 1, using Python version 3.9.10 and SQLite3 version 3.37.0.
 
-\begin{itemize}
-	\item Selective Query Filtering - This approach filters out expired records by adding a condition to consultation, update, and removal queries to apply only to records with a valid "expiration time" field. A REST route is created to delete invalid records. This method is advantageous because it minimizes the overhead associated with constantly checking and deleting expired records while still maintaining data integrity. The performance of this approach will be compared with two other scenarios in terms of query time.
-	\item On-demand Record Deletion - In this approach, all requests use the current context to search for records whose "expiration time" field has already passed and, if so, deletes them. This method adds complexity to each request, potentially impacting performance and increasing the likelihood of implementation errors.
-	\item Periodic Expiration Check - A thread is created that remains active indefinitely, checking every X time if there are fields with an exceeded "expiration time". However, there is a chance that expired records would still be present when queries are made on the main threads. This approach can lead to additional resource consumption and potential race conditions, making it less ideal than the first approach.
-\end{itemize}
+The OneM2M standard can be strictly followed in certain environments, but this can sometimes lead to a degradation of system performance. A common cause for this is the inclusion of the 'expiration time' attribute and the associated logic. It's worth noting that our implementation does not delete records for which the expiration time has already passed. However, there are a couple of other possible approaches to this situation:
 
-The test case under examination focuses on the first approach, "Selective Query Filtering," and examines its performance in three different scenarios using codebase version 1.1: the codebase with the "expiration time" field as a condition in database queries, the codebase with the "expiration time" field as a condition in database queries when it is indexed in the database, and the original codebase without the "expiration time" field as a condition. The test will be performed by executing 500 "discovery" requests with five parameters in each of the three scenarios on "Machine 1", as shown in Table \ref{tab:machinesSpecs}. By evaluating the efficiency of these scenarios in meeting the objectives of the "expiration time" field, we can identify the most effective method for ensuring proper resource management.
+\begin{enumerate}
+    \item \textit{On-demand Record Deletion:} All requests use the current context to search for records whose "expiration time" field has already passed and deletes them. This method adds complexity to each request, potentially impacting performance and increasing the likelihood of implementation errors.
+    \item \textit{Periodic Expiration Check:} A thread is created that remains active indefinitely, checking every X time if there are fields with an exceeded "expiration time". This approach can lead to additional resource consumption and potential race conditions, making it less ideal than the first approach.
+\end{enumerate}
 
-The first approach, "Selective Query Filtering," has been chosen as the primary focus of this study due to its potential for minimizing overhead while maintaining data integrity. The comparative analysis of the three scenarios will provide valuable insights into the impact of different handling techniques for the "expiration time" field on system performance using codebase version 1.1. This assessment will help identify potential optimizations and guide the selection of the most suitable approach for managing resources with an expiration time, ultimately enhancing the overall efficiency of the system.
+For our test, we considered three scenarios: no implementation of the 'expiration time' attribute, implementation of the attribute without indexing, and implementation of the attribute with indexing. We chose these scenarios to demonstrate how much the presence and indexing of the 'expiration time' attribute can impact the implementation.
 
-To assess the performance of the three scenarios in the test case, we have designed a simple algorithm that sends a total of 500 requests, each retrieving data through SELECT queries to the target route for each scenario, considering the five parameters mentioned above. This algorithm measures the time taken for each request in seconds and accumulates the minimum, maximum, and total time. Additionally, it calculates the squared difference of each request's time and the average time to determine the standard deviation. By using this algorithm, we can consistently evaluate the time efficiency of the "Selective Query Filtering" approach in comparison to the other scenarios. The pseudocode for this algorithm is shown in Algorithm \ref{alg:time_measurement}.
+A Python script was implemented to perform this test. The script created the following tables: \texttt{OneM2M\_NoET},\newline \texttt{OneM2M\_NonIndexedET}, and \texttt{OneM2M\_IndexedET}. Each table underwent 10,000 operations of each type (Create, Read, Update, and Delete).
 
-\begin{algorithm}
-\caption{Pseudocode for Time Measurement}\label{alg:time_measurement}
-\begin{algorithmic}[1]
-\State Initialize $\textit{count}$, $\textit{sum}$, $\textit{min}$, $\textit{max}$, $\textit{sq\_diff\_sum} \gets 0$
-\State $\textit{min} \gets$ large value
-\For{$i \gets 1$ to $500$}
-    \State Send a request to the target route
-    \State Measure the time taken for the request ($\textit{time\_ms}$)
-    \If{$\textit{time\_ms} < \textit{min}$}
-        \State $\textit{min} \gets \textit{time\_ms}$
-    \EndIf
-    \If{$\textit{time\_ms} > \textit{max}$}
-        \State $\textit{max} \gets \textit{time\_ms}$
-    \EndIf
-    \State $\textit{sum} \gets \textit{sum} + \textit{time\_ms}$
-\EndFor
-\State Calculate $\textit{average} \gets \frac{\textit{sum}}{500}$
-\For{$i \gets 1$ to $500$}
-    \State $\textit{diff} \gets \textit{time taken for request i} - \textit{average}$
-    \State $\textit{sq\_diff} \gets \textit{diff} \times \textit{diff}$
-    \State $\textit{sq\_diff\_sum} \gets \textit{sq\_diff\_sum} + \textit{sq\_diff}$
-\EndFor
-\State Calculate $\textit{standard\_deviation} \gets \sqrt{\frac{\textit{sq\_diff\_sum}}{500}}$
-\end{algorithmic}
-\end{algorithm}
+As shown in Figure X, \texttt{OneM2M\_NoET} table does not implement the 'expiration time' attribute, \texttt{OneM2M\_NonIndexedET} implements it without indexing, and \texttt{OneM2M\_IndexedET} implements it with indexing. Indexing the 'expiration time' attribute can improve search times when looking for records with specific expiration times, but it also adds additional overhead when inserting or updating records, as the index needs to be updated as well.
 
-With the algorithm in place, we can proceed to the actual testing phase. For each of the three scenarios, we will run the algorithm on "Machine 1" and record the minimum, maximum, average, and standard deviation of the request times. This data will allow us to thoroughly analyze the performance impact of each approach and draw conclusions about their efficiency in meeting the "expiration time" field objectives. The results of the tests are presented in Table \ref{tab:performance_comparison}.
-
-\begin{table*}[htbp]
+\begin{figure}[h]
 \centering
-\caption{Performance comparison of the three scenarios}
-\begin{tabular}{lcccc}
+\includegraphics[width=\linewidth]{TestExpirationTime}
+\caption{Diagram of the tables}
+\label{fig:tableDiagram}
+\end{figure}
+
+Our results are as follows:
+
+\begin{table*}[h]
+\scriptsize
+\centering
+\caption{Results from the 'Expiration Time' test}
+\begin{tabular}{l p{2cm} p{2cm} p{2cm} p{2cm}}
 \hline
-Scenario & Min (s) & Max (s) & Avg (s) & Std Dev (s) \\ \hline
-Original Codebase without Expiration Time Condition & 0.614603 & 0.683479 & 0.626082 & 0.007875 \\
-Non-Indexed Expiration Time Condition & 0.614021 & 0.672247 & 0.622916 & 0.007017 \\
-Indexed Expiration Time Condition & 0.629939 & 1.446011 & 0.640483 & 0.045949 \\ \hline
+\textbf{Scenario} & \textbf{CREATE Avg Time (ms)} & \textbf{READ Avg Time (ms)} & \textbf{UPDATE Avg Time (ms)} & \textbf{DELETE Avg Time (ms)}\\ \hline \hline
+Original Codebase without Expiration Time Condition & 0.00237 & 0.000976 & 0.00239 & 0.000726\\
+Non-Indexed Expiration Time Condition & 0.00248 & 0.00129 & 0.529 & 0.000946\\ 
+Indexed Expiration Time Condition & 0.00269 & 0.00135 & 3.05 & 0.00109\\ \hline
 \end{tabular}
-\label{tab:performance_comparison}
 \end{table*}
 
-Upon examining the results in Table \ref{tab:performance_comparison}, we can derive several insights into the efficiency of the "Selective Query Filtering" approach in managing resources with an expiration time. These insights will be valuable in guiding future optimizations and ensuring proper resource management within the system.
 
-It is important to highlight the trade-offs when comparing the three scenarios. First, the original codebase without the expiration time condition exhibits slightly better average performance compared to the indexed expiration time condition scenario. This result is expected, as the original codebase does not include any additional checks for expired resources, which results in reduced complexity and faster query times. However, the difference in average time between the original codebase and the non-indexed expiration time condition scenario is minimal, indicating that the added complexity of checking for expiration does not significantly impact the overall performance.
-
-When comparing the non-indexed expiration time condition scenario with the indexed expiration time condition scenario, we observe a slight increase in the average time for the indexed case, which might seem counterintuitive as indexing usually improves query performance. However, it is essential to consider that the standard deviation for the indexed expiration time condition scenario is considerably higher, indicating more varied response times. This variability could be attributed to the database's specific structure, the distribution of data within the tables, or the types of queries executed during the test. Despite the higher average time, the indexed expiration time condition scenario offers a more efficient approach to managing resources with an expiration time. The increased standard deviation highlights the variability in response times, which can be attributed to various factors such as the database's structure or the nature of the queries executed during the test. Consequently, the indexed scenario demonstrates greater scalability and adaptability in handling larger volumes of data, making it the preferred choice for implementation.
-
-As the system evolves, the indexed expiration time condition scenario will be the one that prevails and will be part of the solution implementation. It is recommended to further investigate the factors contributing to the variability in response times for this scenario and explore the performance impact of different limit values. This analysis will help guide future optimizations and enhance the system's overall efficiency while meeting the expiration time field objectives.
-
-Furthermore, it is essential to note that the "discovery" request route being tested involves five parameters, which add complexity to the evaluation of each scenario's performance. As the limit value of 50 rows listed increases, the query's latency may grow exponentially. Therefore, the current test with a default limit of 50 rows serves as a starting point, and it is crucial to evaluate the performance of these scenarios with varying limit values to understand their impact on the overall system efficiency.
-
-In conclusion, the "Selective Query Filtering" approach has shown promise in terms of meeting the expiration time field objectives with a minimal impact on database query performance. The small performance difference between the original codebase without the expiration time condition and the non-indexed expiration time condition scenario indicates that checking for expiration does not drastically impact performance. It is recommended to investigate the indexed expiration time condition scenario further to understand the variability in its response times and to explore the performance impact of different limit values. This analysis will guide future optimizations and help select the most suitable approach for managing resources with an expiration time, ultimately enhancing the system's overall efficiency.
+Our results show that the inclusion of the 'expiration time' attribute and its indexing can degrade performance in SQLite3 database operations. Notably, the UPDATE operation was significantly slower when we considered 'expiration time', especially for the Indexed scenario. This is likely due to the overhead of maintaining the index. Similarly, for both the CREATE and DELETE operations, the presence of 'expiration time' attribute, and more so its indexing, resulted in slower operation times. These results highlight the importance of understanding the trade-offs between adhering to standards like OneM2M and the performance requirements of specific applications. 
 
 \subsection{Comparative Analysis of Latency for CRUD Operations Using the Proposed Solution and OpenMTC}
 
@@ -765,7 +738,7 @@ The insights gained from this cross-platform evaluation will contribute to the o
 
 In this test case, we successfully installed and compiled the proposed solution on Ubuntu, one of the two operating systems being evaluated for cross-platform compatibility. The process began by importing the source code to "Machine 2", as shown in Table \ref{tab:machinesSpecs}, using SFTP, since the operation system have already installed the GCC compiler theres no more dependencies to install and the system is ready to be compiled.
 
-The proposed solution was successfully compiled using the provided Makefile, which facilitated the creation of the executable without any issues. A closer examination of the dependencies of the compiled executable was carried out using the \texttt{ldd} command. The command revealed that the proposed solution relies exclusively on system libraries such as 'libdl.so.2', 'libpthread.so.0', and 'libc.so.6', which provide essential functionality for dynamic loading, multi-threading, and standard C functions, respectively.
+The proposed solution was successfully compiled using the provided Makefile, which facilitated the creation of the executable without any issues. A closer examination of the dependencies of the compiled executable was carried out using the \texttt{ldd} command. The command revealed that the proposed solution relies exclusively on system libraries such as \texttt{libdl.so.2}, \texttt{libpthread.so.0}, and \texttt{libc.so.6}, which provide essential functionality for dynamic loading, multi-threading, and standard C functions, respectively.
 
 By relying solely on system libraries, the proposed solution demonstrates a significant advantage in terms of portability and maintainability. This approach eliminates the need for third-party dependencies, reducing potential compatibility issues and simplifying the installation process across various platforms. Furthermore, it ensures that the solution benefits from the stability and performance optimizations provided by the operating system's native libraries, which are generally well-maintained and frequently updated.
 
@@ -833,9 +806,5 @@ Referir que as bibliotecas por serem estáticas não são atualizadas quando uma
 
 
 %\vskip3pt
-
-\bio{figs/bioFig}
-My name is Rafael Pereira, I'm 22 years old, and I'm an MSc Computer Engineering Student and Researcher at Polytechnic of Leiria. I'm extremely curious about the technology world, ambitious for knowledge in this area, I'm dedicated to doing my work. The programming thing always got me, and every day it grows. Today I'm looking for interesting projects, that can make me think and learn every day.
-\endbio
 
 \end{document}
