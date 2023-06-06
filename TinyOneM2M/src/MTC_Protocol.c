@@ -1578,34 +1578,37 @@ char delete_resource(struct Route * destination, char **response) {
     // deleteRoute(); {
     // Remove node from ordered list
 
-    if (destination->left == NULL) {
-        destination->right->left = NULL;
-        responseMessage(response,200,"OK","Record deleted");
-        return TRUE;
-    }
-
-    if (destination->right == NULL) {
-        destination->left->right = NULL;
-        responseMessage(response,200,"OK","Record deleted");
-        return TRUE;
-    }
-
-    destination->left->right = destination->right;
-    destination->right->left = destination->left;
-
     char *resourcePath = destination->key;
+    
     struct Route *currentNode = destination->right;
-    struct Route *nextNode = NULL;
+
+    // Handle cases where the node to delete is the first or the last node.
+    if (destination->left != NULL) {
+        destination->left->right = destination->right;
+    }
+
+    if (destination->right != NULL) {
+        destination->right->left = destination->left;
+    }
+
+    free(destination);  // Don't forget to free the memory of the deleted node.
 
     while (currentNode != NULL && strncmp(currentNode->key, resourcePath, strlen(resourcePath)) == 0) {
-        nextNode = currentNode->right;
+        printf("Deleting currentNode->key = %s\n", currentNode->key);
+
+        // We need to store the reference of the right node before freeing the current node.
+        struct Route *nextNode = currentNode->right;
+
+        // Again, handle cases where the node to delete is the first or the last node.
+        if (currentNode->left != NULL) {
+            currentNode->left->right = nextNode;
+        }
 
         if (nextNode != NULL) {
             nextNode->left = currentNode->left;
         }
 
-        // Assuming we need to free the memory for the deleted node.
-        free(currentNode);
+        free(currentNode);  // Free the memory of the deleted node.
 
         currentNode = nextNode;
     }
