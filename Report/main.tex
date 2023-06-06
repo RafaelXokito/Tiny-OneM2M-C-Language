@@ -748,7 +748,7 @@ The shell script represented by Algorithm \ref{alg:time_measurement} operates as
 \end{algorithmic}
 \end{algorithm}
 
-\begin{center}
+\begin{table}
 \scriptsize
 \centering
 \caption{Comparative Analysis of time measure for CRUD Operations in TinyOneM2M and OpenMTC.}
@@ -765,7 +765,7 @@ PUT & 0.116248 & 0.592979 & 0.012049 & 0.136800 \\
 DELETE & 0.122092 & 0.544047 & 0.008289 & 0.053867 \\
 \hline
 \end{tabular}
-\end{center}
+\end{table}
 
 In a comparative analysis of latency for CRUD operations between TinyOneM2M and OpenMTC shown in Table \ref{tab:ComparativeAnalysis}, significant differences were noted. TinyOneM2M displayed a lower maximum latency for POST operations (1.140625ms) compared to OpenMTC's higher maximum (15.606682ms), suggesting more stable performance. Conversely, OpenMTC demonstrated a quicker response under optimal conditions, outperforming TinyOneM2M in terms of minimum latency for all CRUD operations, for instance, the minimum latency for GET operations was 0.008696ms for OpenMTC compared to 0.011656ms for TinyOneM2M. Further, TinyOneM2M showed less variation in response times across operations, indicating more predictable and stable performance, which could be advantageous in real-world scenarios. However, occasional latency spikes might be an issue with OpenMTC, as suggested by its high maximum latency, potentially affecting overall performance.
 
