@@ -1613,8 +1613,6 @@ char delete_resource(struct Route * destination, char **response) {
         currentNode = nextNode;
     }
 
-    responseMessage(response,200,"OK","Record deleted");
-
     printf("Record deleted ri = %s\n", destination->ri);
     responseMessage(response,200,"OK","Record deleted");
     

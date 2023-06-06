@@ -169,7 +169,6 @@ The authors in \cite{Benoygopal2021} present a secure authentication and access 
 
 The paper \cite{Kim2018} discusses the design, implementation and evaluation of an interoperable platform for the Internet of Things \gls{iot} using the OneM2M standard, where the authors focused on implementing the standard using C language. Moreover, the authors discussed how their C implementation handles registration, discovery and subscription-resource management tasks while proposing optimizations to improve performance. Experiments were designed to assess the scalability, reliability, and processing time with different loads and data sizes. Those experiments concluded that the C implementation of OneM2M achieved better performance than other implementations regarding response time and memory usage. Regarding security, the paper also details oneM2M's security features, namely, authentication, authorization, and confidentiality, how the C implementation handles these features and how to improve the platform's security. Interoperability features, such as standardized interfaces and protocols, and their C implementation were also detailed in the paper since one of oneM2M's main objects must be the interoperability between different \gls{iot} platforms and devices.
 
-
 % https://www.scopus.com/results/results.uri?sort=plf-f&src=s&st1=%28onem2m+OR+mtc%29+and+%22API%22&sid=2e6f61fce202fa9e6635e553544fee3c&sot=b&sdt=b&sl=40&s=TITLE-ABS-KEY%28%28onem2m+OR+mtc%29+and+%22API%22%29&origin=searchbasic&editSaveS=&yearFrom=Before+1960&yearTo=Present
 
 \section{Architecture}
@@ -700,8 +699,8 @@ Our results shown in Table \ref{tab:ExpirationTime} indicates that the inclusion
 \begin{table*}[h]
 \scriptsize
 \centering
-\label{tab:ExpirationTime}
 \caption{Results from the 'Expiration Time' test}
+\label{tab:ExpirationTime}
 \begin{tabular}{l p{2cm} p{2cm} p{2cm} p{2cm}}
 \hline
 \textbf{Scenario} & \textbf{CREATE Avg Time ($\mu$s)} & \textbf{READ Avg Time ($\mu$s)} & \textbf{UPDATE Avg Time ($\mu$s)} & \textbf{DELETE Avg Time ($\mu$s)}\\ \hline \hline
@@ -749,34 +748,26 @@ The shell script represented by Algorithm \ref{alg:time_measurement} operates as
 \end{algorithmic}
 \end{algorithm}
 
-\textcolor{red}{realizar também este teste dentro da própria máquina, ou seja, sem usar a rede. Comparar resultados.}
+\begin{center}
+\scriptsize
+\centering
+\caption{Comparative Analysis of Minimum and Maximum Latency (in milliseconds) for CRUD Operations in TinyOneM2M and OpenMTC.}
+\label{tab:ComparativeAnalysis}
+\begin{tabular}{lcccc}
+\hline
+& \multicolumn{2}{c}{TinyOneM2M} & \multicolumn{2}{c}{OpenMTC} \\
+\cline{2-3} \cline{4-5}
+Operation & Min (ms) & Max (ms) & Min (ms) & Max (ms) \\
+\hline
+POST & 0.123773 & 1.140625 & 0.011947 & 15.606682 \\
+GET & 0.011656 & 0.115155 & 0.008696 & 1.075310 \\
+PUT & 0.116248 & 0.592979 & 0.012049 & 0.136800 \\
+DELETE & 0.122092 & 0.544047 & 0.008289 & 0.053867 \\
+\hline
+\end{tabular}
+\end{center}
 
-Calculating stats for POST
-Min: 0.123773
-Max: 1.140625
-Avg: 0.160153
-Std Dev: 0.053071
-Calculating stats for GET
-Min: 0.011656
-Max: 0.115155
-Avg: 0.025670
-Std Dev: 0.012988
-Calculating stats for PUT
-Min: 0.116248
-Max: 0.592979
-Avg: 0.146315
-Std Dev: 0.037319
-Calculating stats for DELETE
-Min: 0.122092
-Max: 0.544047
-Avg: 0.152935
-Std Dev: 0.030371
-
-\textcolor{red}{<Showing the results in table format, describe, and discuss them>}
-
-By comparing the latency for 500 Application Entity (AE) resource CRUD operations on both platforms, we can highlight the strengths and areas for improvement of our proposed solution. This analysis will not only help us to understand the impact of our solution on system performance but also to identify any potential bottlenecks and areas that could benefit from optimization, particularly in the context of network latency and resource management.
-
-The insights gained from this test case will be crucial in the ongoing development and refinement of our solution, ultimately contributing to a more robust and efficient system for managing resources in the context of the oneM2M standard while accounting for the network-related challenges inherent in distributed systems.
+In a comparative analysis of latency for CRUD operations between TinyOneM2M and OpenMTC shown in Table \ref{tab:ComparativeAnalysis}, significant differences were noted. TinyOneM2M displayed a lower maximum latency for POST operations (1.140625ms) compared to OpenMTC's higher maximum (15.606682ms), suggesting more stable performance. Conversely, OpenMTC demonstrated a quicker response under optimal conditions, outperforming TinyOneM2M in terms of minimum latency for all CRUD operations, for instance, the minimum latency for GET operations was 0.008696ms for OpenMTC compared to 0.011656ms for TinyOneM2M. Further, TinyOneM2M showed less variation in response times across operations, indicating more predictable and stable performance, which could be advantageous in real-world scenarios. However, occasional latency spikes might be an issue with OpenMTC, as suggested by its high maximum latency, potentially affecting overall performance.
 
 \subsection{Cross-Platform Evaluation: Installation and Compilation on Ubuntu, macOS, and Raspbian Operating Systems}
 
