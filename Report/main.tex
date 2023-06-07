@@ -52,6 +52,7 @@
 \usepackage{xcolor}
 \usepackage{algpseudocode}
 \usepackage{algorithm}
+\usepackage{amsmath}
 % -------------------------------------------------------------------
 \PassOptionsToPackage{style=super,nolist}{glossaries}
 \PassOptionsToPackage{acronym}{glossaries}
@@ -119,7 +120,7 @@
 %\cormark[1]
 %\fnmark[1]
 \ead{rafael.m.pereira@ipleiria.pt}
-   
+
 \address[1]{Computer Science and Communications Research Centre, School of Technology and Management, Polytechnic of Leiria, 2411-901 Leiria, Portugal}
 
 \begin{abstract}
@@ -187,7 +188,6 @@ The paper \cite{Thielemans2019} proposes a resource-efficient secure implementat
 The authors in \cite{Benoygopal2021} present a secure authentication and access control scheme for OneM2M-based \gls{iot} systems. Moreover, propose an approach to address the challenge of identity and access management in large-scale \gls{iot} systems. The proposed scheme is based on the role-based access control model, where system administrators can define access policies based on the roles of the users. Their scheme entails a secure authentication and authorization mechanism based on certificates, which are issued by a trusted \gls{ca}. The evaluation process used a prototype implementation of the OneM2M standard and compared it with existing access control schemes. Therefore concluding that their scheme achieves better performance and scalability while providing a flexible and fine-grained access control mechanism. However, the proposed scheme contains security and privacy issues for which the authors presented several countermeasures to mitigate them.
 
 The paper \cite{Kim2018} discusses the design, implementation and evaluation of an interoperable platform for the Internet of Things \gls{iot} using the OneM2M standard, where the authors focused on implementing the standard using C language. Moreover, the authors discussed how their C implementation handles registration, discovery and subscription-resource management tasks while proposing optimizations to improve performance. Experiments were designed to assess the scalability, reliability, and processing time with different loads and data sizes. Those experiments concluded that the C implementation of OneM2M achieved better performance than other implementations regarding response time and memory usage. Regarding security, the paper also details oneM2M's security features, namely, authentication, authorization, and confidentiality, how the C implementation handles these features and how to improve the platform's security. Interoperability features, such as standardized interfaces and protocols, and their C implementation were also detailed in the paper since one of oneM2M's main objects must be the interoperability between different \gls{iot} platforms and devices.
-
 
 % https://www.scopus.com/results/results.uri?sort=plf-f&src=s&st1=%28onem2m+OR+mtc%29+and+%22API%22&sid=2e6f61fce202fa9e6635e553544fee3c&sot=b&sdt=b&sl=40&s=TITLE-ABS-KEY%28%28onem2m+OR+mtc%29+and+%22API%22%29&origin=searchbasic&editSaveS=&yearFrom=Before+1960&yearTo=Present
 
@@ -672,13 +672,13 @@ Table \ref{tab:machinesSpecs} delivers a comprehensive overview of the specific 
 	\midrule
 	\multicolumn{2}{c}{\textbf{Operating System}} \\
 	\midrule
-	Product Name         & Debian \\
-	Product Version      & 12.6.3 \\
-	Kernel Version       & Darwin 21.6.0 \\
+	Product Name         & Raspbian Lite 32x \\
+	Product Version      & 11 \\
+	Kernel Version       & 6.1.21 \\
 	\midrule
 	\multicolumn{2}{c}{\textbf{Compiler}} \\
 	\midrule
-	GCC Version         & Debian 8.3.0-6 \\
+	GCC Version         & Raspbian 10.2.1 \\
 	\bottomrule
 
 	\end{tabular}
@@ -688,7 +688,7 @@ Table \ref{tab:machinesSpecs} delivers a comprehensive overview of the specific 
 
 In this section, we present an investigation into the performance of database normalization versus denormalization. This analysis does not directly implement the OneM2M standard but instead provides a comparative assessment of these two database structuring strategies.
 
-To execute the tests, we employed a Python script directly on the SQLite3 database. The script uses the SQLite3 library and was run on Machine 1. The version of Python used was 3.9.10 and the version of the SQLite3 library used was 3.37.0. The SQLite3 database was allocated in the RAM.
+To execute the tests, we employed a Python script directly on the SQLite3 database. The script uses the SQLite3 library and was run on Machine 1 from Table \ref{tab:machinesSpecs}. The version of Python used was 3.9.10 and the version of the SQLite3 library used was 3.37.0. The SQLite3 database was allocated in the RAM.
 
 \begin{algorithm}
 \scriptsize
@@ -730,11 +730,11 @@ To execute the tests, we employed a Python script directly on the SQLite3 databa
 	\label{fig:TestComparisionDBsStrategies}
 \end{figure}
 
-To analyze the results, let's refer to Table \ref{tab:DBComparisonResults}. For the insertion operation, the denormalized structure was slightly more time-efficient, taking an average of $6.96 \times 10^{-6}$ seconds per depth layer to insert a record, while the normalized structure ranged between $6.82 \times 10^{-6}$ and $7.23 \times 10^{-6}$ seconds per depth layer.
+To analyze the results, let's refer to Table \ref{tab:DBComparisonResults}. For the insertion operation, the denormalized structure was slightly more time-efficient, taking an average of $6.96$ microseconds per depth layer to insert a record, while the normalized structure ranged between $6.82$ and $7.23$ microseconds per depth layer.
 
-The selection operation showed a notable difference between the two database structures. Simple read operations on the denormalized structure consumed significantly more time (around $0.0045$ seconds) than the normalized structure. However, with deep querying, the normalized structure showed an increase in operation time (up to $0.0033$ seconds) due to the complexity of join operations.
+The selection operation showed a notable difference between the two database structures. Simple read operations on the denormalized structure consumed significantly more time (around $4500$ microseconds) than the normalized structure. However, with deep querying, the normalized structure showed an increase in operation time (up to $3300$ microseconds) due to the complexity of join operations.
 
-In the case of the update operation, the normalized structure was slightly quicker, taking about $6.77 \times 10^{-6}$ to $7.32 \times 10^{-6}$ seconds per depth layer compared to $6.90 \times 10^{-6}$ seconds in the denormalized structure. Similar to the update operation, the delete operation was slightly faster in the normalized structure, taking between $3.67 \times 10^{-6}$ and $4.01 \times 10^{-6}$ seconds per depth layer, while the denormalized structure took about $3.60 \times 10^{-6}$ seconds.
+In the case of the update operation, the normalized structure was slightly quicker, taking about $6.77$ to $7.32$ microseconds per depth layer compared to $6.90$ microseconds in the denormalized structure. Similar to the update operation, the delete operation was slightly faster in the normalized structure, taking between $3.67$ and $4.01$ microseconds per depth layer, while the denormalized structure took about $3.60$ microseconds.
 
 \begin{table}[h]
 \scriptsize
@@ -743,12 +743,12 @@ In the case of the update operation, the normalized structure was slightly quick
 \label{tab:DBComparisonResults}
 \begin{tabular}{ p{1cm} p{3cm} p{3cm} }
 \hline
-\textbf{Operation} & \textbf{Denormalized Structure Seconds} & \textbf{Normalized Structure Seconds} \\
+\textbf{Operation} & \textbf{Denormalized Structure ($\mu$s)} & \textbf{Normalized Structure ($\mu$s)} \\
 \hline \hline
-Insert & $6.96 \times 10^{-6}$ (s) & $6.82 \times 10^{-6}$ to $7.23 \times 10^{-6}$ (s) \\
-Select & $0.0045$ (s) & $1.33 \times 10^{-6}$ to $0.0033$ (s) \\
-Update & $6.90 \times 10^{-6}$ (s) & $6.77 \times 10^{-6}$ to $7.32 \times 10^{-6}$ (s) \\
-Delete & $3.60 \times 10^{-6}$ (s) & $3.67 \times 10^{-6}$ to $4.01 \times 10^{-6}$ (s) \\
+Insert & $6.96$ & $6.82$ to $7.23$ \\
+Select & $4500$ & $1.33$ to $3300$ \\
+Update & $6.90$ & $6.77$ to $7.32$ \\
+Delete & $3.60$ & $3.67$ to $4.01$ \\
 \hline
 \end{tabular}
 \end{table}
@@ -757,25 +757,61 @@ From these results, we observe that the denormalized structure was more efficien
 
 \subsection{Assessing the Efficiency of Meeting Expiration Time Attribute Objectives in Database Queries on Performance}
 
-In this section, we focus on a specific test case that aims to assess the efficiency of meeting expiration time field objectives in database queries on performance, using codebase version 1.1. The database contains 2000 records in the "mtc" table and 41,000 in the "multivalue" table, adding difficulty to the SELECT queries. The "expiration time" field's purpose is to ensure that resources are deleted or become unused after their expiration. The test will be performed on a "discovery" request with five parameters: ty (resource type), lbl (labels), expireAfter using the "expiration time" field, expireBefore using the "expiration time" field, and filterOperation. It is important to note that the "labels" attribute is an array and its search requires more effort because it searches in the "multivalue" table. By default, the "discovery" request will have a limit of 50 rows listed, which can be adjusted as a parameter, but for this test, the default value will be used. As the limit value increases, the query's latency may grow exponentially, making it crucial to optimize the database and query structure. Three distinct approaches were considered, with the first one being the primary focus of this study:
+In this part of our study, we focus on assessing the efficiency of meeting the 'expiration time' attribute objectives in database queries on performance. This test was carried out on Machine 1 shown in Table \ref{tab:machinesSpecs}, using Python version 3.9.10 and SQLite3 version 3.37.0.
 
-\begin{itemize}
-	\item Selective Query Filtering - This approach filters out expired records by adding a condition to consultation, update, and removal queries to apply only to records with a valid "expiration time" field. A REST route is created to delete invalid records. This method is advantageous because it minimizes the overhead associated with constantly checking and deleting expired records while still maintaining data integrity. The performance of this approach will be compared with two other scenarios in terms of query time.
-	\item On-demand Record Deletion - In this approach, all requests use the current context to search for records whose "expiration time" field has already passed and, if so, deletes them. This method adds complexity to each request, potentially impacting performance and increasing the likelihood of implementation errors.
-	\item Periodic Expiration Check - A thread is created that remains active indefinitely, checking every X time if there are fields with an exceeded "expiration time". However, there is a chance that expired records would still be present when queries are made on the main threads. This approach can lead to additional resource consumption and potential race conditions, making it less ideal than the first approach.
-\end{itemize}
+The OneM2M standard can be strictly followed in certain environments, but this can sometimes lead to a degradation of system performance. A common cause for this is the inclusion of the 'expiration time' attribute and the associated logic. It's worth noting that our implementation does not delete records for which the expiration time has already passed. However, there are a couple of other possible approaches to this situation:
 
-The test case under examination focuses on the first approach, "Selective Query Filtering," and examines its performance in three different scenarios using codebase version 1.1: the codebase with the "expiration time" field as a condition in database queries, the codebase with the "expiration time" field as a condition in database queries when it is indexed in the database, and the original codebase without the "expiration time" field as a condition. The test will be performed by executing 500 "discovery" requests with five parameters in each of the three scenarios on "Machine 1", as shown in Table \ref{tab:machinesSpecs}. By evaluating the efficiency of these scenarios in meeting the objectives of the "expiration time" field, we can identify the most effective method for ensuring proper resource management.
+\begin{enumerate}
+    \item \textit{On-demand Record Deletion:} All requests use the current context to search for records whose "expiration time" field has already passed and deletes them. This method adds complexity to each request, potentially impacting performance and increasing the likelihood of implementation errors.
+    \item \textit{Periodic Expiration Check:} A thread is created that remains active indefinitely, checking every X time if there are fields with an exceeded "expiration time". This approach can lead to additional resource consumption and potential race conditions, making it less ideal than the first approach.
+\end{enumerate}
 
-The first approach, "Selective Query Filtering," has been chosen as the primary focus of this study due to its potential for minimizing overhead while maintaining data integrity. The comparative analysis of the three scenarios will provide valuable insights into the impact of different handling techniques for the "expiration time" field on system performance using codebase version 1.1. This assessment will help identify potential optimizations and guide the selection of the most suitable approach for managing resources with an expiration time, ultimately enhancing the overall efficiency of the system.
+For our test, we considered three scenarios: no implementation of the 'expiration time' attribute, implementation of the attribute without indexing, and implementation of the attribute with indexing. We chose these scenarios to demonstrate how much the presence of 'expiration time' attribute can impact the implementation, even when the attribute is indexed. We understand that there are many other ways to optimize the database statements with the presence of 'expiration time'. For instance, one could consider the use of partitioning or sharding based on expiration times \cite{Vaidya2002}, where data is logically divided into subsets based on the 'expiration time' value, thus potentially reducing the query scope and improving performance. Another could be techniques such as caching frequently accessed or recently accessed data could also be employed to improve performance \cite{Mao2012, Xing2008}. It is, however, important to note that these strategies come with their own trade-offs and complexities and should be carefully considered based on the specific requirements and constraints of the system.
 
-To assess the performance of the three scenarios in the test case, we have designed a simple algorithm that sends a total of 500 requests, each retrieving data through SELECT queries to the target route for each scenario, considering the five parameters mentioned above. This algorithm measures the time taken for each request in seconds and accumulates the minimum, maximum, and total time. Additionally, it calculates the squared difference of each request's time and the average time to determine the standard deviation. By using this algorithm, we can consistently evaluate the time efficiency of the "Selective Query Filtering" approach in comparison to the other scenarios. The pseudocode for this algorithm is shown in Algorithm \ref{alg:time_measurement}.
+A Python script was implemented to perform this test. The script created the following tables: \texttt{OneM2M\_NoET},\newline \texttt{OneM2M\_NonIndexedET}, and \texttt{OneM2M\_IndexedET}. Each table underwent 10\,000 operations of each type (Create, Read, Update, and Delete).
+
+As shown in Figure \ref{fig:tableDiagram}, \texttt{OneM2M\_NoET} table does not implement the 'expiration time' attribute, \texttt{OneM2M\_NonIndexedET} implements it without indexing, and \texttt{OneM2M\_IndexedET} implements it with indexing. Indexing the 'expiration time' attribute can improve search times when looking for records with specific expiration times, but it also adds additional overhead when inserting or updating records, as the index needs to be updated as well.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{TestExpirationTime}
+\caption{Efficiency of Meeting Expiration Time Attribute Test Database Tables.}
+\label{fig:tableDiagram}
+\end{figure}
+
+Our results shown in Table \ref{tab:ExpirationTime} indicates that the inclusion of the 'expiration time' attribute and its indexing can degrade performance in SQLite3 database operations. Notably, the UPDATE operation was significantly slower when we considered 'expiration time', especially for the Indexed scenario. This is likely due to the overhead of maintaining the index. Similarly, for both the CREATE and DELETE operations, the presence of 'expiration time' attribute, and more so its indexing, resulted in slower operation times. These results highlight the importance of understanding the trade-offs between adhering to standards like OneM2M and the performance requirements of specific applications.
+
+\begin{table*}[h]
+\scriptsize
+\centering
+\caption{Results from the 'Expiration Time' test}
+\label{tab:ExpirationTime}
+\begin{tabular}{l p{2cm} p{2cm} p{2cm} p{2cm}}
+\hline
+\textbf{Scenario} & \textbf{CREATE Avg Time ($\mu$s)} & \textbf{READ Avg Time ($\mu$s)} & \textbf{UPDATE Avg Time ($\mu$s)} & \textbf{DELETE Avg Time ($\mu$s)}\\ \hline \hline
+Original Codebase without Expiration Time Condition & $2.37$ & $0.976$ & $2.39$ & $0.726$\\
+Non-Indexed Expiration Time Condition & $2.48$ & $1.29$ & $529\,000$ & $0.946$\\
+Indexed Expiration Time Condition & $2.69$ & $1.35$ & $3\,050\,000$ & $1.09$\\ \hline
+\end{tabular}
+\end{table*}
+
+\subsection{Comparative Analysis of Latency for CRUD Operations Using the Proposed Solution and OpenMTC}
+
+In this section, we delve into a detailed test case that focuses on the comparative analysis of latency for CRUD (Create, Read, Update, and Delete) operations using the proposed solution and OpenMTC. The objective of this test case is to evaluate the performance of our solution in managing resources against the established OpenMTC standard, providing a benchmark for assessing the efficiency and effectiveness of our approach.
+
+The CRUD operations will be performed through REST requests over the network, rather than on a local machine, as the primary goal of the oneM2M gateway is to facilitate the exchange of information across a distributed network infrastructure. This setup simulates real-world conditions where gateway systems must efficiently handle remote requests, thereby providing a more accurate representation of the solution's performance in practical applications.
+
+To carry out this test case, the both standard implementations will be running on Machine 2, shown in Table \ref{tab:machinesSpecs}, and the requests will be done using Machine 1. The test will be conducted using a shell script that sends 500 requests affecting Content Instances, as we considered the most created resource. Because of Content Instances does not support update operations we will be doing 500 Update operations to Containers resources.
+
+The shell script represented by Algorithm \ref{alg:time_measurement} operates as follows: It begins by initializing variables and CSV files for each CRUD operation (POST, PUT, GET, and DELETE). Then, it iterates 500 times, performing the following steps in each iteration: sending a POST, PUT, GET, and DELETE request to the respective servers and resources (CIN, and CNT), measuring the time taken for each request, and appending the time to the corresponding CSV file. After completing the 500 iterations, the script calculates the minimum, maximum, average, and standard deviation of the times for each CRUD operation from their respective CSV files. The results of these calculations provide insights into the latency of the proposed solution and OpenMTC for each CRUD operation.
 
 \begin{algorithm}
-\caption{Pseudocode for Time Measurement}\label{alg:time_measurement}
+\scriptsize
+\caption{Pseudocode for Time Measurement}
+\label{alg:time_measurement}
 \begin{algorithmic}[1]
 \State Initialize $\textit{count}$, $\textit{sum}$, $\textit{min}$, $\textit{max}$, $\textit{sq\_diff\_sum} \gets 0$
-\State $\textit{min} \gets$ large value
+\State $\textit{min} \gets$ static large value
 \For{$i \gets 1$ to $500$}
     \State Send a request to the target route
     \State Measure the time taken for the request ($\textit{time\_ms}$)
@@ -797,109 +833,70 @@ To assess the performance of the three scenarios in the test case, we have desig
 \end{algorithmic}
 \end{algorithm}
 
-With the algorithm in place, we can proceed to the actual testing phase. For each of the three scenarios, we will run the algorithm on "Machine 1" and record the minimum, maximum, average, and standard deviation of the request times. This data will allow us to thoroughly analyze the performance impact of each approach and draw conclusions about their efficiency in meeting the "expiration time" field objectives. The results of the tests are presented in Table \ref{tab:performance_comparison}.
-
-\begin{table*}[htbp]
+\begin{table}
+\scriptsize
 \centering
-\caption{Performance comparison of the three scenarios}
+\caption{Comparative Analysis of time measure for CRUD Operations in TinyOneM2M and OpenMTC.}
+\label{tab:ComparativeAnalysis}
 \begin{tabular}{lcccc}
 \hline
-Scenario & Min (s) & Max (s) & Avg (s) & Std Dev (s) \\ \hline
-Original Codebase without Expiration Time Condition & 0.614603 & 0.683479 & 0.626082 & 0.007875 \\
-Non-Indexed Expiration Time Condition & 0.614021 & 0.672247 & 0.622916 & 0.007017 \\
-Indexed Expiration Time Condition & 0.629939 & 1.446011 & 0.640483 & 0.045949 \\ \hline
+& \multicolumn{2}{c}{TinyOneM2M} & \multicolumn{2}{c}{OpenMTC} \\
+\cline{2-3} \cline{4-5}
+Operation & Min (ms) & Max (ms) & Min (ms) & Max (ms) \\
+\hline
+POST & 0.123773 & 1.140625 & 0.011947 & 15.606682 \\
+GET & 0.011656 & 0.115155 & 0.008696 & 1.075310 \\
+PUT & 0.116248 & 0.592979 & 0.012049 & 0.136800 \\
+DELETE & 0.122092 & 0.544047 & 0.008289 & 0.053867 \\
+\hline
 \end{tabular}
-\label{tab:performance_comparison}
-\end{table*}
+\end{table}
 
-Upon examining the results in Table \ref{tab:performance_comparison}, we can derive several insights into the efficiency of the "Selective Query Filtering" approach in managing resources with an expiration time. These insights will be valuable in guiding future optimizations and ensuring proper resource management within the system.
+In a comparative analysis of latency for CRUD operations between TinyOneM2M and OpenMTC shown in Table \ref{tab:ComparativeAnalysis}, significant differences were noted. TinyOneM2M displayed a lower maximum latency for POST operations (1.140625ms) compared to OpenMTC's higher maximum (15.606682ms), suggesting more stable performance. Conversely, OpenMTC demonstrated a quicker response under optimal conditions, outperforming TinyOneM2M in terms of minimum latency for all CRUD operations, for instance, the minimum latency for GET operations was 0.008696ms for OpenMTC compared to 0.011656ms for TinyOneM2M. Further, TinyOneM2M showed less variation in response times across operations, indicating more predictable and stable performance, which could be advantageous in real-world scenarios. However, occasional latency spikes might be an issue with OpenMTC, as suggested by its high maximum latency, potentially affecting overall performance.
 
-It is important to highlight the trade-offs when comparing the three scenarios. First, the original codebase without the expiration time condition exhibits slightly better average performance compared to the indexed expiration time condition scenario. This result is expected, as the original codebase does not include any additional checks for expired resources, which results in reduced complexity and faster query times. However, the difference in average time between the original codebase and the non-indexed expiration time condition scenario is minimal, indicating that the added complexity of checking for expiration does not significantly impact the overall performance.
+\subsection{Cross-Platform Evaluation: Installation and Compilation on Ubuntu, macOS, and Raspbian Operating Systems}
 
-When comparing the non-indexed expiration time condition scenario with the indexed expiration time condition scenario, we observe a slight increase in the average time for the indexed case, which might seem counterintuitive as indexing usually improves query performance. However, it is essential to consider that the standard deviation for the indexed expiration time condition scenario is considerably higher, indicating more varied response times. This variability could be attributed to the database's specific structure, the distribution of data within the tables, or the types of queries executed during the test. Despite the higher average time, the indexed expiration time condition scenario offers a more efficient approach to managing resources with an expiration time. The increased standard deviation highlights the variability in response times, which can be attributed to various factors such as the database's structure or the nature of the queries executed during the test. Consequently, the indexed scenario demonstrates greater scalability and adaptability in handling larger volumes of data, making it the preferred choice for implementation.
+This section expands our cross-platform evaluation of the proposed solution to include a third operating system, Raspbian. The objective is to ensure seamless integration across diverse operating environments, underlining the solution's versatility and adaptability. This cross-platform evaluation, integral in computer science, tests the portability and interoperability of the solution across Ubuntu, macOS, and now Raspbian, catering to a broader range of users and applications.
 
-As the system evolves, the indexed expiration time condition scenario will be the one that prevails and will be part of the solution implementation. It is recommended to further investigate the factors contributing to the variability in response times for this scenario and explore the performance impact of different limit values. This analysis will help guide future optimizations and enhance the system's overall efficiency while meeting the expiration time field objectives.
+The test case involves the installation of necessary dependencies, compilation of the source code, and execution of the proposed solution on all three operating systems, with a focus on identifying platform-specific issues. The insights gained from this evaluation will help refine the solution, ensuring its robustness and broad applicability in the context of the oneM2M standard.
 
-Furthermore, it is essential to note that the "discovery" request route being tested involves five parameters, which add complexity to the evaluation of each scenario's performance. As the limit value of 50 rows listed increases, the query's latency may grow exponentially. Therefore, the current test with a default limit of 50 rows serves as a starting point, and it is crucial to evaluate the performance of these scenarios with varying limit values to understand their impact on the overall system efficiency.
+The source code was imported to all machines, that use one of each operating system addressed in this section, shown as Table \ref{tab:machinesSpecs}, and the solution was successfully installed and compiled on all machines, leveraging the pre-installed GCC compiler. The Makefile facilitated the compilation, resulting in the creation of the executable without complications. An interesting observation is that the resultant executable file across all the operating systems maintained a consistent size of 1.4Mb, which indicates a uniform and efficient code compilation and linking process. Dependencies of the compiled executable were examined using the \texttt{ldd} and \texttt{otool} commands, revealing an exclusive reliance on system libraries.
 
-In conclusion, the "Selective Query Filtering" approach has shown promise in terms of meeting the expiration time field objectives with a minimal impact on database query performance. The small performance difference between the original codebase without the expiration time condition and the non-indexed expiration time condition scenario indicates that checking for expiration does not drastically impact performance. It is recommended to investigate the indexed expiration time condition scenario further to understand the variability in its response times and to explore the performance impact of different limit values. This analysis will guide future optimizations and help select the most suitable approach for managing resources with an expiration time, ultimately enhancing the system's overall efficiency.
+The solution's dependence on system libraries alone, such as \texttt{libdl.so.2}, \texttt{libpthread.so.0}, and \texttt{libc.so.6} for Ubuntu and Raspian, and only \texttt{libSystem.B.dylib} for macOS simplifies the installation process and enhances portability and maintainability across platforms. It also benefits from the stability and performance optimizations provided by the operating system's native libraries.
 
-\subsection{Comparative Analysis of Latency for CRUD Operations Using the Proposed Solution and OpenMTC}
+This successful installation, compilation, and dependency identification demonstrates the adaptability of our solution to different operating environments. This adaptability is crucial in ensuring the software's portability and interoperability across different platforms, broadening its potential user base.
 
-In this section, we delve into a detailed test case that focuses on the comparative analysis of latency for CRUD (Create, Read, Update, and Delete) operations using the proposed solution and OpenMTC. The objective of this test case is to evaluate the performance of our solution in managing resources against the established OpenMTC standard, providing a benchmark for assessing the efficiency and effectiveness of our approach.
+Our solution exhibits impressive cross-platform compatibility, having been successfully installed and compiled on Ubuntu, macOS, and Raspbian. The primary reliance on system libraries boosts its portability and maintainability, simplifying the process across various platforms. This reinforces the potential for broad adoption of the solution and the importance of designing versatile software across diverse platforms.
 
-The CRUD operations will be performed through REST requests over the network, rather than on a local machine, as the primary goal of the oneM2M gateway is to facilitate the exchange of information across a distributed network infrastructure. This setup simulates real-world conditions where gateway systems must efficiently handle remote requests, thereby providing a more accurate representation of the solution's performance in practical applications.
-
-To carry out this test case, we will use "Machine 2", as shown in Table \ref{tab:machinesSpecs} as described in the previous test case, with the following specifications: Apple M1 Pro chip, 10 cores, 16 GB RAM, and macOS version 12.6. The codebase version for the proposed solution is 1.2. The test will be conducted using a shell script that sends 500 Application Entity (AE) resource CRUD operations for both the proposed solution and the OpenMTC platform.
-
-The shell script operates as follows: It begins by initializing variables and CSV files for each CRUD operation (POST, PUT, GET, and DELETE). Then, it iterates 500 times, performing the following steps in each iteration: sending a POST, PUT, GET, and DELETE request to the respective servers, measuring the time taken for each request, and appending the time to the corresponding CSV file. After completing the 500 iterations, the script calculates the minimum, maximum, average, and standard deviation of the times for each CRUD operation from their respective CSV files. The results of these calculations provide insights into the latency of the proposed solution and OpenMTC for each CRUD operation.
-
-By comparing the latency for 500 Application Entity (AE) resource CRUD operations on both platforms, we can highlight the strengths and areas for improvement of our proposed solution. This analysis will not only help us to understand the impact of our solution on system performance but also to identify any potential bottlenecks and areas that could benefit from optimization, particularly in the context of network latency and resource management.
-
-The insights gained from this test case will be crucial in the ongoing development and refinement of our solution, ultimately contributing to a more robust and efficient system for managing resources in the context of the oneM2M standard while accounting for the network-related challenges inherent in distributed systems.
-
-\subsection{Cross-Platform Evaluation: Installation and Compilation on Ubuntu and macOS Systems}
-
-In this section, we introduce a test case aimed at evaluating the cross-platform compatibility of our proposed solution through installation and compilation on two widely-used operating systems, Ubuntu and macOS. The objective of this test case is to ensure that our solution can be seamlessly integrated into a variety of operating environments, thereby demonstrating its versatility and adaptability to different system configurations.
-
-A cross-platform evaluation is crucial in the realm of computer science, as it verifies the portability and interoperability of software across different platforms. By validating our solution's compatibility with both Ubuntu and macOS, we demonstrate its ability to function effectively in diverse contexts, catering to a broader range of users and potential applications.
-
-This test case will involve the installation of necessary dependencies, compilation of the source code, and execution of the proposed solution on both operating systems. The evaluation will not only focus on the successful completion of these tasks but also on identifying any platform-specific issues, discrepancies, or bottlenecks that may arise during the process.
-
-The insights gained from this cross-platform evaluation will contribute to the ongoing refinement of our solution, ensuring that it remains robust and effective across various operating environments. This, in turn, enhances its potential for widespread adoption and application in the context of the oneM2M standard.
-
-In this test case, we successfully installed and compiled the proposed solution on Ubuntu, one of the two operating systems being evaluated for cross-platform compatibility. The process began by importing the source code to "Machine 2", as shown in Table \ref{tab:machinesSpecs}, using SFTP, since the operation system have already installed the GCC compiler theres no more dependencies to install and the system is ready to be compiled.
-
-The proposed solution was successfully compiled using the provided Makefile, which facilitated the creation of the executable without any issues. A closer examination of the dependencies of the compiled executable was carried out using the \texttt{ldd} command. The command revealed that the proposed solution relies exclusively on system libraries such as 'libdl.so.2', 'libpthread.so.0', and 'libc.so.6', which provide essential functionality for dynamic loading, multi-threading, and standard C functions, respectively.
-
-By relying solely on system libraries, the proposed solution demonstrates a significant advantage in terms of portability and maintainability. This approach eliminates the need for third-party dependencies, reducing potential compatibility issues and simplifying the installation process across various platforms. Furthermore, it ensures that the solution benefits from the stability and performance optimizations provided by the operating system's native libraries, which are generally well-maintained and frequently updated.
-
-The successful installation, compilation, and identification of dependencies on Ubuntu demonstrate that the proposed solution is adaptable to various operating environments. This adaptability is essential in the realm of computer science as it ensures the portability and interoperability of the software across different platforms. By validating our solution's compatibility with Ubuntu, we have shown its ability to cater to a broader range of users and potential applications.
-
-As the next step in the cross-platform evaluation, the proposed solution will be installed and compiled on macOS. This process will involve identifying and installing any necessary dependencies, compiling the source code, and executing the solution on this operating system.
-
-In this test case, the proposed solution was successfully installed and compiled on the macOS operating system. The source code was imported to "Machine 1", and the necessary dependency, GCC, was found to be already installed on the system. The provided Makefile facilitated the compilation of the files, resulting in the generation of the executable without any issues.
-
-The examination of the dependencies of the compiled executable revealed that the proposed solution relies exclusively on system libraries. The \texttt{otool} command showed that the solution depends on '/usr/lib/libSystem.B.dylib', which provides essential functionality for dynamic loading, memory allocation, and system calls. By relying solely on system libraries, the proposed solution demonstrates a significant advantage in terms of portability and maintainability, as it eliminates the need for third-party dependencies.
-
-The use of system libraries highlights the proposed solution's adaptability to different system configurations, ultimately enhancing its potential for widespread adoption and application in the context of the oneM2M standard. This approach ensures that the solution benefits from the stability and performance optimizations provided by the operating system's native libraries, which are generally well-maintained and frequently updated.
-
-By successfully installing and compiling the proposed solution on both Ubuntu and macOS, we have demonstrated its ability to function effectively in diverse contexts, catering to a broader range of users and potential applications. The insights gained from this cross-platform evaluation will inform any necessary adjustments or refinements to ensure seamless integration into various operating environments.
-
-\textcolor{red}{...Final Thoughts...}
+However, while we remain confident about the straightforward installation of the solution on most Linux-based operating systems, additional steps may be required to support Windows, such as an abstraction layer for the pthread library. This highlights the continual need for refinement and adaptation to ensure comprehensive cross-platform compatibility.
 
 \subsection{Minimal Hardware Compatibility Testing: Raspberry Pi 0 W Case Study}
 
-In this section, we present a test case focused on assessing the compatibility of our proposed solution with minimal hardware, specifically using the ESP32 microcontroller as a case study. The objective of this test case is to verify the suitability of our solution for resource-constrained environments, thereby broadening its potential applications and enabling its adoption in a wider range of use cases.
+In this section, we present a case study using the Machine 3 microcontroller, as shown in Table \ref{tab:machinesSpecs}. Our objective is to test the compatibility of our proposed solution with resource-constrained environments. This test will be conducted using minimal hardware, an essential consideration in computer science, as many real-world applications require efficient and lightweight solutions capable of running on devices with limited processing power, memory, and energy resources.
 
-Minimal hardware compatibility is an essential aspect of computer science, as many real-world applications require efficient and lightweight solutions that can run on devices with limited processing power, memory, and energy resources. By evaluating the performance of our proposed solution on the ESP32, a popular and cost-effective microcontroller with integrated Wi-Fi and Bluetooth capabilities, we can demonstrate its ability to function effectively under such constraints.
+The hardware selected for this test is a Raspberry Pi 0 W, a cost-effective and popular microcontroller with integrated Wi-Fi and Bluetooth capabilities. For storage, we used a Kingston 64GB SD Card with a read speed of 100MB/s, a suitable choice for our test scenario.
 
-This test case will involve the adaptation, deployment, and execution of our solution on the ESP32 platform. The evaluation will not only focus on the successful completion of these tasks but also on identifying any hardware-specific issues, discrepancies, or bottlenecks that may arise during the process. Additionally, we will assess the resource usage, including memory and processing overhead, to ensure that the solution remains viable and efficient in resource-constrained scenarios.
+Our experiment was designed to create SQLite3 CIN resources in quantities of 10\,000, 50\,000, and 100\,000, storing them in the database located on the SD card. We measured the size of the database on the disk and the RAM usage when all resources were loaded by our server application. The shell script we used executed SQLite3 commands to create the desired number of resources and measured the database size, while the top command measured RAM usage, targeting our server application process. The results of these measurements are tabulated in Table \ref{tab:ResourceUtilization}.
 
-The insights gained from this minimal hardware compatibility testing will contribute to the ongoing refinement of our solution, ensuring that it remains both robust and versatile, capable of meeting the demands of a diverse range of applications in the context of the oneM2M standard.
+\begin{table}[h]
+\scriptsize
+\centering
+\caption{Resource Utilization for Different Numbers of Content Instance Resources on Raspberry Pi 0 W.}
+\label{tab:ResourceUtilization}
+\begin{tabular}{ p{1.5cm} p{2.5cm} p{2.5cm} }
+\hline
+\textbf{Instances} & \textbf{Database Size (KB)} & \textbf{RAM Usage (KB)} \\
+\hline \hline
+10\,000 & 9\,136 & 5\,608 \\
+50\,000 & 46\,336 & 9\,696 \\
+100\,000 & 92\,984 & 14\,772 \\
+\hline
+\end{tabular}
+\end{table}
 
+The outcomes of this test case provide significant insights into real-world scenarios, especially those where resources are limited. The efficiency of a solution in such circumstances is determined by its ability to perform effectively under these constraints. These tests can help us understand the suitability of our solution in such situations, and also provide a basis for further optimization.
 
-
-
-
-
-%Avaliação do impacto resultante do cumprimento do objetivo do campo expiration time
-%
-%Especificações da máquina da escola
-%Especificações da rede
-%Meter o executável a funcionar na máquina com o ficheiro de configuração
-%
-%Shell script para executar 500 POST, guardar minimo, maximo, média, desvio padrão
-%Shell script para executar 500 PUT, guardar minimo, maximo, média, desvio padrão
-%Shell script para executar 500 GET, guardar minimo, maximo, média, desvio padrão
-%Shell script para executar 500 DELETE, guardar minimo, maximo, média, desvio padrão
-%
-%
-%Quanto tempo demora a POST/PUT/GET/DELETE 500 AEs usando a nossa solução e a solução disponível do OpenMTC na mesma máquina (na maquina do MEI-CM) na rede - Saber o tempo de cada um dos 500 e calcular, minimo, maximo, média, desvio padrão
-%
-%Instalação e Compilação em máquinas Ubuntu e MacOS (verificar se corre em outros SOs)
-%
-%? Fazer testes com Hardware minimo - por exemplo ESP32 ?
+It's important to note that the recorded RAM usage and disk space are the results of operating in a controlled environment. Actual values can vary depending on a number of other factors, including the specifics of the implementation, the operating conditions, and the additional overhead imposed by other running processes and OS services. Nevertheless, this experiment serves as a valuable indicator of the resource efficiency of our solution.
 
 \section{Lessons Learned}
 \label{sec:lessonsLearned}
@@ -927,9 +924,5 @@ Implementing the OneM2M standard involved incorporating various attributes, incl
 
 
 %\vskip3pt
-
-\bio{figs/bioFig}
-My name is Rafael Pereira, I'm 22 years old, and I'm an MSc Computer Engineering Student and Researcher at Polytechnic of Leiria. I'm extremely curious about the technology world, ambitious for knowledge in this area, I'm dedicated to doing my work. The programming thing always got me, and every day it grows. Today I'm looking for interesting projects, that can make me think and learn every day.
-\endbio
 
 \end{document}

@@ -373,6 +373,8 @@ void *handle_connection(void *connectioninfo) {
         close_socket_and_exit(info);
     }
 
+	// fprintf(stderr, "client_msg: %s\n",client_msg);
+
     char request[4096];
     strncpy(request, client_msg, sizeof(request) - 1);
     request[sizeof(request) - 1] = '\0';

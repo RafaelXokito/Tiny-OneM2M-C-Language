@@ -107,7 +107,7 @@ char init_routes(struct Route** head) {
 		
 
 		char * resourceName = (char *) sqlite3_column_text(stmt, 3);
-		printf("Initializing route: %s\n", resourceName);
+		// printf("Initializing route: %s\n", resourceName);
         char * parentName = (char *) sqlite3_column_text(stmt, 1);
         // constructPath(uri, resourceName, parentName, db);
 		char * uri = (char *) sqlite3_column_text(stmt, 4);
@@ -143,7 +143,7 @@ char init_routes(struct Route** head) {
 		}
 		
 
-		printf("Route created: %s\n", uri);
+		// printf("Route created: %s\n", uri);
     }
 
     sqlite3_finalize(stmt);
