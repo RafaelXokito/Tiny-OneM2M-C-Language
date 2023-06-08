@@ -121,6 +121,14 @@
 %\fnmark[1]
 \ead{rafael.m.pereira@ipleiria.pt}
 
+\author[1]{Carla Mendes}[type=editor,
+%auid=000,bioid=1,
+linkedin='carla-mendes-5b3586233',
+orcid=0000−0001−7138−7124]
+%\cormark[1]
+%\fnmark[1]
+\ead{carla.c.mendes@ipleiria.pt}
+
 \address[1]{Computer Science and Communications Research Centre, School of Technology and Management, Polytechnic of Leiria, 2411-901 Leiria, Portugal}
 
 \begin{abstract}
@@ -166,7 +174,7 @@ In 2008, \gls{etsi} initiated the standardization process for \gls{m2m} by exami
 
 Therefore, the oneM2M \footnote{OneM2M official page: \url{https://www.onem2m.org/}} standard aims to establish uniformity in the communication between devices, servers, and applications by offering a standardized \gls{m2m} service. It defines a platform centered around the concept of resources and \gls{rest} \gls{api}. Moreover, it encompasses over a dozen Common Service Functions such as registration, subscription, discovery, and data management, among others \cite{onem2m_standard}.
 
-In this paper, we present a novel implementation of the OneM2M standard using a low-level programming language to address the limitations of high-level language-based implementations. Our approach is designed to deliver superior performance, reduced memory overhead, and increased control over hardware resources. By focusing on key challenges associated with \gls{mtc} gateways, such as protocol interoperability, scalability, and latency, our implementation aims to provide a robust and efficient solution for the evolving \gls{iot} landscape.
+In this paper, we present a novel implementation of the OneM2M standard using a low-level programming language to address the limitations of high-level language-based implementations. Our approach is purposefully designed to be lightweight, catering to weak computational systems with limited processing power and memory capacity, reducing memory overhead and increasing control over hardware resources. By focusing on key challenges associated with \gls{mtc} gateways, such as protocol interoperability, scalability, and latency, our implementation aims to provide a robust and efficient solution for the evolving \gls{iot} landscape.
 
 \textcolor{red}{Paper structure} The remainder of this paper is organized as follows: Section \ref{relatedWork} provides a comprehensive review of the related work in \gls{m2m} implementations, discussing various programming languages and architectural choices, as well as the importance of interoperability in \gls{iot} systems. Section \ref{architecture} delves into the system architecture and the specific modules that constitute our TinyOneM2M software. In Section \ref{sec:tinyonem2msolution}, we provide a comprehensive overview of our implementation of the OneM2M version 5.1 protocol, detailing the system components that constitute our solution. The testing mechanisms employed to examine the TinyOneM2M solution under various scenarios were detailed in Section \ref{tests}. Section \ref{sec:lessonsLearned} encompasses the acquired knowledge and reflective insights gained throughout the system's development. Finally, Section \ref{conclusion} concludes the paper and highlights potential future research directions.
 
@@ -913,6 +921,21 @@ Implementing the OneM2M standard involved incorporating various attributes, incl
 
 \section{Conclusion and Future Work}
 \label{conclusion}
+
+In this section, we will discuss the conclusions drawn from our C implementation of OneM2M and outline the potential areas for future work and improvement.
+
+Future endeavours encompass various areas where our implementation of OneM2M can be further refined and enhanced. Currently, there is no validation to ensure that the content of the request body is a \gls{json}, therefore potentially leading to erroneous or inconsistent data in the requests. To fix this issue it's mandatory to ensure that the request contains a \gls{json} object as the request body type. 
+
+Secondly, the current implementation doesn't fully guarantee the integrity and accuracy of the received data since only a few attributes of the standard's resources are being validated (e.g. expiration time, URI and RN). Therefore, future work consists of performing attribute validation for all the resource's attributes passed in the \gls{json} body of the requests.
+
+During the implementation process, ensuring compatibility with Windows systems posed a persistent challenge, primarily due to the absence of the pthread library, which is specific to Unix systems. As a result, alternative libraries, such as pthreads-w32, would need to be employed when working with Windows systems. Consequently, a crucial future task is to develop an abstraction layer that enables cross-platform compatibility. By abstracting the thread implementation, we can enhance its portability and accessibility and ensure the execution of our implementation on diverse operating systems.
+
+Moreover, given the extensive scope of the OneM2M standard, numerous resources have not yet been developed. Currently, only a partial implementation of the CSE\_Base, \gls{ae}, \gls{cnt}, \gls{cin}, and \gls{sub} resources has been accomplished. Therefore, a vital area for future work is to complete the implementation of the standard, ensuring that all the resources outlined in the OneM2M standard are fully developed. This undertaking is crucial to provide a more comprehensive and feature-rich implementation of OneM2M, enabling a broader range of functionalities and accommodating a wider array of use cases.
+
+Lastly, TinyOneM2M is currently at the margin of having concurrency problems in a multi-threaded environment. Therefore, it would be advantageous to improve the transactional behaviour with write-ahead logging (WAL) or other techniques to enhance concurrency. Additionally, our system could also be optimized at a database attribute level by performing deep analysis and study of the SQLite3 database operations and available operators such as PRAGMA.
+
+Overall, these future enhancements will further solidify our implementation and ensure its effectiveness in the \gls{iot} ecosystem.
+
 \printcredits
 
 %% Loading bibliography style file
