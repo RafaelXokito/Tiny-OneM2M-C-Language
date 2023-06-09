@@ -1604,12 +1604,13 @@ char delete_resource(struct Route * destination, char **response) {
             currentNode->left->right = nextNode;
         }
 
+        // printf("Deleting currentNode->key = %s\n", currentNode->key);
         if (nextNode != NULL) {
             nextNode->left = currentNode->left;
         }
 
-        free(currentNode);  // Free the memory of the deleted node.
-
+        // free(currentNode);  // Free the memory of the deleted node.
+        
         currentNode = nextNode;
     }
 
