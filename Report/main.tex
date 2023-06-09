@@ -106,8 +106,8 @@
 \let\WriteBookmarks\relax
 \def\floatpagepagefraction{1}
 \def\textpagefraction{.001}
-\shorttitle{Leveraging social media news}
-\shortauthors{CV Radhakrishnan et~al.}
+\shorttitle{Tiny oneM2M C Language API}
+\shortauthors{Pereira Rafael et~al.}
 
 \title [mode = title]{Tiny oneM2M C Language API}                     
 
@@ -122,9 +122,9 @@
 \ead{rafael.m.pereira@ipleiria.pt}
 
 \author[1]{Carla Mendes}[type=editor,
-%auid=000,bioid=1,
-linkedin='carla-mendes-5b3586233',
-orcid=0000−0001−7138−7124]
+                        %auid=000,bioid=1,
+                        linkedin=carla-mendes-5b3586233,
+                        orcid=0000-0001-7138-7124]
 %\cormark[1]
 %\fnmark[1]
 \ead{carla.c.mendes@ipleiria.pt}
@@ -335,10 +335,10 @@ To optimize read operations and streamline data retrieval, we have introduced a 
 	\scriptsize
 	\caption{Atributes designations.}
 	\label{tab:attributesDesignations}
-	\begin{tabular}{ |>{\bfseries}p{1.5cm}|c| }
+	\begin{tabular}{ >{\bfseries}p{1.5cm} c }
 		\hline
 		\textbf{Attribute Abbreviation} & \textbf{Attribute Designation} \\
-		\hline
+		\hline \hline
 		\texttt{ty} & Resource type \\
 		\hline
 		\texttt{ri} & Resource identifier \\
@@ -404,10 +404,10 @@ To optimize read operations and streamline data retrieval, we have introduced a 
 \scriptsize
 \caption{Database structure.}
 \label{tab:database}
-\begin{tabular}{ |>{\bfseries}p{1.5cm}|c|p{3cm}| }
+\begin{tabular}{ >{\bfseries}p{1.5cm}cp{3cm} }
     \hline
     \textbf{Column Name} & \textbf{Type} & \textbf{Reference} \\
-    \hline
+    \hline \hline
     \texttt{ty} & INTEGER & - \\
     \hline
     \texttt{ri} & TEXT & PRIMARY KEY \\
@@ -917,15 +917,15 @@ It's important to note that the recorded RAM usage and disk space are the result
 \section{Lessons Learned}
 \label{sec:lessonsLearned}
 
-Over the implementation of TinyOneM2M, our project has encountered numerous challenges and valuable insights. Therefore, this section aims to provide an overview of the lessons learned throughout the project. 
+In the pursuit of technological innovation, it is not uncommon to traverse uncharted territory and learn through trial and error. This document, reflecting on our journey with the implementation of the TinyOneM2M project, endeavors to impart the lessons we have gleaned, offering readers a distilled version of our experiences and the wisdom we have accrued. This section will broadly focus on key areas such as our choice of database technology, database structure, the use of libraries, and the implementation of the OneM2M standard, each accompanied by the lessons learned and the strategies we adopted for overcoming challenges.
 
-During the development stage, we opted for a single file database over an in-memory database, believing it would offer superior performance. However, as we progressed, we discovered that this assumption might not hold. The performance gains we expected did not materialize, prompting us to reevaluate our choice of database technology and explore alternative options, such as an in-memory database.
+During the development stage, we opted for a single file database over a server-based database, believing it would offer superior performance. However, as we progressed, we discovered that this assumption might not hold. The performance gains we expected did not materialize, prompting us to reevaluate our choice of database technology and explore alternative options, such as a MySQL database because of concurrency, and high write rate, on the other hand, would increase the size of the executable because of the size package size, and the database size occupied.
 
 Following established database best practices, we initially pursued a normalization approach for our database structure which involved creating two tables: "mtc" and "multivalue." The introduction of the multivalue table played a vital role in our database structure since it facilitated the mapping of intricate dependency relationships between each \gls{m2m} resource. This approach proved particularly valuable in handling the dynamic and complex nature of \gls{json} relationships, enabling us to effectively represent the infinite-like associations that can exist within \gls{json} values. While this approach adhered to standard guidelines, it downgrades performance due to the time-consuming processing required to map a \gls{json} structure in C into corresponding database entries significantly impacting the overall performance of our system. Consequently, we recognized that denormalization would be a more suitable strategy for our project, allowing for improved performance and streamlined data retrieval. Therefore, this ultimately became the final approach we chose to implement our database.
 
 Another of the lessons we learned relates to using static C libraries. While these libraries offer certain advantages, such as ease of distribution and reduced dependency management, they pose challenges when keeping up-to-date with new versions. On the positive side, static libraries provide a stable and predictable development environment. However, the downside is that they do not benefit from bug fixes, security patches, or new features introduced in subsequent releases. This trade-off necessitates careful consideration and evaluation of the specific project requirements when choosing between static and dynamic libraries.
 
-Implementing the OneM2M standard involved incorporating various attributes, including expiration time (et), maximum byte size (mbs), and maximum number of instances (mni), among others. While these attributes align with the standard, their inclusion increases implementation complexity and hinders performance. Moreover, in practical scenarios, these fields often have little relevance or are not frequently utilized. Therefore, the attributes to iplement must be extensively evaluated to strike a balance between adherence and practicality.
+Implementing the OneM2M standard involved incorporating various attributes, including expiration time (et), maximum byte size (mbs), and maximum number of instances (mni), among others. While these attributes align with the standard, their inclusion increases implementation complexity and hinders performance. Moreover, in practical scenarios, these fields often have little relevance or are not frequently utilized. Therefore, the attributes to implement must be extensively evaluated to strike a balance between adherence and practicality.
 
 \section{Conclusion and Future Work}
 \label{conclusion}
