@@ -413,7 +413,7 @@ To optimize read operations and streamline data retrieval, we have introduced a 
 
 \subsubsection{Notifications}
 
-The Notification module is responsible for sending notifications based on subscription resources. When a resource (e.g. \gls{cnt}) contains a \gls{sub} resource directly inside, and another resource (e.g. \gls{cin}) is created directly inside the resource (e.g. \gls{cnt}) an \gls{mqtt} or \gls{http} client is asynchronously created to send a notification to the respective third-party \gls{mqtt} or \gls{http} broker.
+The Notification module is responsible for sending notifications based on subscription resources. When a resource (e.g. \gls{cnt}) contains a \gls{sub} resource directly inside, and another resource (e.g. \gls{cin}) is created directly inside the resource (e.g. \gls{cnt}) an \gls{mqtt} and/or \gls{http} client is asynchronously created to send a notification to the respective third-party \gls{mqtt} and/or \gls{http} broker.
 
 \section{Implementation of TinyOneM2M Solution} \label{sec:tinyonem2msolution}
 
