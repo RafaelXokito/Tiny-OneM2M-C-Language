@@ -93,11 +93,12 @@
 \newacronym{sub}{SUB}{Subscription}
 \newacronym{subs}{SUBs}{Subscriptions}
 \newacronym{etsi}{ETSI}{European Telecommunications Standards Institute}
-\newacronym{pi}{PI}{Parent Identifier}
-\newacronym{cse}{CSE}{Common Services Entity}
+\newacronym{cse}{CSE\_Base}{Common Services Entity}
 \newacronym{ram}{RAM}{Random Access Memory}
 \newacronym{json}{JSON}{JavaScript Object Notation}
 \newacronym{wal}{WAL}{write-ahead logging}
+\newacronym{ml}{ML}{Machine Learning}
+\newacronym{fc}{FC}{Fog Computing}
 \makeglossaries
 % -------------------------------------------------------------------
 \usepackage[utf8]{inputenc} % The default since 2018
@@ -181,26 +182,26 @@ Therefore, the oneM2M \footnote{OneM2M official page: \url{https://www.onem2m.or
 
 In this paper, we present a novel implementation of the OneM2M standard using a low-level programming language to address the limitations of high-level language-based implementations. Our approach is purposefully designed to be lightweight, catering to weak computational systems with limited processing power and memory capacity, reducing memory overhead and increasing control over hardware resources. By focusing on key challenges associated with \gls{mtc} gateways, such as protocol interoperability, scalability, and latency, our implementation aims to provide a robust and efficient solution for the evolving \gls{iot} landscape.
 
-The remainder of this paper is organized as follows: Section \ref{relatedWork} provides a comprehensive review of the related work in current \gls{m2m} implementations, discussing various programming languages. In section \ref{architecture}, we delve into the system architecture of our TinyOneM2M software, discussing the specific modules that constitute it where we present three scenarios: Home Gateway, Single Device (peer-to-peer), and Cloud, highlighting how the architecture adapts to each scenario. In section \ref{sec:tinyonem2msolution}, we provide a comprehensive overview of our implementation of the OneM2M standard version 5.1, detailing the system resources that form the foundation of our solution. The testing mechanisms employed to examine the TinyOneM2M solution under various scenarios are detailed in section \ref{tests}. Section \ref{sec:lessonsLearned} encompasses the acquired knowledge and reflective insights gained throughout the system's development. Finally, in section \ref{conclusion}, we conclude the paper by summarizing the key findings and contributions, and we highlight potential future research directions.
+The remainder of this paper is organized as follows: Section \ref{relatedWork} provides a comprehensive review of the related work in current \gls{m2m} implementations, discussing various programming languages. In Section \ref{architecture}, we delve into the system architecture of our TinyOneM2M software, discussing the specific modules that constitute it where we present three scenarios: Home Gateway, Single Device (\gls{p2p}), and Cloud, highlighting how the architecture adapts to each scenario. In Section \ref{sec:tinyonem2msolution}, we provide a comprehensive overview of our implementation of the OneM2M standard version 5.1, detailing the system resources that form the foundation of our solution. The testing mechanisms employed to examine the TinyOneM2M solution under various scenarios are detailed in Section \ref{tests}. Section \ref{sec:lessonsLearned} encompasses the acquired knowledge and reflective insights gained throughout the system's development. Finally, in Section \ref{conclusion}, we conclude the paper by summarizing the key findings and contributions, and we highlight potential future research directions.
 
 \section{Related work}
 \label{relatedWork}
 
-OneM2M provides a standardized framework and protocols to enable interoperability between diverse \gls{iot} devices. It can be regarded as an overarching framework that facilitates the implementation of \gls{m2m} solutions, allowing for seamless communication and integration of various machine-to-machine interactions within an \gls{iot} ecosystem \cite{onem2m_standard}. Therefore, in this section, we will provide an overview of the current state-of-the-art in \gls{m2m} implementations, highlighting the advantages and disadvantages of various programming languages and architectural choices.
+OneM2M provides a standardized framework and protocols to enable interoperability between diverse \gls{iot} devices. It can be regarded as an overarching framework that facilitates the implementation of \gls{m2m} solutions, allowing for seamless communication and integration of various \gls{m2m} interactions within an \gls{iot} ecosystem \cite{onem2m_standard}. Therefore, in this section, we will provide an overview of the current state-of-the-art in \gls{m2m} implementations, highlighting the advantages and disadvantages of various programming languages and architectural choices.
 
-Rubi et al. \cite{Rubi2019} propose an \gls{iomt} platform with a cloud-based electronic health system that collects data from various sources and relays it through gateways or fog servers. The platform enables data management, visualization of electronic records, and knowledge extraction through big data processing, machine learning, and online analytics processing. Additionally, it offers data sharing services for third-party applications, improving healthcare services and interoperability.
+Rubi et al. \cite{Rubi2019} propose an \gls{iomt} platform with a cloud-based electronic health system that collects data from various sources and relays it through gateways or fog servers. The platform enables data management, visualization of electronic records, and knowledge extraction through big data processing, \gls{ml}, and online analytics processing. Additionally, it offers data sharing services for third-party applications, improving healthcare services and interoperability.
 
 The authors in \cite{Volkov2017} conducted \gls{iotdm} service testing for smart city management, focusing on the ecological situation in Saint-Peters\-burg's central district, using an \gls{sdn} network infrastructure. They developed a hierarchical model and \gls{iot} traffic generator in compliance with oneM2M specifications and implemented \gls{http}, \gls{coap}, and \gls{mqtt} protocols. Their findings suggested that \gls{http} is the most suitable protocol for registering \gls{iot} devices to the \gls{iotdm} service, while \gls{mqtt} is optimal for transmitting sensor data. The authors concluded that the \gls{sdn} approach significantly reduces the \gls{rtt} parameter, demonstrating its potential in managing \gls{iot} traffic in smart city environments.
 
-Soumya et al. \cite{Datta2015} explore Fog Computing as a consumer-centric \gls{iot} service deployment platform, particularly for connected vehicles and intelligent transportation systems requiring low latency, high mobility, real-time data analytics, and wide geographic coverage. They present an \gls{iot} architecture for connected vehicles, integrating Fog Computing platforms into oneM2M standard architecture. The architecture comprises virtual sensing zones, \gls{ap}, \gls{rsus}, \gls{m2m} gateways, and cloud systems. Fog Computing enables consumer-centric services such as \gls{m2m} data analytics with semantics, discovery of \gls{iot} services, and management of connected vehicles. The paper highlights the advantages of Fog Computing, including reduced latency, improved \gls{qos}, real-time data analysis, and actuation for superior user experience and consumer-centric \gls{iot} products.
+Soumya et al. \cite{Datta2015} explore \gls{fc} as a consumer-centric \gls{iot} service deployment platform, particularly for connected vehicles and intelligent transportation systems requiring low latency, high mobility, real-time data analytics, and wide geographic coverage. They present an \gls{iot} architecture for connected vehicles, integrating \gls{fc} platforms into oneM2M standard architecture. The architecture comprises virtual sensing zones, \gls{ap}, \gls{rsus}, \gls{m2m} gateways, and cloud systems. \gls{fc} enables consumer-centric services such as \gls{m2m} data analytics with semantics, discovery of \gls{iot} services, and management of connected vehicles. The paper highlights the advantages of \gls{fc}, including reduced latency, improved \gls{qos}, real-time data analysis, and actuation for superior user experience and consumer-centric \gls{iot} products.
 
-This paper \cite{Liang2018} presents a \gls{ccas} that addresses the issue of collision and access efficiency in \gls{m2m} communications. The authors propose a modified spectral clustering algorithm to form clusters based on the location and service requirements of \gls{mtcds}, ensuring that devices with similar requirements are grouped together. They also develop an \gls{mtcg} selection algorithm that considers the delay requirements of \gls{mtcds} and selects an \gls{mtcg} with the appropriate forwarding threshold. The proposed CCAS divides the data transmission process into an \gls{mtcd}-\gls{mtcg} stage and an \gls{mtcg}-\gls{bs} stage to reduce collision probability and increase the number of successfully received packets, without causing additional average access delays for \gls{mtcds}. The paper includes a theoretical analysis of the \gls{mtcg} aggregation and forwarding process, as well as performance evaluations through simulations.
+The paper \cite{Liang2018} presents a \gls{ccas} that addresses the issue of collision and access efficiency in \gls{m2m} communications. The authors propose a modified spectral clustering algorithm to form clusters based on the location and service requirements of \gls{mtcds}, ensuring that devices with similar requirements are grouped together. They also develop an \gls{mtcg} selection algorithm that considers the delay requirements of \gls{mtcds} and selects an \gls{mtcg} with the appropriate forwarding threshold. The proposed CCAS divides the data transmission process into an \gls{mtcd}-\gls{mtcg} stage and an \gls{mtcg}-\gls{bs} stage to reduce collision probability and increase the number of successfully received packets, without causing additional average access delays for \gls{mtcds}. The paper includes a theoretical analysis of the \gls{mtcg} aggregation and forwarding process, as well as performance evaluations through simulations.
 
 The paper \cite{Thielemans2019} proposes a resource-efficient secure implementation of OneM2M based on C programming language for \gls{iot}, while also performing an analysis of the OneM2M architecture and protocols. Furthermore, the authors highlight the relevance of a lightweight implementation using optimized data structures and algorithms for \gls{iot} devices with limited resources and propose a solution that can reduce computational costs and processing time. Secure communication protocols such as \gls{tls} and \gls{dtls}, as well as authentication and encryption mechanisms, were used to ensure security. The authors also suggested that the cryptography algorithms chosen must be lightweight to reduce the computational burden on \gls{iot} devices. The evaluation of this implementation meant using a set of benchmarks while comparing the developed OneM2M implementation with existing ones. Results showed that, in terms of memory usage and processing time, the author's proposed implementation of OneM2M using C language is more resource-efficient.
 
 The authors in \cite{Benoygopal2021} present a secure authentication and access control scheme for OneM2M-based \gls{iot} systems. Moreover, propose an approach to address the challenge of identity and access management in large-scale \gls{iot} systems. The proposed scheme is based on the role-based access control model, where system administrators can define access policies based on the roles of the users. Their scheme entails a secure authentication and authorization mechanism based on certificates, which are issued by a trusted \gls{ca}. The evaluation process used a prototype implementation of the OneM2M standard and compared it with existing access control schemes. Therefore concluding that their scheme achieves better performance and scalability while providing a flexible and fine-grained access control mechanism. However, the proposed scheme contains security and privacy issues for which the authors presented several countermeasures to mitigate them.
 
-The paper \cite{Kim2018} discusses the design, implementation and evaluation of an interoperable platform for the Internet of Things \gls{iot} using the OneM2M standard, where the authors focused on implementing the standard using C language. Moreover, the authors discussed how their C implementation handles registration, discovery and subscription-resource management tasks while proposing optimizations to improve performance. Experiments were designed to assess the scalability, reliability, and processing time with different loads and data sizes. Those experiments concluded that the C implementation of OneM2M achieved better performance than other implementations regarding response time and memory usage. Regarding security, the paper also details oneM2M's security features, namely, authentication, authorization, and confidentiality, how the C implementation handles these features and how to improve the platform's security. Interoperability features, such as standardized interfaces and protocols, and their C implementation were also detailed in the paper since one of oneM2M's main objects must be the interoperability between different \gls{iot} platforms and devices.
+The paper \cite{Kim2018} discusses the design, implementation and evaluation of an interoperable platform for the \gls{iot} using the OneM2M standard, where the authors focused on implementing the standard using C language. Moreover, the authors discussed how their C implementation handles registration, discovery and subscription-resource management tasks while proposing optimizations to improve performance. Experiments were designed to assess the scalability, reliability, and processing time with different loads and data sizes. Those experiments concluded that the C implementation of OneM2M achieved better performance than other implementations regarding response time and memory usage. Regarding security, the paper also details oneM2M's security features, namely, authentication, authorization, and confidentiality, how the C implementation handles these features and how to improve the platform's security. Interoperability features, such as standardized interfaces and protocols, and their C implementation were also detailed in the paper since one of oneM2M's main objects must be the interoperability between different \gls{iot} platforms and devices.
 
 % https://www.scopus.com/results/results.uri?sort=plf-f&src=s&st1=%28onem2m+OR+mtc%29+and+%22API%22&sid=2e6f61fce202fa9e6635e553544fee3c&sot=b&sdt=b&sl=40&s=TITLE-ABS-KEY%28%28onem2m+OR+mtc%29+and+%22API%22%29&origin=searchbasic&editSaveS=&yearFrom=Before+1960&yearTo=Present
 
@@ -277,17 +278,17 @@ The \gls{rest} Webservice module in TinyOneM2M functions as the system's primary
 
 The types of \gls{http} request that are supported by TinyOneM2M are primarily structured around \gls{crud} operations for various resources. These operations pertain to different resources identified by OneM2M standards, including \gls{ae}, \gls{cnt}, \gls{cin}, \gls{sub} resources.
 
-For \gls{aes}, users can perform different actions on \glspl{ae} using specific HTTP requests. They can create a new \gls{ae} by sending a POST request, retrieve the details of an \gls{ae} using a GET request, update an \gls{ae} using a PUT request, and remove an \gls{ae} by issuing a DELETE request. These requests are sent to a specific URL structure, targeting the CSE\_Base and the \texttt{AE\_ResourceName}.
+For \gls{aes}, users can perform different actions on \glspl{ae} using specific \gls{http} requests. They can create a new \gls{ae} by sending a POST request, retrieve the details of an \gls{ae} using a GET request, update an \gls{ae} using a PUT request, and remove an \gls{ae} by issuing a DELETE request. These requests are sent to a specific URL structure, targeting the \gls{cse} and the \texttt{AE\_ResourceName}.
 
 For \gls{cins}, the operations mirror those for \gls{aes} but are extended with an additional URL parameter to specify the \gls{cin}. These operations thus allow users to create, retrieve, and delete \gls{cins} within a specific \gls{ae} and \gls{cnt} resource.
 
-Similarly, \gls{sub} resources can be managed with POST, GET, PUT, and DELETE requests. These requests target a specific \texttt{SUB\_ResourceName} within a specified CSE\_Base, \texttt{AE\_ResourceName}, and \texttt{CNT\_ResourceName}.
+Similarly, \gls{sub} resources can be managed with POST, GET, PUT, and DELETE requests. These requests target a specific \texttt{SUB\_ResourceName} within a specified \gls{cse}, \texttt{AE\_ResourceName}, and \texttt{CNT\_ResourceName}.
 
 The system also provides functionality to retrieve the root resource information with a specific GET request and perform discovery operations. The discovery operation uses a GET request with query parameters to filter resources based on their type and labels. These operations can be used to retrieve general or specific information about the resources available in the system.
 
 \subsubsection{Response Processor} \label{sec:archresponseprocessor}
 
-The instantiated thread uses the Response Processor module to validate the request, determine the HTTP method, and conduct preliminary validations. The processed request is then forwarded to the next module for further action.
+The instantiated thread uses the Response Processor module to validate the request, determine the \gls{http} method, and conduct preliminary validations. The processed request is then forwarded to the next module for further action.
 
 \subsubsection{M2M Protocol Wrapper}
 
@@ -297,13 +298,13 @@ The \gls{m2m} Protocol Wrapper is responsible for processing and validating the 
 
 The \gls{m2m} Resources module in TinyOneM2M is a crucial component that handles data persistence and retrieval operations. Acting as an intermediary between the incoming requests and the database, this module either persists data to the database or retrieves data from it, based on the action specified in the processed request. Additionally, it checks if the parent resource associated with the incoming request is notifiable. If it is, the module triggers a new thread for the Notification module, thus effectively bridging the communication between the client and the notification mechanisms.
 
-This module supports different types of resources, following a hierarchical structure as prescribed by the OneM2M standard and as shown in Figure \ref{fig:hierarchy}. The CSE\_Base \gls{cse} resource sits at the root of this hierarchy, providing an entry point for all other resources in the system.
+This module supports different types of resources, following a hierarchical structure as prescribed by the OneM2M standard and as shown in Figure \ref{fig:hierarchy}. The \gls{cse} resource sits at the root of this hierarchy, providing an entry point for all other resources in the system.
 
 The \gls{ae} is an application-level entity that provides services to end-users. It can encapsulate \gls{cnt} and \gls{sub} resources, which provide data organization and condition-based notification services, respectively.
 
 The \gls{cnt} resource represents a container for organizing data within \gls{ae} and other \gls{cnt} resources. It can contain other \gls{cnt}, \gls{cin}, and \gls{sub} resources, allowing an organized and hierarchical data structure.
 
-The \gls{cin} resource, residing under a \gls{cnt}, encapsulates the actual data or content in the system. The \gls{sub} resource, which can be nested under CSE\_Base, \gls{ae}, and \gls{cnt} resources, is responsible for managing subscriptions. This enables applications to receive notifications about changes in resources they're interested in.
+The \gls{cin} resource, residing under a \gls{cnt}, encapsulates the actual data or content in the system. The \gls{sub} resource, which can be nested under \gls{cse}, \gls{ae}, and \gls{cnt} resources, is responsible for managing subscriptions. This enables applications to receive notifications about changes in resources they're interested in.
 
 \begin{figure}[htbp]
 	\centering
@@ -316,17 +317,17 @@ The \gls{cin} resource, residing under a \gls{cnt}, encapsulates the actual data
 
 The TinyOneM2M system relies on an embedded single-file database for optimized data storage and retrieval. This format offers high efficiency due to its low overhead and quick access time. The system employs a denormalized structure in certain areas, an approach commonly used in database design to improve performance, even at the expense of data redundancy.
 
-In this setup, there is one main table named \texttt{mtc}. This table in \ref{tab:database} is a combination of multiple entity types in the TinyOneM2M hierarchy, such as \gls{ae}, \gls{cin} and \gls{sub}. The attributes of these entities are represented as columns in the \texttt{mtc} table using their abbreviations, .
+In this setup, there is one main table named \texttt{mtc}. This table, which Table \ref{tab:database} provides a representation of the \gls{mtc} table's structure, in \ref{tab:database} is a combination of multiple entity types in the TinyOneM2M hierarchy, such as \gls{ae}, \gls{cin} and \gls{sub}. The attributes of these entities are represented as columns in the \texttt{mtc} table using their abbreviations.
 
-Looking deeper into the table structure, the \texttt{ri} (resource identifier) column serves as the primary key, providing unique identification for each record. It establishes relations with the \gls{pi} column, which refers to the \texttt{ri} of the parent record. This sets up a hierarchical relationship between records, which mirrors the resource hierarchy in the TinyOneM2M system.
+Looking deeper into the table structure, the \texttt{ri} column serves as the primary key, providing unique identification for each record. It establishes relations with the \texttt{pi} column, which refers to the \texttt{ri} of the parent record. This sets up a hierarchical relationship between records, which mirrors the resource hierarchy in the TinyOneM2M system.
 
 The table also includes specific columns for different resource attributes. For example, \texttt{ty}, \texttt{rn}, and \texttt{et}. It also stores specific attributes for \gls{ae} like \texttt{aei}, for \gls{sub} like \texttt{nu} and \texttt{enc}, and for \gls{cin} like \texttt{con} and \texttt{cnf}.
 
-Some columns like \texttt{cbs} (current byte size) and \texttt{mni} (maximum byte size) are used for handling quotas and limits in the TinyOneM2M system. For instance, \texttt{cbs} and \texttt{mbs} are related to the storage size occupied by \gls{cin} resource inside a \gls{cnt} and its maximum allowed size, respectively.
+Some columns like \texttt{cbs} and \texttt{mni} are used for handling quotas and limits in the TinyOneM2M system. For instance, \texttt{cbs} and \texttt{mbs} are related to the storage size occupied by \gls{cin} resource inside a \gls{cnt} and its maximum allowed size, respectively.
 
 The \texttt{mtc} table also includes columns like \texttt{url}, \texttt{lbl}, \texttt{acpi}, \texttt{daci}, and \texttt{poa} (point of access), which store various types of information required for OneM2M standard operations.
 
-To optimize read operations and streamline data retrieval, we have introduced a blob column that stores the \gls{json} object associated with each resource. This approach eliminates the need to select all the columns from the table and map them to the \gls{json} object, as we can now retrieve the complete \gls{json} object directly from the blob column. By doing so, we significantly improve performance and simplify the data retrieval process. Additionally, the database employs indexes on selected columns which allows faster data retrieval and processing, a key requirement for real-time operations in \gls{iot} environments. For instance, the \texttt{sqlite\_autoindex\_mtc\_1} index on the \texttt{ri} column helps in quickly locating records based on their unique identifiers.
+To optimize read operations and streamline data retrieval, we have introduced a \texttt{blob} column that stores the \gls{json} object associated with each resource. This approach eliminates the need to select all the columns from the table and map them to the \gls{json} object, as we can now retrieve the complete \gls{json} object directly from the \texttt{blob} column. By doing so, we significantly improve performance and simplify the data retrieval process. Additionally, the database employs indexes on selected columns which allows faster data retrieval and processing, a key requirement for real-time operations in \gls{iot} environments. For instance, the \texttt{sqlite\_autoindex\_mtc\_1} index on the \texttt{ri} column helps in quickly locating records based on their unique identifiers.
 
 \begin{table}[h]
 	\scriptsize
@@ -412,19 +413,19 @@ To optimize read operations and streamline data retrieval, we have introduced a 
 
 \subsubsection{Notifications}
 
-The Notification module is responsible for sending notifications based on subscription resources. When a resource (e.g. Container) contains a subscription directly inside and other resource (e.g. Content Instance) is created directly inside the resource (e.g. Container) an \gls{mqtt} or \gls{http} client is asynchronous created to send a notification to the respective third-party \gls{mqtt} or \gls{http} broker.
+The Notification module is responsible for sending notifications based on subscription resources. When a resource (e.g. \gls{cnt}) contains a \gls{sub} resource directly inside, and another resource (e.g. \gls{cin}) is created directly inside the resource (e.g. \gls{cnt}) an \gls{mqtt} or \gls{http} client is asynchronously created to send a notification to the respective third-party \gls{mqtt} or \gls{http} broker.
 
 \section{Implementation of TinyOneM2M Solution} \label{sec:tinyonem2msolution}
 
-Our solution adheres to the OneM2M standard version 5.1 \footnote{\url{https://www.onem2m.org/technical/published-specifications\#listofreleases}}, implementing a set of key resources integral to our intended functionalities. We opted for the implementation of the resources CSE\_Base, \gls{ae}, \gls{cnt}, \gls{cin}, and \gls{sub}. The implementation of TinyOneM2M is designed with a strong focus on the system architecture presented in Figure \ref{fig:TinyOneM2Mchitecture} in section \ref{architecture}. Each component of the architecture has a corresponding implementation detail which we aim to elucidate throughout this section.
+Our solution adheres to the OneM2M standard version 5.1 \footnote{OneM2M version 5.1 official page: \url{https://www.onem2m.org/technical/published-specifications\#listofreleases}}, implementing a set of key resources integral to our intended functionalities. We opted for the implementation of the resources \gls{cse}, \gls{ae}, \gls{cnt}, \gls{cin}, and \gls{sub}. The implementation of TinyOneM2M is designed with a strong focus on the system architecture presented in Figure \ref{fig:TinyOneM2Mchitecture} in Section \ref{architecture}. Each component of the architecture has a corresponding implementation detail which we aim to elucidate throughout this section.
 
-The development of the TinyOneM2M solution was carried out using the C language. There are several reasons for this choice. Firstly, C is highly portable and efficient, making it ideal for \gls{iot} applications where devices can have varied processing capabilities. It also offers low-level access to memory, which allows fine-tuned control over system resources. However, C also has some disadvantages. It lacks the built-in object-oriented features found in languages like C++ or Python, which can lead to more complex code structures for large systems. Moreover, the C language places the burden of memory management on the developer, which, if not executed with caution, can give rise to potential issues and challenges.
+The development of the TinyOneM2M solution was carried out using the C language. There are several reasons for this choice. Firstly, C is highly portable and efficient, making it ideal for \gls{iot} applications where devices can have varied processing capabilities. It also offers low-level access to memory, which allows fine-tuned control over system resources. However, C also has some disadvantages. It lacks the built-in object-oriented features found in languages like C++ or Python, which can lead to more complex code structures for large systems. Moreover, the C language places the burden of memory management on the developer, which, if not executed with caution, can give rise to potential issues and challenges \cite{prechelt_empirical_2000}.
 
 To gauge our level of compliance with the OneM2M standard, we quantified the degree of our implementation based on each resource. We calculated the percentage of implementation by comparing the number of implemented attributes to the total number of attributes suggested by the standard, all multiplied by one hundred.
 
-Based on this calculation, we estimate that our solution covers approximately 57\% of the standard on average. A detailed breakdown of this calculation, per resource, will be further elucidated in the section \ref{sec:m2mresources}.
+Based on this calculation, we estimate that our solution covers approximately 57\% of the standard on average. A detailed breakdown of this calculation, per resource, will be further elucidated in the Section \ref{sec:m2mresources}.
 
-Our implementation is designed to ensure compatibility with services utilizing the OpenMTC \footnote{\url{https://github.com/OpenMTC/OpenMTC}} SDK, an open-source framework that provides an OneM2M-based version 1.1 platform. This interoperability is possible because the \gls{rest} requests in our implementation have the same structure as those in the OpenMTC implementation and return similar error codes.
+Our implementation is designed to ensure compatibility with services utilizing the OpenMTC \footnote{OpenMTC official page: \url{https://github.com/OpenMTC/OpenMTC}} SDK, an open-source framework that provides an OneM2M-based version 1.1 platform. This interoperability is possible because the \gls{rest} requests in our implementation have the same structure as those in the OpenMTC implementation and return similar error codes.
 
 Throughout the development process, we've leveraged a variety of external and non-native libraries. The specific libraries used, along with their corresponding versions, will be duly referenced in the following sections. We believe this level of transparency is crucial to understand the depth and scope of our work.
 
@@ -436,11 +437,11 @@ The WebService REST module, as discussed in Section \ref{sec:archwebservice}, pl
 
 The implementation of this module is carried out with the pthread library for thread creation, and the native socket library for setting up and managing the \gls{rest} Webserver. When the webserver detects new clients, it accepts them and launches a new thread. This thread is responsible for reading the content of the request and executing the complete request processing workflow.
 
-To manage webserver routes, a double-sorted list was employed. This list uses the alphabetical order of the resource path as the key for sorting and simple fields to facilitate resource queries. The resource path, which is a composite of the \texttt{resource name} of the resources in the resource hierarchy, is immutable.
+To manage webserver routes, a double-sorted list was employed. This list uses the alphabetical order of the resource path as the key for sorting and simple fields to facilitate resource queries. The resource path, which is a composite of the resource name of the resources in the resource hierarchy, is immutable.
 
 Upon the application's start, the database is scanned to construct the ordered double list, which is subsequently stored in \gls{ram}. This strategy ensures enhanced query efficiency whenever the existence of a request's resource path needs to be verified. When a resource is inserted or deleted, the list is updated accordingly.
 
-However, the use of pthread and the native socket library present a few limitations. While efficient, these libraries may not offer optimal compatibility for systems like Windows, thus limiting the platform independence of our solution. A potential enhancement could be the use of a cross-platform library, such as Drogon \footnote{\url{https://github.com/drogonframework/drogon}} for C++, which could offer non-blocking operations for the \gls{http} server.
+However, the use of pthread and the native socket library present a few limitations. While efficient, these libraries may not offer optimal compatibility for systems like Windows, thus limiting the platform independence of our solution. A potential enhancement could be the use of a cross-platform library, such as Drogon \footnote{Drogon official page: \url{https://github.com/drogonframework/drogon}} for C++, which could offer non-blocking operations for the \gls{http} server.
 
 It's important to note that the algorithm for managing the double-sorted list was custom implemented by the authors. While this allowed for a tailored solution to our specific needs, a well-tested library could have been utilized for this purpose, potentially offering more robustness and efficiency. Nonetheless, our current implementation is situated within the main process and has shown competent performance in managing routes for the webserver.
 
@@ -456,9 +457,9 @@ However, similar to the WebService \gls{rest} module, the algorithm to manage th
 
 \subsection{M2M Protocol Wrapper}
 
-As established in section \ref{architecture}, the \texttt{M2M Protocol Wrapper} is instrumental for the operation of the entire system. Its functions range from initial protocol initialization, resource discovery, and building values, to defining default values and facilitating the insertion of resources into the database.
+As established in Section \ref{architecture}, the M2M Protocol Wrapper is instrumental for the operation of the entire system. Its functions range from initial protocol initialization, resource discovery, and building values, to defining default values and facilitating the insertion of resources into the database.
 
-Upon protocol initialization, the database is created and the resource CSE\_Base is populated if this has not been done previously. The resource discovery feature is 28\% implemented according to the standard, implementing 9 of the suggested 32 filters.
+Upon protocol initialization, the database is created and the resource \gls{cse} is populated if this has not been done previously. The resource discovery feature is 28\% implemented according to the standard, implementing 9 of the suggested 32 filters.
 
 Table \ref{tab:discovery_attributes} describes each implemented discovery attribute:
 
@@ -485,17 +486,17 @@ limit & 0..1 & The maximum number of resources to be included in the filtering r
 \end{tabular}
 \end{table}
 
-The module performs minor database queries to build values before their use. It also validates the attributes of the resources and defines default values, such as creating the automatic "Resource Name" when necessary. Furthermore, it builds a \gls{json} structure that gets mapped to a native structure for later insertion into the database by the resource module.
+The module performs minor database queries to build values before their use. It also validates the attributes of the resources and defines default values, such as creating the automatic \texttt{rn} when necessary. Furthermore, it builds a \gls{json} structure that gets mapped to a native structure for later insertion into the database by the resource module.
 
-The CJson\footnote{\url{https://github.com/DaveGamble/cJSON}} library (version 1.7.15) is utilized for handling \gls{json} content. Note that this library is used statically, as the source code was imported into this project.
+The CJson\footnote{CJson library official page: \url{https://github.com/DaveGamble/cJSON}} library (version 1.7.15) is utilized for handling \gls{json} content. Note that this library is used statically, as the source code was imported into this project.
 
 \subsection{M2M Resources}\label{sec:m2mresources}
 
-Our TinyOneM2M solution provides a comprehensive implementation of several critical resources as per the OneM2M standard. These resources -- CSE\_Base, \gls{ae}, \gls{cnt}, \gls{cin} and \gls{sub} -- serve as the backbone of our application, enabling diverse functionalities and providing a robust foundation upon which our solution operates.
+Our TinyOneM2M solution provides a comprehensive implementation of several critical resources as per the OneM2M standard. These resources -- \gls{cse}, \gls{ae}, \gls{cnt}, \gls{cin} and \gls{sub} -- serve as the backbone of our application, enabling diverse functionalities and providing a robust foundation upon which our solution operates.
 
-The CSE\_Base resource serves as a central hub, managing and organizing various resources and services within our solution. It acts like a system's set of databases, ensuring efficient data management. The \gls{ae} resource encapsulates application-specific information, allowing our solution to adapt to different use cases and applications. The \gls{cnt} and \gls{cin} resources work together to handle and manage information tables and their records, ensuring effective data management. Lastly, the \gls{sub} resource provides real-time monitoring and quick response to changes by acting as watchers that can be added to any of the mentioned resources, including CSE\_Base, \gls{ae}, \gls{cnt}, or even within another \gls{sub}.
+The \gls{cse} resource serves as a central hub, managing and organizing various resources and services within our solution. It acts like a system's set of databases, ensuring efficient data management. The \gls{ae} resource encapsulates application-specific information, allowing our solution to adapt to different use cases and applications. The \gls{cnt} and \gls{cin} resources work together to handle and manage information tables and their records, ensuring effective data management. Lastly, the \gls{sub} resource provides real-time monitoring and quick response to changes by acting as watchers that can be added to any of the mentioned resources, including \gls{cse}, \gls{ae}, \gls{cnt}, or even within another \gls{sub}.
 
-As shown in Table \ref{tab:resourceimplementationpercentage}, we have been successful in achieving substantial coverage of the OneM2M standard. Our implementation covers 52\% of the standard for the CSE\_Base resource, 57\% for \gls{ae}, 68\% for \gls{cnt}, 70\% for \gls{cin}, and 40\% for \gls{sub}. These percentages reflect our commitment to aligning our solution as closely as possible with the OneM2M standard, ensuring compatibility and interoperability, while also adapting the solution to meet the specific needs and constraints of our use case.
+As shown in Table \ref{tab:resourceimplementationpercentage}, we have been successful in achieving substantial coverage of the OneM2M standard. Our implementation covers 52\% of the standard for the \gls{cse} resource, 57\% for \gls{ae}, 68\% for \gls{cnt}, 70\% for \gls{cin}, and 40\% for \gls{sub}. These percentages reflect our commitment to aligning our solution as closely as possible with the OneM2M standard, ensuring compatibility and interoperability, while also adapting the solution to meet the specific needs and constraints of our use case.
 
 \begin{table}[h]
 \scriptsize
@@ -506,18 +507,18 @@ As shown in Table \ref{tab:resourceimplementationpercentage}, we have been succe
 \hline
 \textbf{Resource Type} & \textbf{Implemented Attributes} & \textbf{Attributes Suggested by the Standard} & \textbf{Percentage (\%)} \\
 \hline \hline
-CSE\_Base & 12 & 23 & 52\% \\
-AE & 20 & 35 & 57\% \\
-CNT & 17 & 25 & 68\% \\
-CIN & 14 & 20 & 70\% \\
-SUB & 12 & 30 & 40\% \\
+\gls{cse} & 12 & 23 & 52\% \\
+\gls{ae} & 20 & 35 & 57\% \\
+\gls{cnt} & 17 & 25 & 68\% \\
+\gls{cin} & 14 & 20 & 70\% \\
+\gls{sub} & 12 & 30 & 40\% \\
 \hline
 \end{tabular}
 \end{table}
 
 The implementation of each feature is based on the attributes suggested in Section 9.6.3 of the OneM2M standard documentation (version 5.1), excluding some less relevant attributes like \texttt{appName}, \texttt{AE-ID}, \texttt{CSE-ID}, etc.
 
-Crucially, the implementation of certain attributes alters the system's normal functioning. All resources implement the expiration time attribute, thus preventing access to any resource whose expiration time is less than the current datetime. For the \gls{cnt} resource, the attributes max byte size, max number of instances, current byte size, and current number of instances were implemented. For the \gls{sub} resource, the event notification criteria attribute was implemented to specify which \gls{http} request methods will trigger notifications.
+Crucially, the implementation of certain attributes alters the system's normal functioning. All resources implement the \texttt{et} attribute, thus preventing access to any resource whose expiration time is less than the current datetime. For the \gls{cnt} resource, the attributes \texttt{mbs}, \texttt{mni}, \texttt{cbs}, and \texttt{cni} were implemented. For the \gls{sub} resource, the event notification criteria attribute was implemented to specify which \gls{http} request methods will trigger notifications.
 
 The standard is broad, and some fields may not be relevant for all users. Hence, we have selected the most pertinent attributes for implementation and earmarked the remainder for potential future work.
 
@@ -525,13 +526,13 @@ The standard is broad, and some fields may not be relevant for all users. Hence,
 
 The architecture of our TinyOneM2M solution employs an Embedded Single File Database module, serving as the central data repository. Tasked with persisting resource data, managing hierarchical relationships between resource entities, and enabling efficient data retrieval mechanisms, this module is instrumental in achieving a reliable, efficient, and manageable software system.
 
-For our database management system, we selected SQLite3 \footnote{\url{https://www.sqlite.org/cintro.html}}, an established file-based database known for its performance and simplicity. We integrated the SQLite3 library, specifically version 3.41.1, as source code into our architecture, thereby ensuring broad compatibility across different operating systems. This choice aligns well with our commitment to a platform-independent solution.
+For our database management system, we selected SQLite3 \footnote{SQlite3 official page: \url{https://www.sqlite.org/cintro.html}}, an established file-based database known for its performance and simplicity. We integrated the SQLite3 library, specifically version 3.41.1, as source code into our architecture, thereby ensuring broad compatibility across different operating systems. This choice aligns well with our commitment to a platform-independent solution.
 
 SQLite3's incorporation offers numerous advantages, aligning perfectly with our solution's design principles. It is light\-weight, efficient, and enables swift database operations with minimal resource usage. Its ease in executing queries contributes directly to our system's responsiveness and performance.
 
 The initial architecture of our database comprised two tables: one for single-valued attributes and another for multi-valued attributes, such as labels and points of access. This design aimed to maintain the structure and initial order of these attributes. However, this approach posed performance challenges during database operations, prompting us to shift towards a denormalized, single-table design to enhance performance. Section \ref{sec:normalizationvsdenormalization} provides a detailed comparison of operations on normalized versus denormalized databases.
 
-While SQLite3 serves our current needs effectively, we are mindful of potential limitations. Alternative embedded database solutions like MySQL or PostgreSQL could prove beneficial under specific conditions such as high concurrency or heightened system requirements. One area for potential enhancement within SQLite3 is the use of cache mode, leveraging RAM for faster operations \footnote{\url{https://www.sqlite.org/inmemorydb.html}}. However, this approach can pose challenges with memory blocking in a multi-threaded environment and requires careful handling \cite{Jula2019}.
+While SQLite3 serves our current needs effectively, we are mindful of potential limitations. Alternative embedded database solutions like MySQL or PostgreSQL could prove beneficial under specific conditions such as high concurrency or heightened system requirements. One area for potential enhancement within SQLite3 is the use of cache mode, leveraging \gls{ram} for faster operations \footnote{\url{https://www.sqlite.org/inmemorydb.html}}. However, this approach can pose challenges with memory blocking in a multi-threaded environment and requires careful handling \cite{Jula2019}.
 
 For future development, a detailed analysis of SQLite3 database operations could identify potential optimizations at the attribute level, possibly using the PRAGMA operator. Transactional behavior could also be improved by exploring \gls{wal} to enhance concurrency. Particularly in a multi-threaded environment, concurrent reads and writes can be significantly optimized with \gls{wal}, providing a valuable addition to our implementation \cite{kim_atomic_2017}.
 
@@ -541,7 +542,7 @@ The Notifications module plays an integral role in our TinyOneM2M solution, resp
 
 Our notification system is built around the subscription resource feature. Whenever a notification needs to be dispatched, a new thread is spun up to handle the delivery process. This thread-centric approach enables our system to maintain a high level of responsiveness and efficiency by preventing the blocking of main execution threads. A subscription in TinyOneM2M serves as a contractual agreement between a subscriber and a resource. Whenever a resource that a client has subscribed to undergoes any change, a notification is triggered. This subscription-driven approach ensures that notifications are contextually relevant and valuable to the subscriber.
 
-To facilitate the creation of \gls{mqtt} and/or \gls{http} clients within these notification threads, we have utilized the Mongoose library \footnote{\url{https://github.com/cesanta/mongoose/tree/master}} (version 7.10). The use of this library greatly simplifies the process of setting up clients and managing connections, contributing to the overall efficiency and reliability of our notification system.
+To facilitate the creation of \gls{mqtt} and/or \gls{http} clients within these notification threads, we have utilized the Mongoose library \footnote{Mongoose library official page: \url{https://github.com/cesanta/mongoose/tree/master}} (version 7.10). The use of this library greatly simplifies the process of setting up clients and managing connections, contributing to the overall efficiency and reliability of our notification system.
 
 The delivery addresses for notifications are defined within the \texttt{nu} attribute in the subscription. For example, the delivery addresses could be specified as \texttt{mqtt://0.0.0.0:1883, http://0.0.0.0:1400/monitor}. Similarly, the topic or resource path, such as \texttt{/onem2m/ae-test/cnttest/subtest}, denotes the address of the resource associated with the notification.
 
@@ -558,7 +559,7 @@ Firstly, the Database Normalisation versus Database Denormalisation test will pr
 
 Our second test is dedicated to Assessing the Efficiency of Meeting Expiration Time Attribute Objectives in Database Queries on Performance. Here, we focus on the expiration time attribute, which either hides or eliminates records with an expiration time value surpassing the current date time. We aim to contrast the duration of database operations with and without the implementation of this attribute, focusing on the average time spent on each operation type.
 
-A crucial part of our testing process is the Comparative Analysis of Latency for CRUD operations using both our proposed solution and OpenMTC. This test involves a direct performance comparison between our TinyOneM2M implementation, adhering to version 5.1, and OpenMTC, which complies with the standard version 1.1. We meticulously measure the average time expended on the Create, Read, Update, and Delete operations.
+A crucial part of our testing process is the Comparative Analysis of Latency for \gls{crud} operations using both our proposed solution and OpenMTC. This test involves a direct performance comparison between our TinyOneM2M implementation, adhering to version 5.1, and OpenMTC, which complies with the standard version 1.1. We meticulously measure the average time expended on the Create, Read, Update, and Delete operations.
 
 In the Cross-Platform Evaluation, we demonstrate the adaptability of the TinyOneM2M system by evaluating its ease of installation and compilation on two distinct operating systems: Ubuntu and macOS. The test showcases the platform-independent nature of our solution, adding to its versatility.
 
@@ -582,7 +583,7 @@ Table \ref{tab:machinesSpecs} delivers a comprehensive overview of the specific 
 	\midrule
 	Chip                & Apple M1 Pro @ 3.2 GHz \\
 	Total Number of Cores & 10 (8 performance and 2 efficiency) \\
-	RAM Memory          & 16 GB \\
+	\gls{ram} Memory          & 16 GB \\
 	\midrule
 	\multicolumn{2}{c}{\textbf{Operating System}} \\
 	\midrule
@@ -603,7 +604,7 @@ Table \ref{tab:machinesSpecs} delivers a comprehensive overview of the specific 
 	\midrule
 	Chip                & Intel(R) Core(TM)2 CPU 6600 @ 2.40GHz \\
 	Total Number of Cores & 2 \\
-	RAM Memory          & 8 GB \\
+	\gls{ram} Memory          & 8 GB \\
 	\midrule
 	\multicolumn{2}{c}{\textbf{Operating System}} \\
 	\midrule
@@ -625,7 +626,7 @@ Table \ref{tab:machinesSpecs} delivers a comprehensive overview of the specific 
  	\midrule
 	Chip                & BCM2835 @ 1GHz ARMv6 \\
 	Total Number of Cores & 1 \\
-	RAM Memory          & 512MB \\
+	\gls{ram} Memory          & 512MB \\
 	\midrule
 	\multicolumn{2}{c}{\textbf{Operating System}} \\
 	\midrule
@@ -696,7 +697,7 @@ In the case of the update operation, the normalized structure was slightly quick
 \begin{table}[h]
 \scriptsize
 \centering
-\caption{Average time per depth layer for CRUD operations on the databases}
+\caption{Average time per depth layer for \gls{crud} operations on the databases}
 \label{tab:DBComparisonResults}
 \begin{tabular}{ p{1cm} p{3cm} p{3cm} }
 \hline
@@ -754,13 +755,13 @@ Indexed Expiration Time Condition & $2.69$ & $1.35$ & $3\,050\,000$ & $1.09$\\ \
 
 \subsection{Comparative Analysis of Latency for CRUD Operations Using the Proposed Solution and OpenMTC}
 
-In this section, we delve into a detailed test case that focuses on the comparative analysis of latency for CRUD (Create, Read, Update, and Delete) operations using the proposed solution and OpenMTC. The objective of this test case is to evaluate the performance of our solution in managing resources against the established OpenMTC standard, providing a benchmark for assessing the efficiency and effectiveness of our approach.
+In this section, we delve into a detailed test case that focuses on the comparative analysis of latency for \gls{crud} (Create, Read, Update, and Delete) operations using the proposed solution and OpenMTC. The objective of this test case is to evaluate the performance of our solution in managing resources against the established OpenMTC standard, providing a benchmark for assessing the efficiency and effectiveness of our approach.
 
-The CRUD operations will be performed through REST requests over the network, rather than on a local machine, as the primary goal of the oneM2M gateway is to facilitate the exchange of information across a distributed network infrastructure. This setup simulates real-world conditions where gateway systems must efficiently handle remote requests, thereby providing a more accurate representation of the solution's performance in practical applications.
+The \gls{crud} operations will be performed through REST requests over the network, rather than on a local machine, as the primary goal of the oneM2M gateway is to facilitate the exchange of information across a distributed network infrastructure. This setup simulates real-world conditions where gateway systems must efficiently handle remote requests, thereby providing a more accurate representation of the solution's performance in practical applications.
 
 To carry out this test case, the both standard implementations will be running on Machine 2, shown in Table \ref{tab:machinesSpecs}, and the requests will be done using Machine 1. The test will be conducted using a shell script that sends 500 requests affecting Content Instances, as we considered the most created resource. Because of Content Instances does not support update operations we will be doing 500 Update operations to Containers resources.
 
-The shell script represented by Algorithm \ref{alg:time_measurement} operates as follows: It begins by initializing variables and CSV files for each CRUD operation (POST, PUT, GET, and DELETE). Then, it iterates 500 times, performing the following steps in each iteration: sending a POST, PUT, GET, and DELETE request to the respective servers and resources (CIN, and CNT), measuring the time taken for each request, and appending the time to the corresponding CSV file. After completing the 500 iterations, the script calculates the minimum, maximum, average, and standard deviation of the times for each CRUD operation from their respective CSV files. The results of these calculations provide insights into the latency of the proposed solution and OpenMTC for each CRUD operation.
+The shell script represented by Algorithm \ref{alg:time_measurement} operates as follows: It begins by initializing variables and CSV files for each \gls{crud} operation (POST, PUT, GET, and DELETE). Then, it iterates 500 times, performing the following steps in each iteration: sending a POST, PUT, GET, and DELETE request to the respective servers and resources (CIN, and CNT), measuring the time taken for each request, and appending the time to the corresponding CSV file. After completing the 500 iterations, the script calculates the minimum, maximum, average, and standard deviation of the times for each \gls{crud} operation from their respective CSV files. The results of these calculations provide insights into the latency of the proposed solution and OpenMTC for each \gls{crud} operation.
 
 \begin{algorithm}
 \scriptsize
@@ -809,7 +810,7 @@ DELETE & 0.122092 & 0.544047 & 0.008289 & 0.053867 \\
 \end{tabular}
 \end{table}
 
-In a comparative analysis of latency for CRUD operations between TinyOneM2M and OpenMTC shown in Table \ref{tab:ComparativeAnalysis}, significant differences were noted. TinyOneM2M displayed a lower maximum latency for POST operations (1.140625ms) compared to OpenMTC's higher maximum (15.606682ms), suggesting more stable performance. Conversely, OpenMTC demonstrated a quicker response under optimal conditions, outperforming TinyOneM2M in terms of minimum latency for all CRUD operations, for instance, the minimum latency for GET operations was 0.008696ms for OpenMTC compared to 0.011656ms for TinyOneM2M. Further, TinyOneM2M showed less variation in response times across operations, indicating more predictable and stable performance, which could be advantageous in real-world scenarios. However, occasional latency spikes might be an issue with OpenMTC, as suggested by its high maximum latency, potentially affecting overall performance.
+In a comparative analysis of latency for \gls{crud} operations between TinyOneM2M and OpenMTC shown in Table \ref{tab:ComparativeAnalysis}, significant differences were noted. TinyOneM2M displayed a lower maximum latency for POST operations (1.140625ms) compared to OpenMTC's higher maximum (15.606682ms), suggesting more stable performance. Conversely, OpenMTC demonstrated a quicker response under optimal conditions, outperforming TinyOneM2M in terms of minimum latency for all \gls{crud} operations, for instance, the minimum latency for GET operations was 0.008696ms for OpenMTC compared to 0.011656ms for TinyOneM2M. Further, TinyOneM2M showed less variation in response times across operations, indicating more predictable and stable performance, which could be advantageous in real-world scenarios. However, occasional latency spikes might be an issue with OpenMTC, as suggested by its high maximum latency, potentially affecting overall performance.
 
 \subsection{Cross-Platform Evaluation: Installation and Compilation on Ubuntu, macOS, and Raspbian Operating Systems}
 
@@ -833,7 +834,7 @@ In this section, we present a case study using the Machine 3 microcontroller, as
 
 The hardware selected for this test is a Raspberry Pi 0 W, a cost-effective and popular microcontroller with integrated Wi-Fi and Bluetooth capabilities. For storage, we used a Kingston 64GB SD Card with a read speed of 100MB/s, a suitable choice for our test scenario.
 
-Our experiment was designed to create SQLite3 CIN resources in quantities of 10\,000, 50\,000, and 100\,000, storing them in the database located on the SD card. We measured the size of the database on the disk and the RAM usage when all resources were loaded by our server application. The shell script we used executed SQLite3 commands to create the desired number of resources and measured the database size, while the top command measured RAM usage, targeting our server application process. The results of these measurements are tabulated in Table \ref{tab:ResourceUtilization}.
+Our experiment was designed to create SQLite3 CIN resources in quantities of 10\,000, 50\,000, and 100\,000, storing them in the database located on the SD card. We measured the size of the database on the disk and the \gls{ram} usage when all resources were loaded by our server application. The shell script we used executed SQLite3 commands to create the desired number of resources and measured the database size, while the top command measured \gls{ram} usage, targeting our server application process. The results of these measurements are tabulated in Table \ref{tab:ResourceUtilization}.
 
 \begin{table}[h]
 \scriptsize
@@ -842,7 +843,7 @@ Our experiment was designed to create SQLite3 CIN resources in quantities of 10\
 \label{tab:ResourceUtilization}
 \begin{tabular}{ p{1.5cm} p{2.5cm} p{2.5cm} }
 \hline
-\textbf{Instances} & \textbf{Database Size (KB)} & \textbf{RAM Usage (KB)} \\
+\textbf{Instances} & \textbf{Database Size (KB)} & \textbf{\gls{ram} Usage (KB)} \\
 \hline \hline
 10\,000 & 9\,136 & 5\,608 \\
 50\,000 & 46\,336 & 9\,696 \\
@@ -853,7 +854,7 @@ Our experiment was designed to create SQLite3 CIN resources in quantities of 10\
 
 The outcomes of this test case provide significant insights into real-world scenarios, especially those where resources are limited. The efficiency of a solution in such circumstances is determined by its ability to perform effectively under these constraints. These tests can help us understand the suitability of our solution in such situations, and also provide a basis for further optimization.
 
-It's important to note that the recorded RAM usage and disk space are the results of operating in a controlled environment. Actual values can vary depending on a number of other factors, including the specifics of the implementation, the operating conditions, and the additional overhead imposed by other running processes and OS services. Nevertheless, this experiment serves as a valuable indicator of the resource efficiency of our solution.
+It's important to note that the recorded \gls{ram} usage and disk space are the results of operating in a controlled environment. Actual values can vary depending on a number of other factors, including the specifics of the implementation, the operating conditions, and the additional overhead imposed by other running processes and OS services. Nevertheless, this experiment serves as a valuable indicator of the resource efficiency of our solution.
 
 \section{Lessons Learned}
 \label{sec:lessonsLearned}
@@ -862,11 +863,13 @@ In the pursuit of technological innovation, it is not uncommon to traverse uncha
 
 During the development stage, we opted for a single file database over a server-based database, believing it would offer superior performance. However, as we progressed, we discovered that this assumption might not hold. The performance gains we expected did not materialize, prompting us to reevaluate our choice of database technology and explore alternative options, such as a MySQL database because of concurrency, and high write rate, on the other hand, would increase the size of the executable because of the size package size, and the database size occupied.
 
-Following established database best practices, we initially pursued a normalization approach for our database structure which involved creating two tables: "mtc" and "multivalue." The introduction of the multivalue table played a vital role in our database structure since it facilitated the mapping of intricate dependency relationships between each \gls{m2m} resource. This approach proved particularly valuable in handling the dynamic and complex nature of \gls{json} relationships, enabling us to effectively represent the infinite-like associations that can exist within \gls{json} values. While this approach adhered to standard guidelines, it downgrades performance due to the time-consuming processing required to map a \gls{json} structure in C into corresponding database entries significantly impacting the overall performance of our system. Consequently, we recognized that denormalization would be a more suitable strategy for our project, allowing for improved performance and streamlined data retrieval. Therefore, this ultimately became the final approach we chose to implement our database.
+Following established database best practices, we initially pursued a normalization approach for our database structure which involved creating two tables: \texttt{mtc} and \texttt{multivalue}. The introduction of the \texttt{multivalue} table played a vital role in our database structure since it facilitated the mapping of intricate dependency relationships between each \gls{m2m} resource. This approach proved particularly valuable in handling the dynamic and complex nature of \gls{json} relationships, enabling us to effectively represent the infinite-like associations that can exist within \gls{json} values. While this approach adhered to standard guidelines, it downgrades performance due to the time-consuming processing required to map a \gls{json} structure in C into corresponding database entries significantly impacting the overall performance of our system. Consequently, we recognized that denormalization would be a more suitable strategy for our project, allowing for improved performance and streamlined data retrieval. Therefore, this ultimately became the final approach we chose to implement our database.
 
 Another of the lessons we learned relates to using static C libraries. While these libraries offer certain advantages, such as ease of distribution and reduced dependency management, they pose challenges when keeping up-to-date with new versions. On the positive side, static libraries provide a stable and predictable development environment. However, the downside is that they do not benefit from bug fixes, security patches, or new features introduced in subsequent releases. This trade-off necessitates careful consideration and evaluation of the specific project requirements when choosing between static and dynamic libraries.
 
-Implementing the OneM2M standard involved incorporating various attributes, including expiration time (et), maximum byte size (mbs), and maximum number of instances (mni), among others. While these attributes align with the standard, their inclusion increases implementation complexity and hinders performance. Moreover, in practical scenarios, these fields often have little relevance or are not frequently utilized. Therefore, the attributes to implement must be extensively evaluated to strike a balance between adherence and practicality.
+Implementing the OneM2M standard involved incorporating various attributes, including \texttt{et}, \texttt{mbs}, and \texttt{mni}, among others. While these attributes align with the standard, their inclusion increases implementation complexity and hinders performance. Moreover, in practical scenarios, these fields often have little relevance or are not frequently utilized. Therefore, the attributes to implement must be extensively evaluated to strike a balance between adherence and practicality.
+
+OpenMTC is one of the most used implementations of the OneM2M standard. Even though OpenMTC is a robust Python implementation, therefore providing a comprehensive set of features and capabilities regarding the OneM2M standard, it can be challenging to install. This is primarily due to the complexities associated with different Python versions and dependencies. Moreover, a Python implementation can be more resource-intensive, demanding higher hardware resources. This can pose a significant challenge for IoT systems, which often operate under resource-constrained environments and may not be able to guarantee the availability of ample hardware resources. On the other hand, the proposed implementation, TinyOneM2M, stands out for its ease of installation and a strong focus on adhering to the OneM2M standard, thereby offering a seamless and straightforward installation process, allowing users to quickly set up their environment and start leveraging the power of OneM2M.
 
 \section{Conclusion and Future Work}
 \label{conclusion}
@@ -875,28 +878,29 @@ In this section, we will discuss the conclusions drawn from our C implementation
 
 To overcome the limitations associated with high-level language-based implementations, we present a novel approach by leveraging a low-level programming language for the implementation of the OneM2M standard. Our methodology aims to address the challenges posed by the evolving \gls{iot} landscape, with a particular focus on \gls{mtc} gateways. By emphasizing crucial aspects like protocol interoperability, scalability, and latency, our implementation offers improved performance, reduced memory overhead, and enhanced control over hardware resources. Through comprehensive testing, we thoroughly assessed the efficacy, usability, scalability, and reliability of the TinyOneM2M solution in various scenarios. Our findings validate its suitability as a robust and efficient solution for meeting the demands of the \gls{iot} ecosystem.
 
-The Home Gateway Scenario, the Single Devices Scenario (peer-to-peer), and the Cloud Scenario are the three main scenarios supported by TinyOneM2M's system architecture. TinyOneM2M functions as a central gateway within a home network in the Home Gateway Scenario, facilitating communication between various devices. The scenario for single devices is a decentralized method in which each device has its own instance of TinyOneM2M, allowing for direct connection between devices without the need for a centralized communication hub. In the cloud scenario, TinyOneM2M is hosted by a cloud provider, enabling large-scale dispersed \gls{iot} applications by enabling device connectivity and internet communication. 
+Future endeavours encompass various areas where our implementation of OneM2M can be further refined, enhanced and tested. Currently, there is no validation to ensure that the content of the request body is a \gls{json}, therefore potentially leading to erroneous or inconsistent data in the requests. To fix this issue it's mandatory to ensure that the request contains a \gls{json} object as the request body type. 
 
-Our TinyOneM2M solution implementation follows to version 5.1 of the OneM2M standard and concentrates on important resources including CSE\_Base, AE, CNT, CIN, and SUB. The C programming language, which offers portability and efficiency for \gls{iot} applications, was used to construct the solution. However, it requires careful memory management and lacks built-in object-oriented capabilities. Also, the fact of in media our implementation covers 57\% of the standard is very promissory. As the embedded single file database, we used SQLite3, which offered dependable data persistence and effective retrieval techniques. Performance was enhanced by the denormalized, single-table design, although for particular circumstances, other database options like MySQL or PostgreSQL might be taken into consideration.
+Secondly, the current implementation doesn't fully guarantee the integrity and accuracy of the received data since only a few attributes of the standard's resources are being validated (e.g. \texttt{et}, \texttt{uri} and \texttt{rn}). Therefore, future work consists of performing attribute validation for all the resource's attributes passed in the \gls{json} body of the requests.
+
+During the implementation process, ensuring compatibility with Windows systems posed a persistent challenge, primarily due to the absence of the pthread library, which is specific to Unix systems. As a result, alternative libraries, such as pthreads-w32, would need to be employed when working with Windows systems. Consequently, a crucial future task is to develop an abstraction layer that enables cross-platform compatibility. By abstracting the thread implementation, we can enhance its portability and accessibility and ensure the execution of our implementation on diverse operating systems.
+
+Moreover, given the extensive scope of the OneM2M standard, numerous resources have not yet been developed. Currently, only a partial implementation of the \gls{cse}, \gls{ae}, \gls{cnt}, \gls{cin}, and \gls{sub} resources has been accomplished. Therefore, a vital area for future work is to complete the implementation of the standard, ensuring that all the resources outlined in the OneM2M standard are fully developed. This undertaking is crucial to provide a more comprehensive and feature-rich implementation of OneM2M, enabling a broader range of functionalities and accommodating a wider array of use cases.
+
+TinyOneM2M is currently at the margin of having concurrency problems in a multi-threaded environment. Therefore, it would be advantageous to improve the transactional behaviour with \gls{wal} or other techniques to enhance concurrency. Additionally, our system could also be optimized at a database attribute level by performing deep analysis and study of the SQLite3 database operations and available operators such as PRAGMA.
+
+Lastly, it would be highly beneficial to compare TinyOneM2M not only against OpenMTC but also against other prominent implementations such as Eclipse OneM2M and InterDigital \cite{M2M2015}.
+
+Overall, these future enhancements will further solidify our implementation and ensure its effectiveness in the \gls{iot} ecosystem.
+
+The Home Gateway Scenario, the Single Devices Scenario (\gls{p2p}), and the Cloud Scenario are the three main scenarios supported by TinyOneM2M's system architecture. TinyOneM2M functions as a central gateway within a home network in the Home Gateway Scenario, facilitating communication between various devices. The scenario for single devices is a decentralized method in which each device has its own instance of TinyOneM2M, allowing for direct connection between devices without the need for a centralized communication hub. In the cloud scenario, TinyOneM2M is hosted by a cloud provider, enabling large-scale dispersed \gls{iot} applications by enabling device connectivity and internet communication. 
+
+Our TinyOneM2M solution implementation follows to version 5.1 of the OneM2M standard and concentrates on important resources including \gls{cse}, \gls{ae}, \gls{cnt}, \gls{cin}, and \gls{sub}. The C programming language, which offers portability and efficiency for \gls{iot} applications, was used to construct the solution. However, it requires careful memory management and lacks built-in object-oriented capabilities. Also, the fact of in media our implementation covers 57\% of the standard is very promissory. As the embedded single file database, we used SQLite3, which offered dependable data persistence and effective retrieval techniques. Performance was enhanced by the denormalized, single-table design, although for particular circumstances, other database options like MySQL or PostgreSQL might be taken into consideration.
 
 Our tests yielded several noteworthy outcomes. The implementation of the TinyOneM2M solution proved to be highly reliable, effectively addressing the interoperability and communication demands within an \gls{iot} ecosystem. Interacted with various platforms, protocols, and devices, facilitating efficient resource management and few effort data transmission. 
 
 The solution showcased impressive scalability, exhibiting consistent performance even with an increasing number of connected devices and growing data traffic. This scalability is vital for accommodating the expanding \gls{iot} landscape, ensuring the system's ability to handle large-scale deployments and accommodate future growth. This solution has potential for enterprises looking for effective management of their \gls{iot} ecosystems as \gls{iot} continues to develop and grow.
 
 Overall, TinyOneM2M's architecture offers a reliable and effective mechanism for putting the OneM2M standard into \gls{iot} contexts. It allows for seamless communication and data management in \gls{iot} applications by providing flexibility, scalability, and ease of integration into diverse scenarios. The TinyOneM2M solution we implemented shows a strong foundation and significant advancement towards the OneM2M standard. Platform independence, performance, and resource coverage can all be further improved and enhanced.
-
-Future endeavours encompass various areas where our implementation of OneM2M can be further refined and enhanced. Currently, there is no validation to ensure that the content of the request body is a \gls{json}, therefore potentially leading to erroneous or inconsistent data in the requests. To fix this issue it's mandatory to ensure that the request contains a \gls{json} object as the request body type. 
-
-Secondly, the current implementation doesn't fully guarantee the integrity and accuracy of the received data since only a few attributes of the standard's resources are being validated (e.g. expiration time, URI and RN). Therefore, future work consists of performing attribute validation for all the resource's attributes passed in the \gls{json} body of the requests.
-
-During the implementation process, ensuring compatibility with Windows systems posed a persistent challenge, primarily due to the absence of the pthread library, which is specific to Unix systems. As a result, alternative libraries, such as pthreads-w32, would need to be employed when working with Windows systems. Consequently, a crucial future task is to develop an abstraction layer that enables cross-platform compatibility. By abstracting the thread implementation, we can enhance its portability and accessibility and ensure the execution of our implementation on diverse operating systems.
-
-Moreover, given the extensive scope of the OneM2M standard, numerous resources have not yet been developed. Currently, only a partial implementation of the CSE\_Base, \gls{ae}, \gls{cnt}, \gls{cin}, and \gls{sub} resources has been accomplished. Therefore, a vital area for future work is to complete the implementation of the standard, ensuring that all the resources outlined in the OneM2M standard are fully developed. This undertaking is crucial to provide a more comprehensive and feature-rich implementation of OneM2M, enabling a broader range of functionalities and accommodating a wider array of use cases.
-
-Lastly, TinyOneM2M is currently at the margin of having concurrency problems in a multi-threaded environment. Therefore, it would be advantageous to improve the transactional behaviour with \gls{wal} or other techniques to enhance concurrency. Additionally, our system could also be optimized at a database attribute level by performing deep analysis and study of the SQLite3 database operations and available operators such as PRAGMA.
-
-Overall, these future enhancements will further solidify our implementation and ensure its effectiveness in the \gls{iot} ecosystem.
-
 
 %% Loading bibliography style file
 %\bibliographystyle{model1-num-names}
