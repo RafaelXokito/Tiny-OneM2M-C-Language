@@ -109,7 +109,7 @@
 \shorttitle{Tiny oneM2M C Language API}
 \shortauthors{Pereira Rafael et~al.}
 
-\title [mode = title]{Tiny oneM2M C Language API}                     
+\title [mode = title]{Tiny oneM2M C Language API}
 
 \credit{Conceptualization of this study, Methodology, Software}
 
@@ -140,15 +140,10 @@ orcid=0009-0002-4169-7644]
 \address[1]{Computer Science and Communications Research Centre, School of Technology and Management, Polytechnic of Leiria, 2411-901 Leiria, Portugal}
 
 \begin{abstract}
-This template helps you to create a properly formatted \LaTeX\ manuscript.
+ The \gls{iot} has revolutionized the way we interact with the environment by connecting everyday objects to the digital world, and \gls{m2m} communication is a key aspect of the \gls{iot}, enables devices to exchange data and collaborate autonomously, leading to intelligent and automated systems. 
+ In this paper, we present TinyOneM2M: an implementation of the OneM2M standard using a low-level programming language-based approach, to address the limitations associated with high-level language implementations. Our implementation aims to enhance performance and reduce memory overhead. Through different tests, we evaluate the usability, scalability, and reliability of the solution in various scenarios. 
+ The results demonstrate that our TinyOneM2M solution offers seamless interoperability and scalability to \gls{iot} and general applications on several Linux-based operating systems, even in resource-constrained scenarios.
 
-\noindent\texttt{\textbackslash begin{abstract}} \dots 
-\texttt{\textbackslash end{abstract}} and
-\verb+\begin{keyword}+ \verb+...+ \verb+\end{keyword}+ 
-which
-contain the abstract and keywords respectively. 
-
-\noindent Each keyword shall be separated by a \verb+\sep+ command.
 \end{abstract}
 
 %\begin{graphicalabstract}
@@ -162,7 +157,7 @@ contain the abstract and keywords respectively.
 %\end{highlights}
 
 \begin{keywords}
-quadrupole exciton \sep polariton \sep \WGM \sep \BEC
+Internet of Things \sep OneM2M \sep Scalability \sep 
 \end{keywords}
 
 
@@ -176,7 +171,7 @@ The \gls{iot} encompasses a vast network of diverse entities, including tags, se
 
 \gls{m2m} systems are typically characterized by their heterogeneity, lack of structure, and loose integration, achieved through standardized communication technologies. These technologies include WiFi, Zigbee, Ethernet, and power line communications, among others. By leveraging standardized technologies, \gls{m2m} systems enable seamless interoperability among devices and simplify mass-produced, standards-compliant equipment. This approach contributes to cost-effective implementations, reducing expenses associated with system development and deployment \cite{lawton_machine_2004}, \cite{cao_survey_2016}.
 
-The rapid expansion of \gls{m2m} technologies has compelled various standardization bodies, such as the  \gls{etsi}, to establish \gls{m2m} standards, resulting in the emergence of multiple standards (e.g \gls{etsi} \gls{m2m} and OneM2M). Consequently, the OneM2M initiative was established to develop a unified global specification and standard for \gls{m2m} communication \cite{pticek_architecture_2015}.
+The rapid expansion of \gls{m2m} technologies has compelled various standardization bodies, such as the \gls{etsi}, to establish \gls{m2m} standards, resulting in the emergence of multiple standards (e.g \gls{etsi} \gls{m2m} and OneM2M). Consequently, the OneM2M initiative was established to develop a unified global specification and standard for \gls{m2m} communication \cite{pticek_architecture_2015}.
 
 In 2008, \gls{etsi} initiated the standardization process for \gls{m2m} by examining requirements and identifying gaps in existing standards. \gls{etsi} began defining an \gls{m2m} platform that could cater to various sectors such as smart metering, e-health, transportation, manufacturing, facility management, and more. In February 2015, OneM2M introduced its first global standard. OneM2M shared the same objective as \gls{etsi} \gls{m2m} but aimed to achieve it on a global level \cite{pticek_architecture_2015}. 
 
@@ -184,7 +179,7 @@ Therefore, the oneM2M \footnote{OneM2M official page: \url{https://www.onem2m.or
 
 In this paper, we present a novel implementation of the OneM2M standard using a low-level programming language to address the limitations of high-level language-based implementations. Our approach is purposefully designed to be lightweight, catering to weak computational systems with limited processing power and memory capacity, reducing memory overhead and increasing control over hardware resources. By focusing on key challenges associated with \gls{mtc} gateways, such as protocol interoperability, scalability, and latency, our implementation aims to provide a robust and efficient solution for the evolving \gls{iot} landscape.
 
-\textcolor{red}{Paper structure} The remainder of this paper is organized as follows: Section \ref{relatedWork} provides a comprehensive review of the related work in \gls{m2m} implementations, discussing various programming languages and architectural choices, as well as the importance of interoperability in \gls{iot} systems. Section \ref{architecture} delves into the system architecture and the specific modules that constitute our TinyOneM2M software. In Section \ref{sec:tinyonem2msolution}, we provide a comprehensive overview of our implementation of the OneM2M version 5.1 protocol, detailing the system components that constitute our solution. The testing mechanisms employed to examine the TinyOneM2M solution under various scenarios were detailed in Section \ref{tests}. Section \ref{sec:lessonsLearned} encompasses the acquired knowledge and reflective insights gained throughout the system's development. Finally, Section \ref{conclusion} concludes the paper and highlights potential future research directions.
+The remainder of this paper is organized as follows: Section \ref{relatedWork} provides a comprehensive review of the related work in current \gls{m2m} implementations, discussing various programming languages. In section \ref{architecture}, we delve into the system architecture of our TinyOneM2M software, discussing the specific modules that constitute it where we present three scenarios: Home Gateway, Single Device (peer-to-peer), and Cloud, highlighting how the architecture adapts to each scenario. In section \ref{sec:tinyonem2msolution}, we provide a comprehensive overview of our implementation of the OneM2M standard version 5.1, detailing the system resources that form the foundation of our solution. The testing mechanisms employed to examine the TinyOneM2M solution under various scenarios are detailed in section \ref{tests}. Section \ref{sec:lessonsLearned} encompasses the acquired knowledge and reflective insights gained throughout the system's development. Finally, in section \ref{conclusion}, we conclude the paper by summarizing the key findings and contributions, and we highlight potential future research directions.
 
 \section{Related work}
 \label{relatedWork}
@@ -876,17 +871,17 @@ Implementing the OneM2M standard involved incorporating various attributes, incl
 
 In this section, we will discuss the conclusions drawn from our C implementation of OneM2M and outline the potential areas for future work and improvement.
 
-To overcome the limitations associated with high-level language-based implementations, we present a novel approach by leveraging a low-level programming language for the implementation of the OneM2M standard. Our methodology aims to address the challenges posed by the evolving  \gls{iot} landscape, with a particular focus on  \gls{mtc} gateways. By emphasizing crucial aspects like protocol interoperability, scalability, and latency, our implementation offers improved performance, reduced memory overhead, and enhanced control over hardware resources. Through comprehensive testing, we thoroughly assessed the efficacy, usability, scalability, and reliability of the TinyOneM2M solution in various scenarios. Our findings validate its suitability as a robust and efficient solution for meeting the demands of the  \gls{iot} ecosystem.
+To overcome the limitations associated with high-level language-based implementations, we present a novel approach by leveraging a low-level programming language for the implementation of the OneM2M standard. Our methodology aims to address the challenges posed by the evolving \gls{iot} landscape, with a particular focus on \gls{mtc} gateways. By emphasizing crucial aspects like protocol interoperability, scalability, and latency, our implementation offers improved performance, reduced memory overhead, and enhanced control over hardware resources. Through comprehensive testing, we thoroughly assessed the efficacy, usability, scalability, and reliability of the TinyOneM2M solution in various scenarios. Our findings validate its suitability as a robust and efficient solution for meeting the demands of the \gls{iot} ecosystem.
 
-The Home Gateway Scenario, the Single Devices Scenario (peer-to-peer), and the Cloud Scenario are the three main scenarios supported by TinyOneM2M's system architecture. TinyOneM2M functions as a central gateway within a home network in the Home Gateway Scenario, facilitating communication between various devices. The scenario for single devices is a decentralized method in which each device has its own instance of TinyOneM2M, allowing for direct connection between devices without the need for a centralized communication hub. In the cloud scenario, TinyOneM2M is hosted by a cloud provider, enabling large-scale dispersed  \gls{iot} applications by enabling device connectivity and internet communication. 
+The Home Gateway Scenario, the Single Devices Scenario (peer-to-peer), and the Cloud Scenario are the three main scenarios supported by TinyOneM2M's system architecture. TinyOneM2M functions as a central gateway within a home network in the Home Gateway Scenario, facilitating communication between various devices. The scenario for single devices is a decentralized method in which each device has its own instance of TinyOneM2M, allowing for direct connection between devices without the need for a centralized communication hub. In the cloud scenario, TinyOneM2M is hosted by a cloud provider, enabling large-scale dispersed \gls{iot} applications by enabling device connectivity and internet communication. 
 
-Our TinyOneM2M solution implementation follows to version 5.1 of the OneM2M standard and concentrates on important resources including CSE\_Base, AE, CNT, CIN, and SUB. The C programming language, which offers portability and efficiency for  \gls{iot} applications, was used to construct the solution. However, it requires careful memory management and lacks built-in object-oriented capabilities. Also, the fact of in media our implementation covers 57\% of the standard is very promissory. As the embedded single file database, we used SQLite3, which offered dependable data persistence and effective retrieval techniques. Performance was enhanced by the denormalized, single-table design, although for particular circumstances, other database options like MySQL or PostgreSQL might be taken into consideration.
+Our TinyOneM2M solution implementation follows to version 5.1 of the OneM2M standard and concentrates on important resources including CSE\_Base, AE, CNT, CIN, and SUB. The C programming language, which offers portability and efficiency for \gls{iot} applications, was used to construct the solution. However, it requires careful memory management and lacks built-in object-oriented capabilities. Also, the fact of in media our implementation covers 57\% of the standard is very promissory. As the embedded single file database, we used SQLite3, which offered dependable data persistence and effective retrieval techniques. Performance was enhanced by the denormalized, single-table design, although for particular circumstances, other database options like MySQL or PostgreSQL might be taken into consideration.
 
-Our tests yielded several noteworthy outcomes. The implementation of the TinyOneM2M solution proved to be highly reliable, effectively addressing the interoperability and communication demands within an  \gls{iot} ecosystem. Interacted with various platforms, protocols, and devices, facilitating efficient resource management and few effort data transmission. 
+Our tests yielded several noteworthy outcomes. The implementation of the TinyOneM2M solution proved to be highly reliable, effectively addressing the interoperability and communication demands within an \gls{iot} ecosystem. Interacted with various platforms, protocols, and devices, facilitating efficient resource management and few effort data transmission. 
 
-The solution showcased impressive scalability, exhibiting consistent performance even with an increasing number of connected devices and growing data traffic. This scalability is vital for accommodating the expanding  \gls{iot} landscape, ensuring the system's ability to handle large-scale deployments and accommodate future growth.  This solution has potential for enterprises looking for effective management of their \gls{iot} ecosystems as \gls{iot} continues to develop and grow.
+The solution showcased impressive scalability, exhibiting consistent performance even with an increasing number of connected devices and growing data traffic. This scalability is vital for accommodating the expanding \gls{iot} landscape, ensuring the system's ability to handle large-scale deployments and accommodate future growth. This solution has potential for enterprises looking for effective management of their \gls{iot} ecosystems as \gls{iot} continues to develop and grow.
 
-Overall, TinyOneM2M's architecture offers a reliable and effective mechanism for putting the OneM2M standard into  \gls{iot} contexts. It allows for seamless communication and data management in  \gls{iot} applications by providing flexibility, scalability, and ease of integration into diverse scenarios. The TinyOneM2M solution we implemented shows a strong foundation and significant advancement towards the OneM2M standard. Platform independence, performance, and resource coverage can all be further improved and enhanced.
+Overall, TinyOneM2M's architecture offers a reliable and effective mechanism for putting the OneM2M standard into \gls{iot} contexts. It allows for seamless communication and data management in \gls{iot} applications by providing flexibility, scalability, and ease of integration into diverse scenarios. The TinyOneM2M solution we implemented shows a strong foundation and significant advancement towards the OneM2M standard. Platform independence, performance, and resource coverage can all be further improved and enhanced.
 
 Future endeavours encompass various areas where our implementation of OneM2M can be further refined and enhanced. Currently, there is no validation to ensure that the content of the request body is a \gls{json}, therefore potentially leading to erroneous or inconsistent data in the requests. To fix this issue it's mandatory to ensure that the request contains a \gls{json} object as the request body type. 
 
