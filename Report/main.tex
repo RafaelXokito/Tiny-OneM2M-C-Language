@@ -340,61 +340,33 @@ To optimize read operations and streamline data retrieval, we have introduced a 
 		\textbf{Attribute Abbreviation} & \textbf{Attribute Designation} \\
 		\hline \hline
 		\texttt{ty} & Resource type \\
-		\hline
 		\texttt{ri} & Resource identifier \\
-		\hline
 		\texttt{rn} & Resource name \\
-		\hline
 		\texttt{pi} & Parent identifier \\
-		\hline
 		\texttt{aei} & \gls{ae} identifier \\
-		\hline
 		\texttt{csi} & \gls{cse} identifier \\
-		\hline
 		\texttt{cst} & \gls{cse} type \\
-		\hline
 		\texttt{api} & App identifier \\
-		\hline
 		\texttt{rr} & Request reachability \\
-		\hline
 		\texttt{et} & Expiration time \\
-		\hline
 		\texttt{ct} & Creation time \\
-		\hline
 		\texttt{lt} & Last modified time \\
-		\hline
 		\texttt{url} & Url \\
-		\hline
 		\texttt{lbl} & Labels \\
-		\hline
 		\texttt{acpi} & Access control policy IDs \\
-		\hline
 		\texttt{daci} & Dynamic authorization consultation IDs \\
-		\hline
 		\texttt{poa} & Point of access \\
-		\hline
 		\texttt{srt} & Serialization time \\
-		\hline
 		\texttt{blob} & Blob \\
-		\hline
 		\texttt{cbs} & Current byte size \\
-		\hline
 		\texttt{cni} & Current number of instances \\
-		\hline
 		\texttt{mbs} & Maximum byte size \\
-		\hline
 		\texttt{mni} & Current number of instances \\
-		\hline
 		\texttt{st} & State tag \\
-		\hline
 		\texttt{cnf} & Content info \\
-		\hline
 		\texttt{cs} & Content size \\
-		\hline
 		\texttt{con} & Content \\
-		\hline
 		\texttt{nu} & Notification URI \\
-		\hline
 		\texttt{enc} & Event notification criteria \\
 		\hline
 	\end{tabular}
@@ -409,61 +381,33 @@ To optimize read operations and streamline data retrieval, we have introduced a 
     \textbf{Column Name} & \textbf{Type} & \textbf{Reference} \\
     \hline \hline
     \texttt{ty} & INTEGER & - \\
-    \hline
     \texttt{ri} & TEXT & PRIMARY KEY \\
-    \hline
     \texttt{rn} & TEXT & - \\
-    \hline
     \texttt{pi} & TEXT & REFERENCES mtc(ri) ON DELETE CASCADE \\
-    \hline
     \texttt{aei} & TEXT & - \\
-    \hline
     \texttt{csi} & TEXT & - \\
-    \hline
     \texttt{cst} & INTEGER & - \\
-    \hline
     \texttt{api} & TEXT & - \\
-    \hline
     \texttt{rr} & TEXT & - \\
-    \hline
     \texttt{et} & DATETIME & - \\
-    \hline
     \texttt{ct} & DATETIME & - \\
-    \hline
     \texttt{lt} & DATETIME & - \\
-    \hline
     \texttt{url} & TEXT & - \\
-    \hline
     \texttt{lbl} & TEXT & - \\
-    \hline
     \texttt{acpi} & TEXT & - \\
-    \hline
     \texttt{daci} & TEXT & - \\
-    \hline
     \texttt{poa} & TEXT & - \\
-    \hline
     \texttt{srt} & TEXT & - \\
-    \hline
     \texttt{blob} & TEXT & - \\
-    \hline
     \texttt{cbs} & INTEGER & - \\
-    \hline
     \texttt{cni} & INTEGER & - \\
-    \hline
     \texttt{mbs} & INTEGER & - \\
-    \hline
     \texttt{mni} & INTEGER & - \\
-    \hline
     \texttt{st} & INTEGER & - \\
-    \hline
     \texttt{cnf} & TEXT & - \\
-    \hline
     \texttt{cs} & INTEGER & - \\
-    \hline
     \texttt{con} & TEXT & - \\
-    \hline
     \texttt{nu} & TEXT & - \\
-    \hline
     \texttt{enc} & TEXT & - \\
     \hline
 \end{tabular}
@@ -942,7 +886,7 @@ Our tests yielded several noteworthy outcomes. The implementation of the TinyOne
 
 The solution showcased impressive scalability, exhibiting consistent performance even with an increasing number of connected devices and growing data traffic. This scalability is vital for accommodating the expanding  \gls{iot} landscape, ensuring the system's ability to handle large-scale deployments and accommodate future growth.  This solution has potential for enterprises looking for effective management of their \gls{iot} ecosystems as \gls{iot} continues to develop and grow.
 
-Overall, TinyOneM2M's architecture offers a reliable and \textcolor{red}{effective} mechanism for putting the OneM2M standard into  \gls{iot} contexts. It allows for seamless communication and data management in  \gls{iot} applications by providing flexibility, scalability, and ease of integration into diverse scenarios. The TinyOneM2M solution we implemented shows a strong foundation and significant advancement towards the OneM2M standard. Platform independence, performance, and resource coverage can all be further improved and enhanced.
+Overall, TinyOneM2M's architecture offers a reliable and effective mechanism for putting the OneM2M standard into  \gls{iot} contexts. It allows for seamless communication and data management in  \gls{iot} applications by providing flexibility, scalability, and ease of integration into diverse scenarios. The TinyOneM2M solution we implemented shows a strong foundation and significant advancement towards the OneM2M standard. Platform independence, performance, and resource coverage can all be further improved and enhanced.
 
 Future endeavours encompass various areas where our implementation of OneM2M can be further refined and enhanced. Currently, there is no validation to ensure that the content of the request body is a \gls{json}, therefore potentially leading to erroneous or inconsistent data in the requests. To fix this issue it's mandatory to ensure that the request contains a \gls{json} object as the request body type. 
 
