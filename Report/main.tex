@@ -97,6 +97,7 @@
 \newacronym{cse}{CSE}{Common Services Entity}
 \newacronym{ram}{RAM}{Random Access Memory}
 \newacronym{json}{JSON}{JavaScript Object Notation}
+\newacronym{wal}{WAL}{write-ahead logging}
 \makeglossaries
 % -------------------------------------------------------------------
 \usepackage[utf8]{inputenc} % The default since 2018
@@ -157,7 +158,7 @@ orcid=0009-0002-4169-7644]
 %\end{highlights}
 
 \begin{keywords}
-Internet of Things \sep OneM2M \sep Scalability \sep 
+Internet of Things \sep OneM2M \sep Low-Level Implementation \sep Resource-oriented \sep Cross-platform 
 \end{keywords}
 
 
@@ -531,7 +532,7 @@ The initial architecture of our database comprised two tables: one for single-va
 
 While SQLite3 serves our current needs effectively, we are mindful of potential limitations. Alternative embedded database solutions like MySQL or PostgreSQL could prove beneficial under specific conditions such as high concurrency or heightened system requirements. One area for potential enhancement within SQLite3 is the use of cache mode, leveraging RAM for faster operations \footnote{\url{https://www.sqlite.org/inmemorydb.html}}. However, this approach can pose challenges with memory blocking in a multi-threaded environment and requires careful handling \cite{Jula2019}.
 
-For future development, a detailed analysis of SQLite3 database operations could identify potential optimizations at the attribute level, possibly using the PRAGMA operator. Transactional behavior could also be improved by exploring write-ahead logging (WAL) to enhance concurrency. Particularly in a multi-threaded environment, concurrent reads and writes can be significantly optimized with WAL, providing a valuable addition to our implementation \cite{}.
+For future development, a detailed analysis of SQLite3 database operations could identify potential optimizations at the attribute level, possibly using the PRAGMA operator. Transactional behavior could also be improved by exploring \gls{wal} to enhance concurrency. Particularly in a multi-threaded environment, concurrent reads and writes can be significantly optimized with \gls{wal}, providing a valuable addition to our implementation \cite{kim_atomic_2017}.
 
 \subsection{Notifications}
 
@@ -891,7 +892,7 @@ During the implementation process, ensuring compatibility with Windows systems p
 
 Moreover, given the extensive scope of the OneM2M standard, numerous resources have not yet been developed. Currently, only a partial implementation of the CSE\_Base, \gls{ae}, \gls{cnt}, \gls{cin}, and \gls{sub} resources has been accomplished. Therefore, a vital area for future work is to complete the implementation of the standard, ensuring that all the resources outlined in the OneM2M standard are fully developed. This undertaking is crucial to provide a more comprehensive and feature-rich implementation of OneM2M, enabling a broader range of functionalities and accommodating a wider array of use cases.
 
-Lastly, TinyOneM2M is currently at the margin of having concurrency problems in a multi-threaded environment. Therefore, it would be advantageous to improve the transactional behaviour with write-ahead logging (WAL) or other techniques to enhance concurrency. Additionally, our system could also be optimized at a database attribute level by performing deep analysis and study of the SQLite3 database operations and available operators such as PRAGMA.
+Lastly, TinyOneM2M is currently at the margin of having concurrency problems in a multi-threaded environment. Therefore, it would be advantageous to improve the transactional behaviour with \gls{wal} or other techniques to enhance concurrency. Additionally, our system could also be optimized at a database attribute level by performing deep analysis and study of the SQLite3 database operations and available operators such as PRAGMA.
 
 Overall, these future enhancements will further solidify our implementation and ensure its effectiveness in the \gls{iot} ecosystem.
 
