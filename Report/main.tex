@@ -335,61 +335,33 @@ To optimize read operations and streamline data retrieval, we have introduced a 
 		\textbf{Attribute Abbreviation} & \textbf{Attribute Designation} \\
 		\hline \hline
 		\texttt{ty} & Resource type \\
-		\hline
 		\texttt{ri} & Resource identifier \\
-		\hline
 		\texttt{rn} & Resource name \\
-		\hline
 		\texttt{pi} & Parent identifier \\
-		\hline
 		\texttt{aei} & \gls{ae} identifier \\
-		\hline
 		\texttt{csi} & \gls{cse} identifier \\
-		\hline
 		\texttt{cst} & \gls{cse} type \\
-		\hline
 		\texttt{api} & App identifier \\
-		\hline
 		\texttt{rr} & Request reachability \\
-		\hline
 		\texttt{et} & Expiration time \\
-		\hline
 		\texttt{ct} & Creation time \\
-		\hline
 		\texttt{lt} & Last modified time \\
-		\hline
 		\texttt{url} & Url \\
-		\hline
 		\texttt{lbl} & Labels \\
-		\hline
 		\texttt{acpi} & Access control policy IDs \\
-		\hline
 		\texttt{daci} & Dynamic authorization consultation IDs \\
-		\hline
 		\texttt{poa} & Point of access \\
-		\hline
 		\texttt{srt} & Serialization time \\
-		\hline
 		\texttt{blob} & Blob \\
-		\hline
 		\texttt{cbs} & Current byte size \\
-		\hline
 		\texttt{cni} & Current number of instances \\
-		\hline
 		\texttt{mbs} & Maximum byte size \\
-		\hline
 		\texttt{mni} & Current number of instances \\
-		\hline
 		\texttt{st} & State tag \\
-		\hline
 		\texttt{cnf} & Content info \\
-		\hline
 		\texttt{cs} & Content size \\
-		\hline
 		\texttt{con} & Content \\
-		\hline
 		\texttt{nu} & Notification URI \\
-		\hline
 		\texttt{enc} & Event notification criteria \\
 		\hline
 	\end{tabular}
@@ -404,61 +376,33 @@ To optimize read operations and streamline data retrieval, we have introduced a 
     \textbf{Column Name} & \textbf{Type} & \textbf{Reference} \\
     \hline \hline
     \texttt{ty} & INTEGER & - \\
-    \hline
     \texttt{ri} & TEXT & PRIMARY KEY \\
-    \hline
     \texttt{rn} & TEXT & - \\
-    \hline
     \texttt{pi} & TEXT & REFERENCES mtc(ri) ON DELETE CASCADE \\
-    \hline
     \texttt{aei} & TEXT & - \\
-    \hline
     \texttt{csi} & TEXT & - \\
-    \hline
     \texttt{cst} & INTEGER & - \\
-    \hline
     \texttt{api} & TEXT & - \\
-    \hline
     \texttt{rr} & TEXT & - \\
-    \hline
     \texttt{et} & DATETIME & - \\
-    \hline
     \texttt{ct} & DATETIME & - \\
-    \hline
     \texttt{lt} & DATETIME & - \\
-    \hline
     \texttt{url} & TEXT & - \\
-    \hline
     \texttt{lbl} & TEXT & - \\
-    \hline
     \texttt{acpi} & TEXT & - \\
-    \hline
     \texttt{daci} & TEXT & - \\
-    \hline
     \texttt{poa} & TEXT & - \\
-    \hline
     \texttt{srt} & TEXT & - \\
-    \hline
     \texttt{blob} & TEXT & - \\
-    \hline
     \texttt{cbs} & INTEGER & - \\
-    \hline
     \texttt{cni} & INTEGER & - \\
-    \hline
     \texttt{mbs} & INTEGER & - \\
-    \hline
     \texttt{mni} & INTEGER & - \\
-    \hline
     \texttt{st} & INTEGER & - \\
-    \hline
     \texttt{cnf} & TEXT & - \\
-    \hline
     \texttt{cs} & INTEGER & - \\
-    \hline
     \texttt{con} & TEXT & - \\
-    \hline
     \texttt{nu} & TEXT & - \\
-    \hline
     \texttt{enc} & TEXT & - \\
     \hline
 \end{tabular}

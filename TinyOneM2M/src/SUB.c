@@ -295,9 +295,9 @@ char create_sub(SUBStruct * sub, cJSON *content, char** response) {
             // Append the original body
             strcat(wrapped_body, data->body);
             // Append the topic
-            strcat(wrapped_body, "\",\"nfu\":null,\"sud\":null,\"sur\":\"");
+            strcat(wrapped_body, ",\"nfu\":null,\"sud\":null,\"sur\":\"");
             strcat(wrapped_body, data->topic);
-            strcat(wrapped_body, "\",\"vrq\":null");
+            strcat(wrapped_body, "\",\"vrq\":null}");
             // Append the suffix
             strcat(wrapped_body, suffix);
 
@@ -699,9 +699,9 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
             // Append the original body
             strcat(wrapped_body, data->body);
             // Append the topic
-            strcat(wrapped_body, "\",\"nfu\":null,\"sud\":null,\"sur\":\"");
+            strcat(wrapped_body, ",\"nfu\":null,\"sud\":null,\"sur\":\"");
             strcat(wrapped_body, data->topic);
-            strcat(wrapped_body, "\",\"vrq\":null");
+            strcat(wrapped_body, "\",\"vrq\":null}");
             // Append the suffix
             strcat(wrapped_body, suffix);
 
@@ -851,9 +851,9 @@ char get_sub(struct Route* destination, char** response){
                 // Append the original body
                 strcat(wrapped_body, data->body);
                 // Append the topic
-                strcat(wrapped_body, "\",\"nfu\":null,\"sud\":null,\"sur\":\"");
+                strcat(wrapped_body, ",\"nfu\":null,\"sud\":null,\"sur\":\"");
                 strcat(wrapped_body, data->topic);
-                strcat(wrapped_body, "\",\"vrq\":null");
+                strcat(wrapped_body, "\",\"vrq\":null}");
                 // Append the suffix
                 strcat(wrapped_body, suffix);
 

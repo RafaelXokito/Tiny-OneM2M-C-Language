@@ -1670,9 +1670,9 @@ char delete_resource(struct Route * destination, char **response) {
             // Append the original body
             strcat(wrapped_body, data->body);
             // Append the topic
-            strcat(wrapped_body, "\",\"nfu\":null,\"sud\":null,\"sur\":\"");
+            strcat(wrapped_body, ",\"nfu\":null,\"sud\":null,\"sur\":\"");
             strcat(wrapped_body, data->topic);
-            strcat(wrapped_body, "\",\"vrq\":null");
+            strcat(wrapped_body, "\",\"vrq\":null}");
             // Append the suffix
             strcat(wrapped_body, suffix);
 
