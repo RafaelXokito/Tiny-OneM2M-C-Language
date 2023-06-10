@@ -74,7 +74,7 @@
 \newacronym{ap}{AP}{Access Points}
 \newacronym{rsus}{RSUs}{Roadside Units}
 \newacronym{qos}{QoS}{Quality of Service}
-\newacronym{ccas}{CCAS}{Cluster-based Congestion-mitigating Access Scheme}
+\newacronym{ccas}{CCAS}{Cluster-based Congestion-miti\-gating Access Scheme}
 \newacronym{mtcds}{MTCDs}{Machine-type Communication Devices}
 \newacronym{mtcd}{MTCD}{Machine-type Communication Device}
 \newacronym{bs}{BS}{Base Station}
@@ -101,6 +101,7 @@
 % -------------------------------------------------------------------
 \usepackage[utf8]{inputenc} % The default since 2018
 \DeclareUnicodeCharacter{200B}{{\hskip 0pt}}
+
 % -------------------------------------------------------------------
 \begin{document}
 \let\WriteBookmarks\relax
@@ -167,9 +168,9 @@ Internet of Things \sep OneM2M \sep Scalability \sep
 
 The \gls{iot} encompasses a vast network of diverse entities, including tags, sensors, embedded devices, handheld devices, and backend servers. It enables the development of novel services and applications across various domains such as civil transportation, electric power grids, medical treatment, and industrial and home automation \cite{kim_m2m_2014}. 
 
-\gls{m2m} denotes technologies that enable communication and networking of different devices and is a part of the field of \gls{iot}. While the \gls{iot} focuses on the interconnection of physical objects and their interaction with humans, the \gls{m2m} system focus towards seamless connectivity. It involves automated systems where devices autonomously gather data (e.g., temperature, humidity, speed, position, heartbeat) from remote sources, exchange information, and execute actions based on control messages. These operations generally occur without or with minimal human intervention, utilizing public network infrastructures. Consequently, the \gls{m2m} system plays a crucial role in realizing the full potential of the \gls{iot} \cite{kim_m2m_2014}, \cite{lawton_machine_2004}, \cite{pticek_architecture_2015}.
+\gls{m2m} denotes technologies that enable communication and networking of different devices and is a part of the field of \gls{iot}. While the \gls{iot} focuses on the interconnection of physical objects and their interaction with humans, the \gls{m2m} system focus towards seamless connectivity. It involves automated systems where devices autonomously gather data (e.g., temperature, humidity, speed, position, heartbeat) from remote sources, exchange information, and execute actions based on control messages. These operations generally occur without or with minimal human intervention, utilizing public network infrastructures. Consequently, the \gls{m2m} system plays a crucial role in realizing the full potential of the \gls{iot} \cite{kim_m2m_2014, lawton_machine_2004, pticek_architecture_2015}.
 
-\gls{m2m} systems are typically characterized by their heterogeneity, lack of structure, and loose integration, achieved through standardized communication technologies. These technologies include WiFi, Zigbee, Ethernet, and power line communications, among others. By leveraging standardized technologies, \gls{m2m} systems enable seamless interoperability among devices and simplify mass-produced, standards-compliant equipment. This approach contributes to cost-effective implementations, reducing expenses associated with system development and deployment \cite{lawton_machine_2004}, \cite{cao_survey_2016}.
+\gls{m2m} systems are typically characterized by their heterogeneity, lack of structure, and loose integration, achieved through standardized communication technologies. These technologies include WiFi, Zigbee, Ethernet, and power line communications, among others. By leveraging standardized technologies, \gls{m2m} systems enable seamless interoperability among devices and simplify mass-produced, standards-compliant equipment. This approach contributes to cost-effective implementations, reducing expenses associated with system development and deployment \cite{lawton_machine_2004, cao_survey_2016}.
 
 The rapid expansion of \gls{m2m} technologies has compelled various standardization bodies, such as the \gls{etsi}, to establish \gls{m2m} standards, resulting in the emergence of multiple standards (e.g \gls{etsi} \gls{m2m} and OneM2M). Consequently, the OneM2M initiative was established to develop a unified global specification and standard for \gls{m2m} communication \cite{pticek_architecture_2015}.
 
@@ -188,7 +189,7 @@ OneM2M provides a standardized framework and protocols to enable interoperabilit
 
 Rubi et al. \cite{Rubi2019} propose an \gls{iomt} platform with a cloud-based electronic health system that collects data from various sources and relays it through gateways or fog servers. The platform enables data management, visualization of electronic records, and knowledge extraction through big data processing, machine learning, and online analytics processing. Additionally, it offers data sharing services for third-party applications, improving healthcare services and interoperability.
 
-The authors in \cite{Volkov2017} conducted \gls{iotdm} service testing for smart city management, focusing on the ecological situation in Saint-Petersburg's central district, using an \gls{sdn} network infrastructure. They developed a hierarchical model and \gls{iot} traffic generator in compliance with oneM2M specifications and implemented \gls{http}, \gls{coap}, and \gls{mqtt} protocols. Their findings suggested that \gls{http} is the most suitable protocol for registering \gls{iot} devices to the \gls{iotdm} service, while \gls{mqtt} is optimal for transmitting sensor data. The authors concluded that the \gls{sdn} approach significantly reduces the \gls{rtt} parameter, demonstrating its potential in managing \gls{iot} traffic in smart city environments.
+The authors in \cite{Volkov2017} conducted \gls{iotdm} service testing for smart city management, focusing on the ecological situation in Saint-Peters\-burg's central district, using an \gls{sdn} network infrastructure. They developed a hierarchical model and \gls{iot} traffic generator in compliance with oneM2M specifications and implemented \gls{http}, \gls{coap}, and \gls{mqtt} protocols. Their findings suggested that \gls{http} is the most suitable protocol for registering \gls{iot} devices to the \gls{iotdm} service, while \gls{mqtt} is optimal for transmitting sensor data. The authors concluded that the \gls{sdn} approach significantly reduces the \gls{rtt} parameter, demonstrating its potential in managing \gls{iot} traffic in smart city environments.
 
 Soumya et al. \cite{Datta2015} explore Fog Computing as a consumer-centric \gls{iot} service deployment platform, particularly for connected vehicles and intelligent transportation systems requiring low latency, high mobility, real-time data analytics, and wide geographic coverage. They present an \gls{iot} architecture for connected vehicles, integrating Fog Computing platforms into oneM2M standard architecture. The architecture comprises virtual sensing zones, \gls{ap}, \gls{rsus}, \gls{m2m} gateways, and cloud systems. Fog Computing enables consumer-centric services such as \gls{m2m} data analytics with semantics, discovery of \gls{iot} services, and management of connected vehicles. The paper highlights the advantages of Fog Computing, including reduced latency, improved \gls{qos}, real-time data analysis, and actuation for superior user experience and consumer-centric \gls{iot} products.
 
@@ -525,7 +526,7 @@ The architecture of our TinyOneM2M solution employs an Embedded Single File Data
 
 For our database management system, we selected SQLite3 \footnote{\url{https://www.sqlite.org/cintro.html}}, an established file-based database known for its performance and simplicity. We integrated the SQLite3 library, specifically version 3.41.1, as source code into our architecture, thereby ensuring broad compatibility across different operating systems. This choice aligns well with our commitment to a platform-independent solution.
 
-SQLite3's incorporation offers numerous advantages, aligning perfectly with our solution's design principles. It is lightweight, efficient, and enables swift database operations with minimal resource usage. Its ease in executing queries contributes directly to our system's responsiveness and performance.
+SQLite3's incorporation offers numerous advantages, aligning perfectly with our solution's design principles. It is light\-weight, efficient, and enables swift database operations with minimal resource usage. Its ease in executing queries contributes directly to our system's responsiveness and performance.
 
 The initial architecture of our database comprised two tables: one for single-valued attributes and another for multi-valued attributes, such as labels and points of access. This design aimed to maintain the structure and initial order of these attributes. However, this approach posed performance challenges during database operations, prompting us to shift towards a denormalized, single-table design to enhance performance. Section \ref{sec:normalizationvsdenormalization} provides a detailed comparison of operations on normalized versus denormalized databases.
 
@@ -653,7 +654,7 @@ To execute the tests, we employed a Python script directly on the SQLite3 databa
 \Procedure{[Insert/Select/Update/Delete]Data}{conn, table, depth}
     \State $\text{start time}$
     \For{$i=1$ to $\text{depth}$}
-        \State $\text{execute SQL to [Insert/Select/Update/Delete] data in table with hierarchy depth i}$
+        \State $\text{exec SQL to [Insert/Select/Update/Delete] in table with hierarchy depth i}$
     \EndFor
     \State $\text{end time}$
     \State $\text{calculate and print time difference divided by depth}$
@@ -661,7 +662,7 @@ To execute the tests, we employed a Python script directly on the SQLite3 databa
 \\
 \Procedure{ComparePerformance}{}
     \State $\text{conn} \gets \text{open database connection}$
-    \State $\text{tables} \gets \text{[OneM2M\_Denorm, CSE\_Base\_Norm, AE\_Norm, CNT\_Norm, SUB\_Norm]}$
+    \State $\text{tables} \gets \text{[Denorm, CSE\_Base\_Norm, AE\_Norm, CNT\_Norm, SUB\_Norm]}$
     \State $\text{depth} \gets \text{15}$
     \State $\text{CreateDenormalizedTables(conn)}$
     \State $\text{CreateNormalizedTables(conn)}$
