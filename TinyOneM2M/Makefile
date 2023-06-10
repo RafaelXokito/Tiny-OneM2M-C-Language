@@ -19,3 +19,4 @@ $(exec): $(objects)
 
 clean:
 	-rm src/*.o
+	-rm ./*.o

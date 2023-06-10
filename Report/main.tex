@@ -278,13 +278,9 @@ The \gls{rest} Webservice module in TinyOneM2M functions as the system's primary
 
 The types of \gls{http} request that are supported by TinyOneM2M are primarily structured around \gls{crud} operations for various resources. These operations pertain to different resources identified by OneM2M standards, including \gls{ae}, \gls{cnt}, \gls{cin}, \gls{sub} resources.
 
-For \gls{aes}, users can perform different actions on \glspl{ae} using specific \gls{http} requests. They can create a new \gls{ae} by sending a POST request, retrieve the details of an \gls{ae} using a GET request, update an \gls{ae} using a PUT request, and remove an \gls{ae} by issuing a DELETE request. These requests are sent to a specific URL structure, targeting the \gls{cse} and the \texttt{AE\_ResourceName}.
+For \gls{aes}, \gls{cnts}, \gls{subs}, users can perform different actions on the resource with the corresponding \gls{http} requests. These requests are sent to a specific URL structure, with a specific payload specified by the OneM2M standard. The \gls{cin} resource only allows Create, Read, and Delete operations.
 
-For \gls{cins}, the operations mirror those for \gls{aes} but are extended with an additional URL parameter to specify the \gls{cin}. These operations thus allow users to create, retrieve, and delete \gls{cins} within a specific \gls{ae} and \gls{cnt} resource.
-
-Similarly, \gls{sub} resources can be managed with POST, GET, PUT, and DELETE requests. These requests target a specific \texttt{SUB\_ResourceName} within a specified \gls{cse}, \texttt{AE\_ResourceName}, and \texttt{CNT\_ResourceName}.
-
-The system also provides functionality to retrieve the root resource information with a specific GET request and perform discovery operations. The discovery operation uses a GET request with query parameters to filter resources based on their type and labels. These operations can be used to retrieve general or specific information about the resources available in the system.
+The system also provides functionality to retrieve the \gls{cse} (root) resource information with a specific GET request. It's allowed to perform a discovery operation using GET request with query parameters to filter resources based on their type, labels, and many other attributes. These operations can be used to retrieve general or specific information about the resources available in the system.
 
 \subsubsection{Response Processor} \label{sec:archresponseprocessor}
 
@@ -317,9 +313,9 @@ The \gls{cin} resource, residing under a \gls{cnt}, encapsulates the actual data
 
 The TinyOneM2M system relies on an embedded single-file database for optimized data storage and retrieval. This format offers high efficiency due to its low overhead and quick access time. The system employs a denormalized structure in certain areas, an approach commonly used in database design to improve performance, even at the expense of data redundancy.
 
-In this setup, there is one main table named \texttt{mtc}. This table, which Table \ref{tab:database} provides a representation of the \gls{mtc} table's structure, in \ref{tab:database} is a combination of multiple entity types in the TinyOneM2M hierarchy, such as \gls{ae}, \gls{cin} and \gls{sub}. The attributes of these entities are represented as columns in the \texttt{mtc} table using their abbreviations.
+In this setup, there is one main table named \texttt{mtc}, which is represented in Table \ref{tab:database}. It is a combination of multiple entity types in the TinyOneM2M hierarchy, such as \gls{cse}, \gls{ae}, \gls{cnt}, \gls{cin}, and \gls{sub}. The attributes of these entities are represented as columns in the \texttt{mtc} table using their abbreviations.
 
-Looking deeper into the table structure, the \texttt{ri} column serves as the primary key, providing unique identification for each record. It establishes relations with the \texttt{pi} column, which refers to the \texttt{ri} of the parent record. This sets up a hierarchical relationship between records, which mirrors the resource hierarchy in the TinyOneM2M system.
+Looking deeper into the table structure, the \texttt{ri} column serves as the primary key, providing unique identification for each record. It establishes relations with the \texttt{pi} column, which refers to the \texttt{ri} of the parent record. This sets up a hierarchical relationship between records addressing the resource hierarchy from OneM2M standard.
 
 The table also includes specific columns for different resource attributes. For example, \texttt{ty}, \texttt{rn}, and \texttt{et}. It also stores specific attributes for \gls{ae} like \texttt{aei}, for \gls{sub} like \texttt{nu} and \texttt{enc}, and for \gls{cin} like \texttt{con} and \texttt{cnf}.
 
@@ -715,20 +711,20 @@ From these results, we observe that the denormalized structure was more efficien
 
 \subsection{Assessing the Efficiency of Meeting Expiration Time Attribute Objectives in Database Queries on Performance}
 
-In this part of our study, we focus on assessing the efficiency of meeting the 'expiration time' attribute objectives in database queries on performance. This test was carried out on Machine 1 shown in Table \ref{tab:machinesSpecs}, using Python version 3.9.10 and SQLite3 version 3.37.0.
+In this part of our study, we focus on assessing the efficiency of meeting the expiration time attribute objectives in database queries on performance. This test was carried out on Machine 1 shown in Table \ref{tab:machinesSpecs}, using Python version 3.9.10 and SQLite3 version 3.37.0.
 
-The OneM2M standard can be strictly followed in certain environments, but this can sometimes lead to a degradation of system performance. A common cause for this is the inclusion of the 'expiration time' attribute and the associated logic. It's worth noting that our implementation does not delete records for which the expiration time has already passed. However, there are a couple of other possible approaches to this situation:
+The OneM2M standard can be strictly followed in certain environments, but this can sometimes lead to a degradation of system performance. A common cause for this is the inclusion of the expiration time attribute and the associated logic. It's worth noting that our implementation does not delete records for which the expiration time has already passed. However, there are a couple of other possible approaches to this situation:
 
 \begin{enumerate}
     \item \textit{On-demand Record Deletion:} All requests use the current context to search for records whose "expiration time" field has already passed and deletes them. This method adds complexity to each request, potentially impacting performance and increasing the likelihood of implementation errors.
     \item \textit{Periodic Expiration Check:} A thread is created that remains active indefinitely, checking every X time if there are fields with an exceeded "expiration time". This approach can lead to additional resource consumption and potential race conditions, making it less ideal than the first approach.
 \end{enumerate}
 
-For our test, we considered three scenarios: no implementation of the 'expiration time' attribute, implementation of the attribute without indexing, and implementation of the attribute with indexing. We chose these scenarios to demonstrate how much the presence of 'expiration time' attribute can impact the implementation, even when the attribute is indexed. We understand that there are many other ways to optimize the database statements with the presence of 'expiration time'. For instance, one could consider the use of partitioning or sharding based on expiration times \cite{Vaidya2002}, where data is logically divided into subsets based on the 'expiration time' value, thus potentially reducing the query scope and improving performance. Another could be techniques such as caching frequently accessed or recently accessed data could also be employed to improve performance \cite{Mao2012, Xing2008}. It is, however, important to note that these strategies come with their own trade-offs and complexities and should be carefully considered based on the specific requirements and constraints of the system.
+For our test, we considered three scenarios: no implementation of the expiration time attribute, implementation of the attribute without indexing, and implementation of the attribute with indexing. We chose these scenarios to demonstrate how much the presence of expiration time attribute can impact the implementation, even when the attribute is indexed. We understand that there are many other ways to optimize the database statements with the presence of expiration time. For instance, one could consider the use of partitioning or sharding based on expiration times \cite{Vaidya2002}, where data is logically divided into subsets based on the expiration time value, thus potentially reducing the query scope and improving performance. Another could be techniques such as caching frequently accessed or recently accessed data could also be employed to improve performance \cite{Mao2012, Xing2008}. It is, however, important to note that these strategies come with their own trade-offs and complexities and should be carefully considered based on the specific requirements and constraints of the system.
 
 A Python script was implemented to perform this test. The script created the following tables: \texttt{OneM2M\_NoET},\newline \texttt{OneM2M\_NonIndexedET}, and \texttt{OneM2M\_IndexedET}. Each table underwent 10\,000 operations of each type (Create, Read, Update, and Delete).
 
-As shown in Figure \ref{fig:tableDiagram}, \texttt{OneM2M\_NoET} table does not implement the 'expiration time' attribute, \texttt{OneM2M\_NonIndexedET} implements it without indexing, and \texttt{OneM2M\_IndexedET} implements it with indexing. Indexing the 'expiration time' attribute can improve search times when looking for records with specific expiration times, but it also adds additional overhead when inserting or updating records, as the index needs to be updated as well.
+As shown in Figure \ref{fig:tableDiagram}, \texttt{OneM2M\_NoET} table does not implement the expiration time attribute, \texttt{OneM2M\_NonIndexedET} implements it without indexing, and \texttt{OneM2M\_IndexedET} implements it with indexing. Indexing the expiration time attribute can improve search times when looking for records with specific expiration times, but it also adds additional overhead when inserting or updating records, as the index needs to be updated as well.
 
 \begin{figure}[h]
 \centering
@@ -737,12 +733,12 @@ As shown in Figure \ref{fig:tableDiagram}, \texttt{OneM2M\_NoET} table does not 
 \label{fig:tableDiagram}
 \end{figure}
 
-Our results shown in Table \ref{tab:ExpirationTime} indicates that the inclusion of the 'expiration time' attribute and its indexing can degrade performance in SQLite3 database operations. Notably, the UPDATE operation was significantly slower when we considered 'expiration time', especially for the Indexed scenario. This is likely due to the overhead of maintaining the index. Similarly, for both the CREATE and DELETE operations, the presence of 'expiration time' attribute, and more so its indexing, resulted in slower operation times. These results highlight the importance of understanding the trade-offs between adhering to standards like OneM2M and the performance requirements of specific applications.
+Our results shown in Table \ref{tab:ExpirationTime} indicates that the inclusion of the expiration time attribute and its indexing can degrade performance in SQLite3 database operations. Notably, the UPDATE operation was significantly slower when we considered expiration time, especially for the Indexed scenario. This is likely due to the overhead of maintaining the index. Similarly, for both the CREATE and DELETE operations, the presence of expiration time attribute, and more so its indexing, resulted in slower operation times. These results highlight the importance of understanding the trade-offs between adhering to standards like OneM2M and the performance requirements of specific applications.
 
 \begin{table*}[h]
 \scriptsize
 \centering
-\caption{Results from the 'Expiration Time' test}
+\caption{Results from the expiration time test}
 \label{tab:ExpirationTime}
 \begin{tabular}{l p{2cm} p{2cm} p{2cm} p{2cm}}
 \hline
@@ -887,6 +883,8 @@ During the implementation process, ensuring compatibility with Windows systems p
 Moreover, given the extensive scope of the OneM2M standard, numerous resources have not yet been developed. Currently, only a partial implementation of the \gls{cse}, \gls{ae}, \gls{cnt}, \gls{cin}, and \gls{sub} resources has been accomplished. Therefore, a vital area for future work is to complete the implementation of the standard, ensuring that all the resources outlined in the OneM2M standard are fully developed. This undertaking is crucial to provide a more comprehensive and feature-rich implementation of OneM2M, enabling a broader range of functionalities and accommodating a wider array of use cases.
 
 TinyOneM2M is currently at the margin of having concurrency problems in a multi-threaded environment. Therefore, it would be advantageous to improve the transactional behaviour with \gls{wal} or other techniques to enhance concurrency. Additionally, our system could also be optimized at a database attribute level by performing deep analysis and study of the SQLite3 database operations and available operators such as PRAGMA.
+
+Furthermore, another proposed area for future work is to conduct tests utilizing the various scenarios outlined in Section \ref{architecture}.
 
 Lastly, it would be highly beneficial to compare TinyOneM2M not only against OpenMTC but also against other prominent implementations such as Eclipse OneM2M and InterDigital \cite{M2M2015}.
 
