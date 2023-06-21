@@ -27,7 +27,16 @@ count=0
 # Perform CRUD operations and store timings in CSV files
 while [ $count -lt 200 ]; do
     # POST
-    time=$(curl -X POST "http://192.168.1.86:8000/onem2m/AE-3/cntTestrr" -H "Content-Type: application/vnd.onem2m-res+json" -d "{\"m2m:cin\": {\"cnf\": \"application/json\",\"con\": \"{'temperature':27,'timestamp':1517912099}\",\"lbl\": [\"temperature\",\"xpto2\"]}}" -w "%{time_total}" -o /dev/null)
+    time=$(curl --location --request POST 'http://10.79.12.208:8000/onem2m/lightbulb/state' \
+--header 'X-M2M-Origin: admin:admin' \
+--header 'Content-Type: application/json;ty=23' \
+--data-raw '{
+    "m2m:sub": {
+        "nu":   ["mqtt://10.79.12.253:1883"],
+        "enc":  "DELETE"
+    }
+}
+' -w "%{time_total}" -o /dev/null)
     echo "$time" >> "$post_times"
 
     count=$((count+1))

@@ -8,6 +8,10 @@
  */
 
 #include "Utils.h"
+#include "mqtt.h"
+#include "mongoose.h"
+#include <pthread.h>
+#include "posix_sockets.h"
 
 extern int DAYS_PLUS_ET;
 extern int PORT;
@@ -208,7 +212,9 @@ void* send_notification(void* arg) {
         if (is_valid_url(item_string)) {
             printf("Item string: '%s'\n", item_string);
             if (strncmp(item_string, "mqtt://", 7) == 0) {
-                mqtt_publish(item_string, topic, body);
+                // mqtt_publish(item_string, topic, body);
+                // From mqtt.c
+                mqtt_publish_message(item_string, topic, body);
             } else if ((strncmp(item_string, "http://", 7) == 0) || strncmp(item_string, "https://", 8) == 0) {
                 send_http_request(item_string, topic, body);
             }
@@ -256,38 +262,133 @@ void fn_http(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
   (void) fn_data;
 }
 
-void mqtt_publish(const char* url, const char* topic, const char* message) {
-    struct mg_mgr mgr;
-    struct mg_connection* conn;
-    is_mqtt_connected = 0;
+// void mqtt_publish(const char* url, const char* topic, const char* message) {
+//     struct mg_mgr mgr;
+//     struct mg_connection* conn;
+//     is_mqtt_connected = 0;
 
-    mg_mgr_init(&mgr);
+//     mg_mgr_init(&mgr);
     
-    // Create a connection
-    conn = mg_mqtt_connect(&mgr, url, NULL, fn_mqtt, NULL);
-    if (conn == NULL) {
-        printf("Failed to create MQTT connection.\n");
-        return;
+//     // Create a connection
+//     conn = mg_mqtt_connect(&mgr, url, NULL, fn_mqtt, NULL);
+//     if (conn == NULL) {
+//         printf("Failed to create MQTT connection.\n");
+//         return;
+//     }
+    
+//     // Wait for the MQTT connection to be ready
+//     while (!is_mqtt_connected) {
+//         mg_mgr_poll(&mgr, 1000);
+//     }
+    
+//     // Publish the message
+//     struct mg_mqtt_opts pub_opts;
+//     memset(&pub_opts, 0, sizeof(pub_opts));
+//     pub_opts.topic = mg_str(topic);
+//     pub_opts.message = mg_str(message);
+//     pub_opts.qos = 0;
+//     pub_opts.retain = false;
+//     mg_mqtt_pub(conn, &pub_opts);
+    
+//     // Wait for a bit to ensure the message is sent
+//     mg_mgr_poll(&mgr, 1000);
+    
+//     mg_mgr_free(&mgr);
+// }
+
+// from mqtt.c example
+void publish_callback(void** unused, struct mqtt_response_publish *published)
+{
+    /* not used in this example */
+}
+
+void* client_refresher(void* client)
+{
+    while(1)
+    {
+        mqtt_sync((struct mqtt_client*) client);
+        usleep(100000U);
     }
-    
-    // Wait for the MQTT connection to be ready
-    while (!is_mqtt_connected) {
-        mg_mgr_poll(&mgr, 1000);
+    return NULL;
+}
+
+void exit_example(int status, int sockfd, pthread_t *client_daemon)
+{
+    if (sockfd != -1) close(sockfd);
+    if (client_daemon != NULL) pthread_cancel(*client_daemon);
+}
+
+void mqtt_publish_message(const char* addr, const char* topic, const char* message) {
+    /* open the non-blocking TCP socket (connecting to the broker) */
+    char addr_copy[256]; // Buffer to store address copy
+    strcpy(addr_copy, addr); // Copy address to mutable buffer
+
+    // Find the start position of the host
+    const char* hostStart = strchr(addr, '/') + 2; // +2 to skip "mqtt://"
+
+    // Find the end position of the host
+    const char* hostEnd = strchr(hostStart, ':');
+
+    // Calculate the length of the host
+    int hostLength = hostEnd - hostStart;
+
+    // Extract the host into a separate string
+    char host[hostLength + 1];
+    strncpy(host, hostStart, hostLength);
+    host[hostLength] = '\0';
+
+    /* open the non-blocking TCP socket (connecting to the broker) */
+    int sockfd = open_nb_socket(host, hostEnd + 1);
+
+    if (sockfd == -1) {
+        perror("Failed to open socket: ");
+        exit_example(EXIT_FAILURE, sockfd, NULL);
     }
-    
-    // Publish the message
-    struct mg_mqtt_opts pub_opts;
-    memset(&pub_opts, 0, sizeof(pub_opts));
-    pub_opts.topic = mg_str(topic);
-    pub_opts.message = mg_str(message);
-    pub_opts.qos = 0;
-    pub_opts.retain = false;
-    mg_mqtt_pub(conn, &pub_opts);
-    
-    // Wait for a bit to ensure the message is sent
-    mg_mgr_poll(&mgr, 1000);
-    
-    mg_mgr_free(&mgr);
+
+    /* setup a client */
+    struct mqtt_client client;
+    uint8_t sendbuf[2048]; /* sendbuf should be large enough to hold multiple whole mqtt messages */
+    uint8_t recvbuf[1024]; /* recvbuf should be large enough any whole mqtt message expected to be received */
+    mqtt_init(&client, sockfd, sendbuf, sizeof(sendbuf), recvbuf, sizeof(recvbuf), publish_callback);
+    /* Create an anonymous session */
+    const char* client_id = NULL;
+    /* Ensure we have a clean session */
+    uint8_t connect_flags = MQTT_CONNECT_CLEAN_SESSION;
+    /* Send connection request to the broker. */
+    mqtt_connect(&client, client_id, NULL, NULL, 0, NULL, NULL, connect_flags, 400);
+
+    /* check that we don't have any errors */
+    if (client.error != MQTTC_OK) {
+        fprintf(stderr, "error: %s\n", mqtt_error_str(client.error));
+        exit_example(EXIT_FAILURE, sockfd, NULL);
+    }
+
+    /* start a thread to refresh the client (handle egress and ingree client traffic) */
+    pthread_t client_daemon;
+    if(pthread_create(&client_daemon, NULL, client_refresher, &client)) {
+        fprintf(stderr, "Failed to start client daemon.\n");
+        exit_example(EXIT_FAILURE, sockfd, NULL);
+
+    }
+
+    /* publish the time */
+    printf("\nPublishing to topic %s", topic);
+    mqtt_publish(&client, topic, message, strlen(message) + 1, MQTT_PUBLISH_QOS_0);
+
+    /* check for errors */
+    if (client.error != MQTTC_OK) {
+        fprintf(stderr, "error: %s\n", mqtt_error_str(client.error));
+        exit_example(EXIT_FAILURE, sockfd, &client_daemon);
+    }
+
+    /* disconnect */
+    printf("\nDisconnecting from %s\n", addr);
+    mqtt_disconnect(&client);
+    sleep(1);
+
+
+    /* exit */
+    exit_example(EXIT_SUCCESS, sockfd, &client_daemon);
 }
 
 // This function sends a POST request to a given URL with the specified content
