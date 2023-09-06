@@ -18,7 +18,7 @@ Enter **OneM2M** - the global standard that's like the United Nations for device
 
 ## 📚 Dive into the Docs
 
-Craving the nitty-gritty details? The [documentation directory](TinyOneM2M/templates/about.html) is your treasure trove. From the ABCs of the API to sample spells (code) and the secret sauce to install and wield this library - it's all there.
+Craving the nitty-gritty details? The [documentation directory](https://rafaelxokito.github.io/Tiny-OneM2M-C-Language/?documentation=true) is your treasure trove. From the ABCs of the API to sample spells (code) and the secret sauce to install and wield this library - it's all there.
 
 ## 🚀 Launch Sequence
 
