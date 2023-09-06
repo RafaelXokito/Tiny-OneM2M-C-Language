@@ -35,7 +35,7 @@ cd TinyOneM2M
 make
 
 # Execute the program
-./output_program_name  # Replace 'output_program_name' with your program's name
+./main.o
 ```
 
 🌌 Explore. 🚀 Innovate. 🌠 Conquer with Tiny-OneM2M C API.
