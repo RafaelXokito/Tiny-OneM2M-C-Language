@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Tiny_OneM2M_C_Language" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" WORKING_DIR="file://$PROJECT_DIR$/TinyOneM2M" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Tiny_OneM2M_C_Language" TARGET_NAME="Tiny_OneM2M_C_Language" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Tiny_OneM2M_C_Language" RUN_TARGET_NAME="Tiny_OneM2M_C_Language">
+    <method v="2">
+      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>

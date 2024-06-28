@@ -572,12 +572,18 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
 
     printf("Creating AE\n");
     AEStruct *ae = init_ae();
+    if (ae == NULL) {
+        responseMessage(response, 500, "Internal Server Error", "Could not initialize AE");
+        pthread_mutex_destroy(&db_mutex);
+        return FALSE;
+    }
+
     // Should be garantee that the content (json object) dont have this keys
     cJSON_AddStringToObject(content, "pi", destination->ri);
 
     // perform database operations
     pthread_mutex_lock(&db_mutex);
-    
+
     size_t destinationKeyLength = strlen(destination->key);
     size_t rnLength = strlen(cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
 
@@ -591,6 +597,7 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
         fprintf(stderr, "Memory allocation error\n");
         pthread_mutex_unlock(&db_mutex);
         pthread_mutex_destroy(&db_mutex);
+        free(ae);
         return FALSE;
     }
 
@@ -602,6 +609,10 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     sprintf(ae->url + destinationKeyLength, "/%s", cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
     if (search(*head, ae->url) != NULL) {
         responseMessage(response, 409, "Conflict", "Resource already exists (Skipping)");
+        free(ae->url);
+        free(ae);
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
         return FALSE;
     }
 
@@ -621,28 +632,34 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
     printf("Time taken by create_ae: %f seconds\n", elapsed_time);
     if (rs == FALSE) {
         // É feito dentro da função create_ae
+        free(ae->url);
+        free(ae);
         pthread_mutex_unlock(&db_mutex);
         pthread_mutex_destroy(&db_mutex);
         return FALSE;
     }
-    
+
     // Add New Routes
     to_lowercase(uri);
     addRoute(head, uri, ae->ri, ae->ty, ae->rn);
     printf("New Route: %s -> %s -> %d -> %s \n", uri, ae->ri, ae->ty, ae->rn);
-    
+
     // Convert the AE struct to json and the Json Object to Json String
     cJSON *root = ae_to_json(ae);
     char *str = cJSON_PrintUnformatted(root);
     if (str == NULL) {
         responseMessage(response, 500, "Internal Server Error", "Could not print cJSON object");
         cJSON_Delete(root);
+        free(ae->url);
+        free(ae);
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
         return FALSE;
     }
-    
+
     // Calculate the required buffer size
     size_t response_size = strlen("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n") + strlen(str) + 1;
-    
+
     // Allocate memory for the response buffer
     *response = (char *)malloc(response_size * sizeof(char));
 
@@ -652,6 +669,10 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
         // Cleanup
         cJSON_free(str);
         cJSON_Delete(root);
+        free(ae->url);
+        free(ae);
+        pthread_mutex_unlock(&db_mutex);
+        pthread_mutex_destroy(&db_mutex);
         return FALSE;
     }
     sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", str);
@@ -665,6 +686,10 @@ char post_ae(struct Route** head, struct Route* destination, cJSON *content, cha
 
     // // clean up
     pthread_mutex_destroy(&db_mutex);
+
+    // Free the AE struct and its members
+    free(ae->url);
+    free(ae);
 
     return TRUE;
 }
@@ -1367,8 +1392,7 @@ char delete_resource(struct Route * destination, char **response) {
     char* errMsg = NULL;
 
     // Sqlite3 initialization opening/creating database
-    sqlite3 *db;
-    db = initDatabase("tiny-oneM2M.db");
+    sqlite3 *db  = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
         fprintf(stderr, "Failed to initialize the database.\n");
         return FALSE;
@@ -1591,8 +1615,6 @@ char delete_resource(struct Route * destination, char **response) {
         destination->right->left = destination->left;
     }
 
-    free(destination);  // Don't forget to free the memory of the deleted node.
-
     while (currentNode != NULL && strncmp(currentNode->key, resourcePath, strlen(resourcePath)) == 0) {
         printf("Deleting currentNode->key = %s\n", currentNode->key);
 
@@ -1615,6 +1637,7 @@ char delete_resource(struct Route * destination, char **response) {
     }
 
     printf("Record deleted ri = %s\n", destination->ri);
+    free(destination);  // Don't forget to free the memory of the deleted node.
     responseMessage(response,200,"OK","Record deleted");
     
     // Populate the CNT

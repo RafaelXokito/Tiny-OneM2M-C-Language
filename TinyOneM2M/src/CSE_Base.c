@@ -50,8 +50,7 @@ char create_cse_base(CSEBaseStruct * csebase, char isTableCreated) {
     // }
 
     // Sqlite3 initialization opening/creating database
-    sqlite3 *db;
-    db = initDatabase("tiny-oneM2M.db");
+    sqlite3 *db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
 		return FALSE;
 	}

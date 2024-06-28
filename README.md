@@ -38,4 +38,29 @@ make
 ./main.o
 ```
 
+## Tests
+
+Make sure you have the poetry environment by running:
+
+```bash
+poetry install
+```
+
+Run the tests:
+```bash
+poetry run pytest --reruns 3 --reruns-delay 1
+```
+
+## Roadmap
+
+[] - End2End tests by testing the creation and the usage in a real context.
+
+[] - Test the usage of CNT, CIN and SUB resources, for instance test if the mbs property, and so on change after update.
+
+[] - Create long CRUD tests that check every handled resource attribute.
+
+[] - Check why when you pass ["TAG"] as lbl attribute for the SUB resource the server crash.
+
+[] - Run Valgrind to check memory leaks and fix them. Run the tests to cover as much as possible. 
+
 🌌 Explore. 🚀 Innovate. 🌠 Conquer with Tiny-OneM2M C API.

@@ -8,6 +8,13 @@ MacOS:
 // Já tem o SQLite3 previamente instalado (Mac W)
 brew install cJSON
 
+To run valgrind:
+```bash
+docker pull karek/valgrind:latest
+docker run --rm -t -p 8000:8000 -v "$PWD":/valgrind karek/valgrind:latest valgrind
+valgrind ./server.o
+```
+
 Linux: 
 ```
 //sudo apt install sqlite3 // serviço de sqlite

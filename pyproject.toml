@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "tiny-onem2m-c-language"
+version = "0.1.0"
+description = ""
+authors = ["rpereira <rafael_pereira_2000@hotmail.com>", "Carla Mendes"]
+packages = [{include= "tests", from="TinyOneM2M"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.32.3"
+python-dotenv = "^1.0.1"
+pytest = "^8.2.2"
+pytest-rerunfailures = "^14.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

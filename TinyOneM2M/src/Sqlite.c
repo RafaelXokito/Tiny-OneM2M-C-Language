@@ -36,7 +36,7 @@ sqlite3 *initDatabase(const char* databasename) {
         return NULL;
     }
 
-    sqlite3_busy_timeout(db, 1000);
+    sqlite3_busy_timeout(db, 600);
 
     return db;
 }

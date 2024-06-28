@@ -360,35 +360,76 @@ void handle_put(ConnectionInfo *info, const char *request, struct Route *destina
 void *handle_connection(void *connectioninfo) {
     ConnectionInfo* info = (ConnectionInfo*) connectioninfo;
 
+    char *response = NULL;
+
+	// Initializing the process of reading from the socket
+	char *buffer = NULL;
+	size_t buffer_size = INITIAL_BUFFER_SIZE;
+	size_t total_read = 0; // Variable that will hold the number of chars readed
+	ssize_t valread;
+
+	buffer = malloc(buffer_size);
+	if (buffer == NULL) {
+		responseMessage(&response, 500, "Internal Server Error", "Something Went Wrong.");
+		send(info->socket_desc, response, strlen(response), 0);
+		close_socket_and_exit(info);
+		free(response);
+	}
+
+	// Read the request data from the socket and increment the size of the buffer since it reaches the base-line size.
+	while (1) {
+		// Ensure there is enough space for the next chunk of data
+		if (total_read + BUFFER_INCREMENT_SIZE > buffer_size) {
+			buffer_size += BUFFER_INCREMENT_SIZE;
+			char *new_buffer = realloc(buffer, buffer_size);
+			if (new_buffer == NULL) {
+				perror("realloc");
+				free(buffer);
+				close_socket_and_exit(info);
+				return NULL;
+			}
+			buffer = new_buffer;
+		}
+
+		// Read data from the client
+		// valread holds the number of chars readed at once
+		// increment the buffer
+		valread = read(info->socket_desc, buffer + total_read, BUFFER_INCREMENT_SIZE);
+		if (valread < 0) {
+			perror("read");
+			free(buffer);
+			close_socket_and_exit(info);
+			return NULL;
+		} else if (valread < BUFFER_INCREMENT_SIZE) {
+			// No more data to read
+			total_read += valread;
+			break;
+		}
+
+		total_read += valread;
+	}
+
+	// Null-terminate the buffer
+	buffer[total_read] = '\0';
+
     printf("\n");
 
-    char client_msg[4096] = "";
-
-    int valread;
-
-    // read data from the client
-    valread = read(info->socket_desc, client_msg, sizeof(client_msg));
-    if (valread < 0) {
-        perror("read");
-        close_socket_and_exit(info);
-    }
-
-    char request[4096];
-    strncpy(request, client_msg, sizeof(request) - 1);
+	total_read++;
+    char request[total_read];
+    strncpy(request, buffer, sizeof(request) - 1);
     request[sizeof(request) - 1] = '\0';
 
     // parsing client socket header to get HTTP method, route
     char *method = "";
     char *urlRoute = "";
 
-    char *client_http_header = strtok(client_msg, "\n");
+    char *client_http_header = strtok(buffer, "\n");
 
     char *header_token = strtok(client_http_header, " ");
 
     int header_parse_counter = 0;
 
     while (header_token != NULL) {
-
         switch (header_parse_counter) {
             case 0:
                 method = header_token;
@@ -403,91 +444,75 @@ void *handle_connection(void *connectioninfo) {
 
     to_lowercase(urlRoute);
 
-	char *queryString = strtok(urlRoute, "?");
-	
-	urlRoute = queryString;
-	queryString = strtok(NULL, "?");
+    char *queryString = strtok(urlRoute, "?");
+
+    urlRoute = queryString;
+    queryString = strtok(NULL, "?");
 
     printf("The method is %s\n", method);
     printf("The route is %s\n", urlRoute);
-	if (queryString != NULL && strcmp(queryString, "") != 0) {
-		printf("The query string is %s\n", queryString);
-	}
+    if (queryString != NULL && strcmp(queryString, "") != 0) {
+        printf("The query string is %s\n", queryString);
+    }
 
-    struct Route * destination = search(info->route, urlRoute);
+    struct Route *destination = search(info->route, urlRoute);
 
-    printf("Check if route was founded\n");
+    printf("Check if route was found\n");
     if (destination == NULL) {
-        char *response = NULL;
-
         responseMessage(&response, 404, "Not found", "Resource not found");
-
         printf("http_header: %s\n", response);
-
-        send(info->socket_desc, response, strlen(response), 0);
-
-        close_socket_and_exit(info);
+        goto cleanup;
     }
 
     // Creating the response
-    char *response = NULL;
-
-    printf("Check if is the default route\n");
+    printf("Check if it is the default route\n");
     if (destination->ty == -1) {
         char template[100] = "templates/";
-
         strncat(template, destination->value, sizeof(template) - strlen(template) - 1);
-        char * response_data = render_static_file(template);
+        char *response_data = render_static_file(template);
 
-		FILE *file;
+        FILE *file;
+        long file_size;
 
-		long file_size;
+        // Open the file in binary mode
+        file = fopen(template, "rb");
 
-		// Open the file in binary mode
-		file = fopen(template, "rb");
-		
-		if (file == NULL) {
-			fprintf(stderr, "Failed to open the file.\n");
-			responseMessage(&response, 500, "Internal", "HTTP method not supported");
-			send(info->socket_desc, response, strlen(response), 0);
+        if (file == NULL) {
+            fprintf(stderr, "Failed to open the file.\n");
+            responseMessage(&response, 500, "Internal", "HTTP method not supported");
+            send(info->socket_desc, response, strlen(response), 0);
+            goto cleanup;
+        }
 
-			close_socket_and_exit(info);
-			free(response);
-			return NULL;
-		}
+        // Get the size of the file
+        fseek(file, 0, SEEK_END);
+        file_size = ftell(file);
+        rewind(file);
 
-		// Get the size of the file
-		fseek(file, 0, SEEK_END);
-		file_size = ftell(file);
-		rewind(file);
+        // Close the file
+        fclose(file);
 
-		// Close the file
-		fclose(file);
+        // Dynamically allocate memory for the buffer
+        response = (char *)malloc((file_size + 200) * sizeof(char));
+        if (response == NULL) {
+            fprintf(stderr, "Memory allocation failed.\n");
+            responseMessage(&response, 500, "Internal", "HTTP method not supported");
+            send(info->socket_desc, response, strlen(response), 0);
+            goto cleanup;
+        }
 
-		// Dynamically allocate memory for the buffer
-		response = (char*)malloc((file_size + 200) * sizeof(char));
-		if (response == NULL) {
-			fprintf(stderr, "Memory allocation failed.\n");
-			responseMessage(&response, 500, "Internal", "HTTP method not supported");
-			send(info->socket_desc, response, strlen(response), 0);
-
-			close_socket_and_exit(info);
-			free(response);
-			return NULL;
-		}
-
-		sprintf(response, "HTTP/1.1 200 OK\r\n\r\n");
-        strncat(response, response_data, sizeof(response) - strlen(response) - 1);
-        strncat(response, "\r\n\r\n", sizeof(response) - strlen(response) - 1);
+        sprintf(response, "HTTP/1.1 200 OK\r\n\r\n");
+        strncat(response, response_data, file_size + 200 - strlen(response) - 1);
+        strncat(response, "\r\n\r\n", file_size + 200 - strlen(response) - 1);
 
         send(info->socket_desc, response, strlen(response), 0);
-        close_socket_and_exit(info);
+        goto cleanup;
     }
 
-	printf("Check the HTTP method\n");
+    printf("Check the HTTP method\n");
     if (strcmp(method, "GET") == 0) {
         handle_get(info, queryString, destination, &response);
-	} else if (strcmp(method, "POST") == 0) {
+    } else if (strcmp(method, "POST") == 0) {
         handle_post(info, request, destination, &response);
     } else if (strcmp(method, "PUT") == 0) {
         handle_put(info, request, destination, &response);
@@ -497,12 +522,18 @@ void *handle_connection(void *connectioninfo) {
         responseMessage(&response, 405, "Method Not Allowed", "HTTP method not supported");
     }
 
+	cleanup:
+    if (response == NULL) {
+        responseMessage(&response, 500, "Internal Server Error", "Something Went Wrong.");
+    }
     send(info->socket_desc, response, strlen(response), 0);
 
+
     close_socket_and_exit(info);
-	free(response);
+    free(response);
     return NULL;
 }
+
 
 cJSON *get_json_from_request(const char *request) {
     char *json_start = strstr(request, "{");

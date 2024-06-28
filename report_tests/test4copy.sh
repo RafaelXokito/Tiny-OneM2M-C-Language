@@ -25,14 +25,14 @@ rm -f "$post_times" "$put_times" "$get_times" "$delete_times"
 count=0
 
 # Perform CRUD operations and store timings in CSV files
-while [ $count -lt 200 ]; do
+while [ $count -lt 2000 ]; do
     # POST
-    time=$(curl --location --request POST 'http://10.79.12.208:8000/onem2m/lightbulb/state' \
+    time=$(curl --location --request POST 'http://localhost:8001/onem2m/lightbulb/state' \
 --header 'X-M2M-Origin: admin:admin' \
 --header 'Content-Type: application/json;ty=23' \
 --data-raw '{
     "m2m:sub": {
-        "nu":   ["mqtt://10.79.12.253:1883"],
+        "nu":   ["mqtt://localhost:1883"],
         "enc":  "DELETE"
     }
 }

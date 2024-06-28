@@ -31,16 +31,14 @@ SUBStruct *init_sub() {
     return sub;
 }
 
-char create_sub(SUBStruct * sub, cJSON *content, char** response) {
-    
+char create_sub(SUBStruct *sub, cJSON *content, char **response) {
     // Sqlite3 initialization opening/creating database
-    struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
+    struct sqlite3 *db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
-        responseMessage(response,500,"Internal Server Error","Could not open the database");
-		return FALSE;
-	}
-    // Convert the JSON object to a C structure
-    // the URL attribute was already populated in the caller of this function
+        responseMessage(response, 500, "Internal Server Error", "Could not open the database");
+        return FALSE;
+    }
+
     sqlite3_stmt *stmt;
     int result;
     const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 5) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 23";
@@ -50,7 +48,7 @@ char create_sub(SUBStruct * sub, cJSON *content, char** response) {
         closeDatabase(db);
         return FALSE;
     }
-    
+
     char *ri = NULL;
     // Execute the query and fetch the result
     if (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -75,35 +73,35 @@ char create_sub(SUBStruct * sub, cJSON *content, char** response) {
     strcpy(sub->rn, cJSON_GetObjectItemCaseSensitive(content, "rn")->valuestring);
     strcpy(sub->pi, cJSON_GetObjectItemCaseSensitive(content, "pi")->valuestring);
     strcpy(sub->enc, cJSON_GetObjectItemCaseSensitive(content, "enc")->valuestring);
+
     cJSON *et = cJSON_GetObjectItemCaseSensitive(content, "et");
     if (et) {
         struct tm et_tm;
         char *parse_result = strptime(et->valuestring, "%Y%m%dT%H%M%S", &et_tm);
         if (parse_result == NULL) {
-            // The date string did not match the expected format
             responseMessage(response, 400, "Bad Request", "Invalid date format");
             return FALSE;
         }
 
         time_t datetime_timestamp, current_time;
-        
-        // Convert the parsed time to a timestamp
+
         datetime_timestamp = mktime(&et_tm);
-        // Get the current time
         current_time = time(NULL);
 
-        // Compara o timestamp atual com o timestamp recebido, caso o timestamp está no passado dá excepção
         if (difftime(datetime_timestamp, current_time) < 0) {
             responseMessage(response, 400, "Bad Request", "Expiration time is in the past");
+            sqlite3_finalize(stmt);
+            closeDatabase(db);
+            free(sub);
             return FALSE;
-        }        
+        }
         strcpy(sub->et, et->valuestring);
     } else {
         strcpy(sub->et, get_datetime_days_later(DAYS_PLUS_ET));
     }
     strcpy(sub->ct, getCurrentTime());
     strcpy(sub->lt, sub->ct);
-    
+
     const char *keys[] = {"acpi", "lbl", "daci", "nu"};
     short num_keys = sizeof(keys) / sizeof(keys[0]);
     for (int i = 0; i < num_keys; i++) {
@@ -111,55 +109,66 @@ char create_sub(SUBStruct * sub, cJSON *content, char** response) {
         if (json_array) {
             char *json_str = cJSON_Print(json_array);
             if (json_str) {
-                size_t len = strlen(json_str);
-                if(strcmp(keys[i], "acpi") == 0){
-                    sub->json_acpi = (char *)malloc(len+1);
+                size_t len = strlen(json_str) + 1;
+                if (strcmp(keys[i], "acpi") == 0) {
+                    sub->json_acpi = (char *)malloc(len);
                     strcpy(sub->json_acpi, json_str);
-                }
-                if(strcmp(keys[i],"lbl") == 0){
-                    sub->json_lbl = (char *)malloc(len+1);
+                } else if (strcmp(keys[i], "lbl") == 0) {
+                    sub->json_lbl = (char *)malloc(len);
                     strcpy(sub->json_lbl, json_str);
-                }
-                if(strcmp(keys[i],"daci") == 0){
-                    sub->json_daci = (char *)malloc(len+1);
+                } else if (strcmp(keys[i], "daci") == 0) {
+                    sub->json_daci = (char *)malloc(len);
                     strcpy(sub->json_daci, json_str);
-                }
-                if(strcmp(keys[i],"nu") == 0){
-                    sub->json_nu = (char *)malloc(len+1);
+                } else if (strcmp(keys[i], "nu") == 0) {
+                    sub->json_nu = (char *)malloc(len);
                     strcpy(sub->json_nu, json_str);
-                } 
-            }           
-        }else if (json_array == NULL){
+                }
+                free(json_str); // Free the temporary JSON string
+            }
+        } else if (json_array == NULL) {
             cJSON *empty_array = cJSON_CreateArray();
-            size_t len = strlen(cJSON_Print(empty_array));
-            if(strcmp(keys[i],"acpi") == 0){
-                sub->json_acpi = (char *)malloc(len+1);
-                strcpy(sub->json_acpi, cJSON_Print(empty_array));
+            char *empty_str = cJSON_Print(empty_array);
+            if (empty_str) {
+                size_t len = strlen(empty_str) + 1;
+                if (strcmp(keys[i], "acpi") == 0) {
+                    sub->json_acpi = (char *)malloc(len);
+                    strcpy(sub->json_acpi, empty_str);
+                } else if (strcmp(keys[i], "lbl") == 0) {
+                    sub->json_lbl = (char *)malloc(len);
+                    strcpy(sub->json_lbl, empty_str);
+                } else if (strcmp(keys[i], "daci") == 0) {
+                    sub->json_daci = (char *)malloc(len);
+                    strcpy(sub->json_daci, empty_str);
+                } else if (strcmp(keys[i], "nu") == 0) {
+                    sub->json_nu = (char *)malloc(len);
+                    strcpy(sub->json_nu, empty_str);
+                }
+                free(empty_str); // Free the temporary JSON string
             }
-            if(strcmp(keys[i],"lbl") == 0){
-                sub->json_lbl = (char *)malloc(len+1);
-                strcpy(sub->json_lbl, cJSON_Print(empty_array));
-            }
-            if(strcmp(keys[i],"daci") == 0){
-                sub->json_daci = (char *)malloc(len+1);
-                strcpy(sub->json_daci, cJSON_Print(empty_array));
-            }
-            if(strcmp(keys[i],"nu") == 0){
-                sub->json_nu = (char *)malloc(len+1);
-                strcpy(sub->json_nu, cJSON_Print(empty_array));
-            }  
-        }       
+            cJSON_Delete(empty_array); // Free the empty array
+        }
     }
-    
-    //blob
-    size_t rnLengthBlob = strlen(cJSON_Print(sub_to_json(sub)));
-    sub->blob = (char *)malloc(rnLengthBlob);
-    if (sub->blob == NULL) {
-        // Handle memory allocation error
-        fprintf(stderr, "Memory allocation error\n");
+
+    // Generate JSON string from sub and allocate memory for sub->blob
+    char *json_string = cJSON_Print(sub_to_json(sub));
+    if (json_string == NULL) {
+        fprintf(stderr, "Failed to generate JSON string\n");
+        sqlite3_finalize(stmt);
+        closeDatabase(db);
+        free(sub);
         return FALSE;
     }
-    strcpy(sub->blob, cJSON_Print(sub_to_json(sub)));  
+
+    size_t rnLengthBlob = strlen(json_string) + 1;
+    sub->blob = (char *)malloc(rnLengthBlob);
+    if (sub->blob == NULL) {
+        fprintf(stderr, "Memory allocation error\n");
+        free(json_string);
+        free(sub);
+        return FALSE;
+    }
+    strcpy(sub->blob, json_string);
+    free(json_string); // Free the temporary JSON string
 
     short rc = begin_transaction(db);
     if (rc != SQLITE_OK) {
@@ -169,15 +178,15 @@ char create_sub(SUBStruct * sub, cJSON *content, char** response) {
     }
     // Prepare the insert statement
     const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, et, ct, lt, url, blob, acpi, lbl, daci, nu, enc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    
+
     rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
-        fprintf(stderr,"Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        fprintf(stderr, "Failed to prepare statement: %s\n", sqlite3_errmsg(db));
         responseMessage(response, 400, "Bad Request", "Verify the request body");
         closeDatabase(db);
         return FALSE;
     }
-    
+
     // Bind the values to the statement
     sqlite3_bind_int(stmt, 1, sub->ty);
     sqlite3_bind_text(stmt, 2, sub->ri, strlen(sub->ri), SQLITE_STATIC);
@@ -201,12 +210,11 @@ char create_sub(SUBStruct * sub, cJSON *content, char** response) {
     sqlite3_bind_text(stmt, 12, sub->json_daci, strlen(sub->json_daci), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 13, sub->json_nu, strlen(sub->json_nu), SQLITE_STATIC);
     sqlite3_bind_text(stmt, 14, sub->enc, strlen(sub->enc), SQLITE_STATIC);
-    
-    
+
     // Execute the statement
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
-        fprintf(stderr,"Failed to execute statement: %s\n", sqlite3_errmsg(db));
+        fprintf(stderr, "Failed to execute statement: %s\n", sqlite3_errmsg(db));
         responseMessage(response, 400, "Bad Request", "Verify the request body");
         rollback_transaction(db); // Rollback transaction
         sqlite3_finalize(stmt);
@@ -245,7 +253,7 @@ char create_sub(SUBStruct * sub, cJSON *content, char** response) {
     // Populate the CNT
     pthread_t thread_id;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        notificationData* data = malloc(sizeof(notificationData));
+        notificationData *data = malloc(sizeof(notificationData));
         pthread_t thread_id;
         int result;
 
@@ -273,16 +281,16 @@ char create_sub(SUBStruct * sub, cJSON *content, char** response) {
         int enc_temp_length = strlen(enc_temp); // assuming enc_temp is a string
         int topic_length = strlen(data->topic);
 
-        // Here we construct the prefix dynamically with sprintf. 
-        char prefix[256];  // Make sure this size is enough for your string
+        // Here we construct the prefix dynamically with sprintf.
+        char prefix[256]; // Make sure this size is enough for your string
         sprintf(prefix, "{\"m2m:sgn\":{\"cr\":\"admin:admin\",\"nev\":{\"net\":\"%s\",\"om\":null,\"rep\":", "POST");
-        
+
         int prefix_length = strlen(prefix);
         int total_length = prefix_length + body_length + enc_temp_length + topic_length + strlen(suffix) + 201;
         // Allocate enough memory for the new string
         char *wrapped_body = malloc(total_length);
 
-        if(wrapped_body == NULL) {
+        if (wrapped_body == NULL) {
             fprintf(stderr, "Failed to allocate memory for the wrapped body.\n");
             free(data->nu); // Free the memory for the string
             free(data->topic); // Free the memory for the string
@@ -306,7 +314,7 @@ char create_sub(SUBStruct * sub, cJSON *content, char** response) {
             // Make the wrapped body the new body
             data->body = wrapped_body;
         }
-        
+
         result = pthread_create(&thread_id, NULL, send_notification, data); //pass data, not &data
         if (result != 0) {
             fprintf(stderr, "Error creating thread: %s\n", strerror(result));
@@ -431,7 +439,6 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
 
     int num_keys = cJSON_GetArraySize(content); //size of my body content
     const char *key; //to get the key(s) of my content
-    const char *valueSUB; //to confirm the value already store in my SUB
     char my_string[100]; //to convert destination->ty
     cJSON *item; //to get the values of my content MTC
 
@@ -453,23 +460,25 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
         // Get the JSON string associated to the "key" from the content of JSON Body
         item = cJSON_GetObjectItemCaseSensitive(content, key);
         char *json_strITEM = cJSON_Print(item);
-        // remove a few 
+        const char *old_value_SUB; //to confirm the value already store in my SUB
+        // remove a few
         if (strcmp(key, "et") == 0){
-            valueSUB = sub->et;
+            old_value_SUB = sub->et;
             strcpy(sub->et, json_strITEM);
         } else if (strcmp(key, "enc") == 0){
-            valueSUB = sub->enc;
+            old_value_SUB = sub->enc;
             strcpy(sub->enc, item->valuestring);
         } else if (strcmp(key, "acpi") != 0 && strcmp(key, "lbl") != 0 && strcmp(key, "daci") != 0 && strcmp(key, "nu") != 0){
             responseMessage(response, 400, "Bad Request", "Invalid key");
             sqlite3_finalize(stmt);
             closeDatabase(db);
+            free(sub);
             return FALSE;
         }
 
         // validate if the value from the JSON Body is the same as the DB Table
         if (!cJSON_IsArray(item)) {
-            if (strcmp(json_strITEM, valueSUB) == 0) { //if the content is equal ignore
+            if (strcmp(json_strITEM, old_value_SUB) == 0) { //if the content is equal ignore
                 printf("Continue \n");
                 continue;
             }
@@ -511,6 +520,7 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
                 responseMessage(response, 400, "Bad Request", "Invalid date format");
                 sqlite3_finalize(stmt);
                 closeDatabase(db);
+                free(sub);
                 return FALSE;
             }
 
@@ -524,6 +534,7 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
                 responseMessage(response, 400, "Bad Request", "Expiration time is in the past");
                 sqlite3_finalize(stmt);
                 closeDatabase(db);
+                free(sub);
                 return FALSE;
             }
 
@@ -533,11 +544,7 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
             strcpy(sub->et, et_iso);
         }
         else {
-            if(cJSON_IsArray(item)){
-                updateQueryMTC = sqlite3_mprintf("%s%s = %Q, ",updateQueryMTC, key, json_strITEM);
-            }else{
-                updateQueryMTC = sqlite3_mprintf("%s%s = %Q, ",updateQueryMTC, key, cJSON_GetArrayItem(content, i)->valuestring);
-            }
+            updateQueryMTC = sqlite3_mprintf("%s%s = %Q, ",updateQueryMTC, key, json_strITEM);
         }
     }
     strcpy(sub->lt,getCurrentTime());
@@ -547,6 +554,7 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
     if (sub->blob == NULL) {
         // Handle memory allocation error
         fprintf(stderr, "Memory allocation error\n");
+        free(sub);
         return FALSE;
     }
     strcpy(sub->blob, cJSON_Print(sub_to_json(sub)));  
@@ -562,6 +570,7 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
             printf("Failed to execute statement: %s\n", sqlite3_errmsg(db));
             sqlite3_free(errMsg);
             closeDatabase(db);
+            free(sub);
             return FALSE;
         }
 
@@ -570,6 +579,7 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
             fprintf(stderr, "Can't commit transaction\n");
             sqlite3_free(errMsg);
             closeDatabase(db);
+            free(sub);
             return FALSE;
         }
         
@@ -584,6 +594,7 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
             sqlite3_finalize(stmt);
             sqlite3_free(errMsg);
             closeDatabase(db);
+            free(sub);
             return FALSE;
         }
 
@@ -607,6 +618,7 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
         fprintf(stderr, "Failed to print JSON as a string.\n");
         sqlite3_finalize(stmt);
         closeDatabase(db);
+        free(sub);
         return FALSE;
     }
     char * response_data = json_str;
@@ -624,6 +636,7 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
         sqlite3_finalize(stmt);
         closeDatabase(db);
         free(json_str);
+        free(sub);
         return FALSE;
     }
     sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", response_data);
@@ -635,6 +648,7 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
     if (sql_not == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
         responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
+        free(sub);
         return FALSE;
     }
     rc = sqlite3_prepare_v2(db, sql_not, -1, &stmt, NULL);
@@ -643,6 +657,7 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
         responseMessage(response, 400, "Bad Request", "Failed to prepare statement.");
         sqlite3_finalize(stmt);
         closeDatabase(db);
+        free(sub);
         return FALSE;
     }
 
@@ -722,6 +737,7 @@ char update_sub(struct Route* destination, cJSON *content, char** response){
     }
 
     closeDatabase(db);
+    free(sub);
     return TRUE;
 }
 

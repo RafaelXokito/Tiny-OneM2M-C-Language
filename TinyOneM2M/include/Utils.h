@@ -7,10 +7,17 @@
  * Copyright (c) 2023 IPLeiria
  */
 
-#define MAX_CONFIG_LINE_LENGTH 64  
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#define MAX_CONFIG_LINE_LENGTH 64
+#define INITIAL_BUFFER_SIZE 4096
+#define BUFFER_INCREMENT_SIZE 2048
 
 #define TRUE 1
 #define FALSE 0
+
+#endif // CONFIG_H
 
 #include <stdio.h>
 #include <time.h>

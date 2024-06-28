@@ -7,22 +7,22 @@ num_concurrent_processes=10
 # Functions for CRUD operations
 perform_post() {
     count=$1
-    time=$(curl -s -X POST "http://127.0.0.1:6000/onem2m" -H "Content-Type: application/vnd.onem2m-res+json" -d "{\"m2m:ae\": {\"api\": \"placeholder2\",\"rr\": \"true\",\"rn\": \"AE-${count}\",\"et\": \"20230428T234737\",\"lbl\": [\"interropetores\",\"xpto2\"],\"poa\": [\"http://127.0.0.1:1234\"],\"acpi\": [\"/id-in/acpCreateACPs\"]}}" -w "%{time_total}" -o /dev/null)
+    time=$(curl -s -X POST "http://127.0.0.1:8001/onem2m" -H "Content-Type: application/vnd.onem2m-res+json" -d "{\"m2m:ae\": {\"api\": \"placeholder2\",\"rr\": \"true\",\"rn\": \"AE-${count}\",\"et\": \"20230428T234737\",\"lbl\": [\"interropetores\",\"xpto2\"],\"poa\": [\"http://127.0.0.1:1234\"],\"acpi\": [\"/id-in/acpCreateACPs\"]}}" -w "%{time_total}" -o /dev/null)
     echo "${time}"
 }
 perform_put() {
     count=$1
-    time=$(curl -s -X PUT "http://127.0.0.1:6000/onem2m/AE-${count}" -H "Content-Type: application/vnd.onem2m-res+json" -d '{"m2m:ae": {"et": "20230531T234737","rr": "true","poa": ["http://127.0.0.1:4314"]}}' -w "%{time_total}" -o /dev/null)
+    time=$(curl -s -X PUT "http://127.0.0.1:8001/onem2m/AE-${count}" -H "Content-Type: application/vnd.onem2m-res+json" -d '{"m2m:ae": {"et": "20230531T234737","rr": "true","poa": ["http://127.0.0.1:4314"]}}' -w "%{time_total}" -o /dev/null)
     echo "${time}"
 }
 perform_get() {
     count=$1
-    time=$(curl -s -X GET "http://127.0.0.1:6000/onem2m/AE-${count}" -w "%{time_total}" -o /dev/null)
+    time=$(curl -s -X GET "http://127.0.0.1:8001/onem2m/AE-${count}" -w "%{time_total}" -o /dev/null)
     echo "${time}"
 }
 perform_delete() {
     count=$1
-    time=$(curl -s -X DELETE "http://127.0.0.1:6000/onem2m/AE-${count}" -w "%{time_total}" -o /dev/null)
+    time=$(curl -s -X DELETE "http://127.0.0.1:8001/onem2m/AE-${count}" -w "%{time_total}" -o /dev/null)
     echo "${time}"
 }
 

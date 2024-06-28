@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  valgrind:
+    image: karek/valgrind:latest
+    container_name: valgrind-container
+    volumes:
+      - ./TinyOneM2M:/valgrind
+    ports:
+      - "8000:8000"
+    command: /bin/sh -c "make clean && make && valgrind ./server.o"

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module classpath="External" external.linked.project.id="Tiny-OneM2M-C-Language" external.linked.project.path="$MODULE_DIR$/TinyOneM2M" external.root.project.path="$MODULE_DIR$/TinyOneM2M" external.system.id="Makefile" type="CPP_MODULE" version="4">
+  <component name="FacetManager">
+    <facet type="Python" name="Python facet">
+      <configuration sdkName="Poetry (Tiny-OneM2M-C-Language)" />
+    </facet>
+  </component>
+</module>
