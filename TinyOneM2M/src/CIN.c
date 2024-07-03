@@ -42,7 +42,8 @@ char create_cin(sqlite3 *db, CINStruct *cin, cJSON *content, char **response) {
     // Convert the JSON object to a C structure
     sqlite3_stmt *stmt;
     int result;
-    const char *query = "SELECT COALESCE(MAX(CAST(substr(ri, 5) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 4 AND et > datetime('now')";
+    const char *query =
+            "SELECT COALESCE(MAX(CAST(substr(ri, 5) AS INTEGER)), 0) + 1 as result FROM mtc WHERE ty = 4 AND et > datetime('now')";
 
     if (sqlite3_prepare_v2(db, query, -1, &stmt, 0) != SQLITE_OK) {
         fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(db));
@@ -76,7 +77,7 @@ char create_cin(sqlite3 *db, CINStruct *cin, cJSON *content, char **response) {
     cin->st = cJSON_GetObjectItemCaseSensitive(content, "st")->valueint;
 
     size_t rnLengthCon = strlen(cJSON_GetObjectItemCaseSensitive(content, "con")->valuestring) + 1;
-    cin->con = (char *)malloc(rnLengthCon);
+    cin->con = (char *) malloc(rnLengthCon);
     if (cin->con == NULL) {
         fprintf(stderr, "Memory allocation error\n");
         responseMessage(response, 500, "Internal Server Error", "Memory allocation error.");
@@ -122,7 +123,7 @@ char create_cin(sqlite3 *db, CINStruct *cin, cJSON *content, char **response) {
             if (json_str) {
                 size_t len = strlen(json_str) + 1;
                 if (strcmp(keys[i], "lbl") == 0) {
-                    cin->json_lbl = (char *)malloc(len);
+                    cin->json_lbl = (char *) malloc(len);
                     strcpy(cin->json_lbl, json_str);
                 }
                 free(json_str);
@@ -133,7 +134,7 @@ char create_cin(sqlite3 *db, CINStruct *cin, cJSON *content, char **response) {
             if (empty_str) {
                 size_t len = strlen(empty_str) + 1;
                 if (strcmp(keys[i], "lbl") == 0) {
-                    cin->json_lbl = (char *)malloc(len);
+                    cin->json_lbl = (char *) malloc(len);
                     strcpy(cin->json_lbl, empty_str);
                 }
                 free(empty_str);
@@ -153,7 +154,7 @@ char create_cin(sqlite3 *db, CINStruct *cin, cJSON *content, char **response) {
     }
 
     size_t rnLengthBlob = strlen(json_string) + 1;
-    cin->blob = (char *)malloc(rnLengthBlob);
+    cin->blob = (char *) malloc(rnLengthBlob);
     if (cin->blob == NULL) {
         fprintf(stderr, "Memory allocation error\n");
         free(json_string);
@@ -170,7 +171,8 @@ char create_cin(sqlite3 *db, CINStruct *cin, cJSON *content, char **response) {
         return FALSE;
     }
 
-    const char *insertSQL = "INSERT INTO mtc (ty, ri, rn, pi, st, cnf, cs, con, et, ct, lt, url, blob, lbl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+    const char *insertSQL =
+            "INSERT INTO mtc (ty, ri, rn, pi, st, cnf, cs, con, et, ct, lt, url, blob, lbl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
     rc = sqlite3_prepare_v2(db, insertSQL, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
@@ -218,7 +220,8 @@ char create_cin(sqlite3 *db, CINStruct *cin, cJSON *content, char **response) {
 
     // Actions that need to done in the CNT resource update the cni and cbs
     int cni, mni, cbs, mbs;
-    char *sql = sqlite3_mprintf("SELECT cni, mni, cbs, mbs, blob FROM mtc WHERE ri = '%s' AND et > datetime('now');", cin->pi);
+    char *sql = sqlite3_mprintf("SELECT cni, mni, cbs, mbs, blob FROM mtc WHERE ri = '%s' AND et > datetime('now');",
+                                cin->pi);
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
     sqlite3_free(sql);
     if (rc != SQLITE_OK) {
@@ -245,7 +248,7 @@ char create_cin(sqlite3 *db, CINStruct *cin, cJSON *content, char **response) {
             mbs = sqlite3_column_int(stmt, 3);
         }
 
-        cntBlob = cJSON_Parse((char *)sqlite3_column_text(stmt, 4));
+        cntBlob = cJSON_Parse((char *) sqlite3_column_text(stmt, 4));
         cJSON *cnt = cJSON_GetObjectItem(cntBlob, "m2m:cnt");
         if (cnt != NULL) {
             cJSON *JsonCni = cJSON_GetObjectItem(cnt, "cni");
@@ -295,7 +298,8 @@ char create_cin(sqlite3 *db, CINStruct *cin, cJSON *content, char **response) {
     while ((mni != -1 && cni > mni) || (mbs != -1 && cbs > mbs)) {
         char instance_id[30];
         int instance_size;
-        sql = sqlite3_mprintf("SELECT ri, cs FROM mtc WHERE pi = '%s' AND et > datetime('now') ORDER BY ct LIMIT 1;", cin->pi);
+        sql = sqlite3_mprintf("SELECT ri, cs FROM mtc WHERE pi = '%s' AND et > datetime('now') ORDER BY ct LIMIT 1;",
+                              cin->pi);
         rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
         sqlite3_free(sql);
         if (rc != SQLITE_OK) {
@@ -308,7 +312,7 @@ char create_cin(sqlite3 *db, CINStruct *cin, cJSON *content, char **response) {
         }
 
         if ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-            strcpy(instance_id, (char *)sqlite3_column_text(stmt, 0));
+            strcpy(instance_id, (char *) sqlite3_column_text(stmt, 0));
             instance_size = sqlite3_column_int(stmt, 1);
         }
 
@@ -377,12 +381,14 @@ char create_cin(sqlite3 *db, CINStruct *cin, cJSON *content, char **response) {
     rc = commit_transaction(db);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Can't commit transaction\n");
-        responseMessage(response, 500, "Internal Server Error", (char *)sqlite3_errmsg(db));
+        responseMessage(response, 500, "Internal Server Error", (char *) sqlite3_errmsg(db));
         closeDatabase(db);
         return FALSE;
     }
 
-    char *sql_not = sqlite3_mprintf("SELECT DISTINCT nu, url, enc FROM mtc WHERE LOWER(pi) = LOWER('%s') AND nu IS NOT NULL AND et > DATETIME('now');", cin->pi);
+    char *sql_not = sqlite3_mprintf(
+        "SELECT DISTINCT nu, url, enc FROM mtc WHERE LOWER(pi) = LOWER('%s') AND nu IS NOT NULL AND et > DATETIME('now');",
+        cin->pi);
     if (sql_not == NULL) {
         fprintf(stderr, "Failed to allocate memory for SQL query.\n");
         responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
@@ -405,18 +411,18 @@ char create_cin(sqlite3 *db, CINStruct *cin, cJSON *content, char **response) {
             continue;
         }
 
-        const char *nu_temp = (const char *)sqlite3_column_text(stmt, 0);
+        const char *nu_temp = (const char *) sqlite3_column_text(stmt, 0);
         data->nu = malloc(strlen(nu_temp) + 1);
         strcpy(data->nu, nu_temp);
 
-        const char *url_temp = (const char *)sqlite3_column_text(stmt, 1);
+        const char *url_temp = (const char *) sqlite3_column_text(stmt, 1);
         data->topic = malloc(strlen(url_temp) + 1);
         strcpy(data->topic, url_temp);
 
         data->body = malloc(strlen(cin->blob) + 1);
         strcpy(data->body, cin->blob);
 
-        const char *enc_temp = (const char *)sqlite3_column_text(stmt, 2);
+        const char *enc_temp = (const char *) sqlite3_column_text(stmt, 2);
         if (strstr(enc_temp, "POST") == NULL) {
             free(data->nu);
             free(data->topic);
@@ -512,22 +518,26 @@ cJSON *cin_to_json(const CINStruct *cin) {
     }
 
     // Create the outer JSON object with the key "m2m:cin" and the value set to the inner object
-    cJSON* root = cJSON_CreateObject();
+    cJSON *root = cJSON_CreateObject();
     cJSON_AddItemToObject(root, "m2m:cin", innerObject);
 
     return root;
 }
 
-char get_cin(struct Route* destination, char** response){
+char get_cin(struct Route *destination, char **response) {
     char *sql = NULL;
     if ((destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la") ||
         (destination->key + strlen(destination->key) - strlen("ol")) == strstr(destination->key, "ol")) {
-        sql = sqlite3_mprintf("SELECT blob, pi FROM mtc WHERE LOWER(pi) = LOWER('%s') AND et > datetime('now') AND ty = %d ORDER BY ROWID %s LIMIT 1;", 
-                            destination->ri, 
-                            CIN,
-                            ((destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la")) ? "DESC" : "ASC");
+        sql = sqlite3_mprintf(
+            "SELECT blob, pi FROM mtc WHERE LOWER(pi) = LOWER('%s') AND et > datetime('now') AND ty = %d ORDER BY ROWID %s LIMIT 1;",
+            destination->ri,
+            CIN,
+            ((destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la"))
+                ? "DESC"
+                : "ASC");
     } else {
-        sql = sqlite3_mprintf("SELECT blob, pi FROM mtc WHERE LOWER(url) = LOWER('%s') AND et > datetime('now');", destination->key);
+        sql = sqlite3_mprintf("SELECT blob, pi FROM mtc WHERE LOWER(url) = LOWER('%s') AND et > datetime('now');",
+                              destination->key);
     }
 
     if (sql == NULL) {
@@ -535,7 +545,7 @@ char get_cin(struct Route* destination, char** response){
         return FALSE;
     }
     sqlite3_stmt *stmt;
-    struct sqlite3 * db = initDatabase("tiny-oneM2M.db");
+    struct sqlite3 *db = initDatabase("tiny-oneM2M.db");
     if (db == NULL) {
         fprintf(stderr, "Failed to initialize the database.\n");
         sqlite3_free(sql);
@@ -555,13 +565,29 @@ char get_cin(struct Route* destination, char** response){
     char *pi = NULL;
     rc = sqlite3_step(stmt);
     if (rc == SQLITE_ROW) {
-        response_data = (char *)sqlite3_column_text(stmt, 0); // note the change in index to 0
-        blob = malloc(strlen(response_data));
+        response_data = (char *) sqlite3_column_text(stmt, 0); // note the change in index to 0
+        blob = malloc(strlen(response_data) + 1);
+        if (blob == NULL) {
+            fprintf(stderr, "Failed to allocate memory for blob.\n");
+            sqlite3_finalize(stmt);
+            closeDatabase(db);
+            return FALSE;
+        }
         strcpy(blob, response_data);
-        pi = malloc(strlen((char *)sqlite3_column_text(stmt, 1)));
-        strcpy(pi, (char *)sqlite3_column_text(stmt, 1));
-    } else if (rc == SQLITE_DONE && (destination->key + strlen(destination->key) - strlen("la")) == strstr(destination->key, "la") ||
-                                    (destination->key + strlen(destination->key) - strlen("ol")) == strstr(destination->key, "ol")) {
+
+        pi = malloc(strlen((char *) sqlite3_column_text(stmt, 1)) + 1);
+        if (pi == NULL) {
+            fprintf(stderr, "Failed to allocate memory for pi.\n");
+            free(blob);
+            sqlite3_finalize(stmt);
+            closeDatabase(db);
+            return FALSE;
+        }
+        strcpy(pi, (char *) sqlite3_column_text(stmt, 1));
+    } else if (rc == SQLITE_DONE && ((destination->key + strlen(destination->key) - strlen("la")) == strstr(
+                                         destination->key, "la") ||
+                                     (destination->key + strlen(destination->key) - strlen("ol")) == strstr(
+                                         destination->key, "ol"))) {
         response_data = strdup("{\"m2m:dbg\": \"no instance for <latest> or <oldest>\"}");
     } else {
         fprintf(stderr, "Failed to print JSON as a string.\n");
@@ -572,10 +598,11 @@ char get_cin(struct Route* destination, char** response){
     }
 
     // Calculate the required buffer size
-    size_t response_size = strlen("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n") + strlen(response_data) + 1;
-    
+    size_t response_size = strlen("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n") + strlen(response_data) +
+                           1;
+
     // Allocate memory for the response buffer
-    *response = (char *)malloc(response_size * sizeof(char));
+    *response = (char *) malloc(response_size * sizeof(char));
 
     // Check if memory allocation was successful
     if (*response == NULL) {
@@ -588,9 +615,11 @@ char get_cin(struct Route* destination, char** response){
     }
     sprintf(*response, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n%s", response_data);
     sqlite3_finalize(stmt);
-    
+
     if (blob != NULL) {
-        char *sql_not = sqlite3_mprintf("SELECT DISTINCT nu, url, enc FROM mtc WHERE LOWER(pi) = LOWER('%s') AND nu IS NOT NULL AND et > DATETIME('now');", pi);
+        char *sql_not = sqlite3_mprintf(
+            "SELECT DISTINCT nu, url, enc FROM mtc WHERE LOWER(pi) = LOWER('%s') AND nu IS NOT NULL AND et > DATETIME('now');",
+            pi);
         if (sql_not == NULL) {
             fprintf(stderr, "Failed to allocate memory for SQL query.\n");
             responseMessage(response, 500, "Internal Server Error", "Failed to allocate memory for SQL query.");
@@ -604,28 +633,52 @@ char get_cin(struct Route* destination, char** response){
             closeDatabase(db);
             return FALSE;
         }
-        
-        // Populate the CNT
-        pthread_t thread_id;
-        while (sqlite3_step(stmt) == SQLITE_ROW) {
-            notificationData* data = malloc(sizeof(notificationData));
-            pthread_t thread_id;
-            int result;
 
-            const char *nu_temp = (const char *)sqlite3_column_text(stmt, 0);
+        pthread_t thread_id;
+        // Send notifications
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            notificationData *data = malloc(sizeof(notificationData));
+            if (data == NULL) {
+                fprintf(stderr, "Failed to allocate memory for notification data.\n");
+                continue;
+            }
+
+            const char *nu_temp = (const char *) sqlite3_column_text(stmt, 0);
             data->nu = malloc(strlen(nu_temp) + 1); // +1 for null terminator
+            if (data->nu == NULL) {
+                fprintf(stderr, "Failed to allocate memory for nu.\n");
+                free(data);
+                continue;
+            }
             strcpy(data->nu, nu_temp);
 
-            const char *url_temp = (const char *)sqlite3_column_text(stmt, 1);
+            const char *url_temp = (const char *) sqlite3_column_text(stmt, 1);
             data->topic = malloc(strlen(url_temp) + 1); // +1 for null terminator
+            if (data->topic == NULL) {
+                fprintf(stderr, "Failed to allocate memory for topic.\n");
+                free(data->nu);
+                free(data);
+                continue;
+            }
             strcpy(data->topic, url_temp);
 
             data->body = malloc(strlen(blob) + 1); // +1 for null terminator
+            if (data->body == NULL) {
+                fprintf(stderr, "Failed to allocate memory for body.\n");
+                free(data->nu);
+                free(data->topic);
+                free(data);
+                continue;
+            }
             strcpy(data->body, blob);
 
-            const char *enc_temp = (const char *)sqlite3_column_text(stmt, 2);
+            const char *enc_temp = (const char *) sqlite3_column_text(stmt, 2);
             // Check if the subscription eventNotificationCriteria contains "POST"
             if (strstr(enc_temp, "GET") == NULL) {
+                free(data->nu);
+                free(data->topic);
+                free(data->body);
+                free(data);
                 continue;
             }
 
@@ -636,16 +689,16 @@ char get_cin(struct Route* destination, char** response){
             int enc_temp_length = strlen(enc_temp); // assuming enc_temp is a string
             int topic_length = strlen(data->topic);
 
-            // Here we construct the prefix dynamically with sprintf. 
-            char prefix[256];  // Make sure this size is enough for your string
+            // Here we construct the prefix dynamically with sprintf.
+            char prefix[256]; // Make sure this size is enough for your string
             sprintf(prefix, "{\"m2m:sgn\":{\"cr\":\"admin:admin\",\"nev\":{\"net\":\"%s\",\"om\":null,\"rep\":", "GET");
-            
+
             int prefix_length = strlen(prefix);
             int total_length = prefix_length + body_length + enc_temp_length + topic_length + strlen(suffix) + 201;
             // Allocate enough memory for the new string
             char *wrapped_body = malloc(total_length);
 
-            if(wrapped_body == NULL) {
+            if (wrapped_body == NULL) {
                 fprintf(stderr, "Failed to allocate memory for the wrapped body.\n");
                 free(data->nu); // Free the memory for the string
                 free(data->topic); // Free the memory for the string
@@ -670,7 +723,7 @@ char get_cin(struct Route* destination, char** response){
                 data->body = wrapped_body;
             }
 
-            result = pthread_create(&thread_id, NULL, send_notification, data); //pass data, not &data
+            int result = pthread_create(&thread_id, NULL, send_notification, data); //pass data, not &data
             if (result != 0) {
                 fprintf(stderr, "Error creating thread: %s\n", strerror(result));
                 free(data->nu); // Free the memory for the string
@@ -680,7 +733,7 @@ char get_cin(struct Route* destination, char** response){
             }
         }
     }
-    
+
     closeDatabase(db);
     return TRUE;
 }

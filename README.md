@@ -61,6 +61,8 @@ poetry run pytest --reruns 3 --reruns-delay 1
 
 [] - Check why when you pass ["TAG"] as lbl attribute for the SUB resource the server crash.
 
-[] - Run Valgrind to check memory leaks and fix them. Run the tests to cover as much as possible. 
+[] - Run Valgrind to check memory leaks and fix them. Run the tests to cover as much as possible.
+
+[] - Remove ACME-oneM2M-CSE as normal package, and include it as a git submodule. The ACME-oneM2M-CSE is causing several vulnerabilities alerts in GitHub.
 
 🌌 Explore. 🚀 Innovate. 🌠 Conquer with Tiny-OneM2M C API.

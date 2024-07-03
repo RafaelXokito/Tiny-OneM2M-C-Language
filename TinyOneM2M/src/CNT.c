@@ -33,8 +33,8 @@ CNTStruct *init_cnt() {
         cnt->st = 0;
         cnt->mbs = -1;
         cnt->mni = -1;
-        cnt->cni = 0;
-        cnt->cbs = 0;
+        cnt->cni = 0; // currentNrOfInstances
+        cnt->cbs = 0; // currentByteSize
         cnt->li = -1;
         cnt->dr = -1;
     }
