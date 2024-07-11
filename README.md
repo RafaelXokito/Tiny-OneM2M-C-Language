@@ -65,4 +65,10 @@ poetry run pytest --reruns 3 --reruns-delay 1
 
 [] - Remove ACME-oneM2M-CSE as normal package, and include it as a git submodule. The ACME-oneM2M-CSE is causing several vulnerabilities alerts in GitHub.
 
+## Ideas
+
+ - Natural Language for M2M commands. Implement a simple and small ontology-capable system and provide the ontology structure and the user query to an LLM and receive ontology commands from it. These commands are mapped into the OneM2M Ontology Base standard which makes it easy to trigger then using subscriptions. The idea is to not fully implement something that it's time consuming, and add something that we know already. Besides the novelty we can add a real and simple use case for that, like the smart switch app.
+ - Chatbot for IoT network. Implement a chatbot to answer questions related to the OneM2M system using Retrieval Augmented Generation.
+ - 
+
 🌌 Explore. 🚀 Innovate. 🌠 Conquer with Tiny-OneM2M C API.
